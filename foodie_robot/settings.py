@@ -37,6 +37,8 @@ TRY_LOCAL_DEV_PAYMENT = config('TRY_LOCAL_DEV_PAYMENT', default=False, cast=bool
 # Application definition
 
 INSTALLED_APPS = [
+    "jazzmin",
+    "leaflet",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "djgeojson",
     "api"
 ]
 

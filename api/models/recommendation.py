@@ -5,7 +5,7 @@ from api.models.user import User
 from django.utils import timezone
 
 
-class TimeOfDay(models.TextChoices):
+class TimeOfDayChoices(models.TextChoices):
     MORNING = 'morning', 'Morning'
     AFTERNOON = 'afternoon', 'Afternoon'
     EVENING = 'evening', 'Evening'
@@ -17,8 +17,8 @@ class ChoiceOption(models.TextChoices):
 
 class Recommendation(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recommendations")
-    meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name="recommendations")
-    time_of_day = models.CharField(max_length=20, choices=TimeOfDay.choices)
+    meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="recommendations")
+    time_of_day = models.CharField(max_length=20, choices=TimeOfDayChoices.choices)
     choice_option = models.CharField(max_length=20, choices=ChoiceOption.choices)
     day = models.DateField(default=timezone.now)
     accepted = models.BooleanField(default=False)

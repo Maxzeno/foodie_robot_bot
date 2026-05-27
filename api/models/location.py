@@ -1,5 +1,10 @@
 from django.db import models
 from api.models.base import BaseModel
+from djgeojson.fields import PolygonField
+
+from api.models.currency import Currency
+
+# from api.models.meal import PreferredCuisine
 
 
 class Country(BaseModel):
@@ -17,7 +22,7 @@ class Country(BaseModel):
 class State(BaseModel):
     name = models.CharField(max_length=100) # e.g. "Lagos"
     country = models.ForeignKey(
-        Country, on_delete=models.CASCADE, related_name="states"
+        Country, on_delete=models.PROTECT, related_name="states"
     )
 
     class Meta:
@@ -32,8 +37,11 @@ class State(BaseModel):
 class City(BaseModel):
     name = models.CharField(max_length=100) # e.g. "Ikeja"
     state = models.ForeignKey(
-        State, on_delete=models.CASCADE, related_name="cities"
+        State, on_delete=models.PROTECT, related_name="cities"
     )
+    boundary = PolygonField()
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='cities')
+    preferred_cuisine = models.ManyToManyField("PreferredCuisine", blank=True, related_name="cities")
 
     class Meta:
         unique_together = ('name', 'state') # Prevent duplicate city names within same state

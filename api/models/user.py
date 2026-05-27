@@ -2,7 +2,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 
-from api.models.base import BaseModel, Currency
+from api.models.base import BaseModel
+from api.models.currency import Currency
+from api.models.meal import Allergy, FitnessGoal, HealthCondition, PreferredCuisine
 from api.models.location import City
 from api.utils.generate import generate_unique_code
 
@@ -12,7 +14,7 @@ def unique_user_code():
 
 
 # Custom User Model
-class Gender(models.TextChoices):
+class GenderChoices(models.TextChoices):
     MALE = 'male', 'Male'
     FEMALE = 'female', 'Female'
 
@@ -22,10 +24,11 @@ class User(AbstractUser, BaseModel):
     password = models.CharField(max_length=128, null=True, blank=True)
     username = models.CharField(unique=True, max_length=200, null=True, blank=True)
     code = models.CharField(max_length=100, unique=True, blank=True)
-    currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.USD)
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='users')
+    city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
+    average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2)
 
-    gender = models.CharField(max_length=10, blank=True, null=True, choices=Gender.choices)
+    gender = models.CharField(max_length=10, choices=GenderChoices.choices, null=True, blank=True)
     phone = models.CharField(
         max_length=100,
         blank=True,
@@ -38,9 +41,10 @@ class User(AbstractUser, BaseModel):
         ],
     )
 
-    health_conditions = models.ManyToManyField("HealthCondition", blank=True, related_name="users")
-    fitness_goals = models.ManyToManyField("FitnessGoal", blank=True, related_name="users")
-    allergies = models.ManyToManyField("Allergy", blank=True, related_name="users")
+    fitness_goals = models.ForeignKey(FitnessGoal, on_delete=models.PROTECT, related_name="users", null=True, blank=True)
+    health_conditions = models.ManyToManyField(HealthCondition, blank=True, related_name="users")
+    allergies = models.ManyToManyField(Allergy, blank=True, related_name="users")
+    preferred_cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="user")
 
     def save(self, *args, **kwargs):
         if self.email:
@@ -50,7 +54,7 @@ class User(AbstractUser, BaseModel):
             self.password = self.password.strip()
 
         if self.username:
-            self.username = self.password.strip()
+            self.username = self.username.strip()
         
         if not self.code:
             self.code = unique_user_code()

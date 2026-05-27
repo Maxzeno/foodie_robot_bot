@@ -1,1 +1,7 @@
-Currency should be in USD 
+* Currency should default to USD
+
+* Filter user groups based on (fitness_goals, health_conditions, allergies, preferred_cuisine - only pick one or non at a time so the combination doesn't get so many) and recommend 4 meals to them but make sure that the two being picked was not recommended to them the previous day or they have marked it as "not liked" or the price is way above their average in a case where they is less than 2 options left or they have not being filtered into a group then manually generate recommendations for them. So I will check the recommendation model and see people who haven't been offered a recommendation then recommend to them. (auto using CRON JOB)
+
+* Only recommend for people who are active (Meaning they have replied our message in the last 24 hours)
+
+* When it's been 22 hours and almost 24 hours since they replied our message last send then send a message telling them that if they don't confirm we will stop sending them recommend till they message or reply us. (auto using CRON JOB)
