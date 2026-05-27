@@ -34,11 +34,14 @@ ALLOWED_HOSTS.extend(_ALLOWED_HOST.split())
 
 TRY_LOCAL_DEV_PAYMENT = config('TRY_LOCAL_DEV_PAYMENT', default=False, cast=bool)
 
+WHATSAPP_MESSAGE_BASE_URL = config('WHATSAPP_MESSAGE_BASE_URL')
+WHATSAPP_API = config('WHATSAPP_API')
+
 # Application definition
 
 INSTALLED_APPS = [
     "jazzmin",
-    "leaflet",
+    # "leaflet",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

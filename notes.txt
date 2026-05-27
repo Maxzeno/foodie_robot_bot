@@ -5,3 +5,5 @@
 * Only recommend for people who are active (Meaning they have replied our message in the last 24 hours)
 
 * When it's been 22 hours and almost 24 hours since they replied our message last send then send a message telling them that if they don't confirm we will stop sending them recommend till they message or reply us. (auto using CRON JOB)
+
+- Maybe adding the current intent to the message model is better

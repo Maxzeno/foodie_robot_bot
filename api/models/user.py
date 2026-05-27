@@ -13,20 +13,30 @@ def unique_user_code():
     return generate_unique_code(User, field='code')
 
 
-# Custom User Model
 class GenderChoices(models.TextChoices):
     MALE = 'male', 'Male'
     FEMALE = 'female', 'Female'
 
 
+class CurrentIntentChoices(models.TextChoices):
+    REGISTERED = 'registered', 'Registered'
+    FITNESS_GOAL = 'fitness_goal', 'Fitness Goal'
+
+intent_summary = {
+    CurrentIntentChoices.REGISTERED: "User has registered", 
+    CurrentIntentChoices.FITNESS_GOAL: "User's fitness goal",
+}
+
 class User(AbstractUser, BaseModel):
     email = models.EmailField(unique=True, null=True, blank=True)
     password = models.CharField(max_length=128, null=True, blank=True)
     username = models.CharField(unique=True, max_length=200, null=True, blank=True)
+    current_intent = models.CharField(max_length=100, choices=CurrentIntentChoices.choices, null=True, blank=True)
+    
     code = models.CharField(max_length=100, unique=True, blank=True)
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
-    average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2)
+    average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     gender = models.CharField(max_length=10, choices=GenderChoices.choices, null=True, blank=True)
     phone = models.CharField(
@@ -60,3 +70,7 @@ class User(AbstractUser, BaseModel):
             self.code = unique_user_code()
 
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.code} - {self.phone}"
+    

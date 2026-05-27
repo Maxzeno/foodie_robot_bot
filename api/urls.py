@@ -1,4 +1,4 @@
-from api.views import router
+from api.views.whatsapp_webhook import router as whatsapp_webhook_router
 from ninja import NinjaAPI, Swagger
 
 api = NinjaAPI(
@@ -12,4 +12,4 @@ api = NinjaAPI(
     docs=Swagger(settings={"persistAuthorization": True}),
 )
 
-api.add_router("/webhook", router)
+api.add_router("/webhook", whatsapp_webhook_router)

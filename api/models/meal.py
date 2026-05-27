@@ -26,6 +26,8 @@ class FitnessGoalChoices(models.TextChoices):
     MAINTENANCE = 'maintenance', 'Maintenance'
 
 class CuisineChoices(models.TextChoices):
+    VEGAN_VEGETARIAN = 'vegan_vegetarian', 'Vegan Vegetarian'
+    
     NIGERIAN = 'nigerian', 'Nigerian'
     # GHANAIAN = 'ghanaian', 'Ghanaian'
     # ETHIOPIAN = 'ethiopian', 'Ethiopian'

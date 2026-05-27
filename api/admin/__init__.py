@@ -8,12 +8,17 @@ from api.models.order import Order
 from api.models.recommendation import Recommendation
 from api.models.review import Review
 from api.models.user import User
-from leaflet.admin import LeafletGeoAdmin
+from api.models.message import Message
+# from leaflet.admin import LeafletGeoAdmin
+
 
 # Register your models here.
+# admin.site.register(DeliveryAddress, LeafletGeoAdmin)
+# admin.site.register(City, LeafletGeoAdmin)
+admin.site.register(DeliveryAddress)
+admin.site.register(City)
+
 admin.site.register(User)
-admin.site.register(DeliveryAddress, LeafletGeoAdmin)
-admin.site.register(City, LeafletGeoAdmin)
 admin.site.register(State)
 admin.site.register(Country)
 admin.site.register(Meal)
@@ -25,3 +30,4 @@ admin.site.register(Recommendation)
 admin.site.register(Order)
 admin.site.register(Review)
 admin.site.register(Currency)
+admin.site.register(Message)
