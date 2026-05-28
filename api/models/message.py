@@ -5,7 +5,7 @@ from django.db.models import Q, CheckConstraint
 import requests
 from django.conf import settings
 from requests.exceptions import RequestException
-
+import random
 
 
 class RoleChoices(models.TextChoices):
@@ -15,6 +15,7 @@ class RoleChoices(models.TextChoices):
 
 class CurrentIntentChoices(models.TextChoices):
     NO_INTENT = 'no_intent', 'No Intent'
+    MENU_OPTIONS = 'menu_options', 'Menu Options'
     REGISTERED = 'registered', 'Registered'
     SET_PREFERENCE = 'set_preference', 'Set Preference'
     UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
@@ -22,16 +23,16 @@ class CurrentIntentChoices(models.TextChoices):
     FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
     RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
 
-    # def get_intent_summary(intent):
-    #     summaries = {
-    #         CurrentIntentChoices.REGISTERED: "User has registered",
-    #         CurrentIntentChoices.SET_PREFERENCE: "Setting user preferences",
-    #         CurrentIntentChoices.UPDATE_PREFERENCE: "Updating user preferences",
-    #         CurrentIntentChoices.FIRST_LOCATION: "Setting user's first location",
-    #         CurrentIntentChoices.FIRST_LOCATION_RETRY: "Retrying to set user's first location",
-    #         CurrentIntentChoices.RECOMMENDED_MEALS: "Recommending meals to user",
-    #     }
-    #     return summaries.get(intent, "Unknown intent")
+    PICK_DELIVERY_ADDRESS_OPTION = 'pick_delivery_address_option', 'Pick Delivery Address Option'
+    ADD_NEW_ORDER_DELIVERY_ADDRESS = 'add_new_order_delivery_address', 'Add New Order Delivery Address'
+
+    NUMBER_OF_PLATES = 'number_of_plates', 'Number of Plates'
+    PAY_FOR_ORDER = 'pay_for_order', 'Pay for Order'
+    ORDER_PLACED = 'order_placed', 'Order Placed'
+
+    # add order status, updates, review of the food, etc
+
+    # TODO: Add more menu options intents eg. Order the current recommendation (first or second), see orders and status, see/update liked/hated meals, see/update preferences, etc.
 
 
 class Message(BaseModel):
@@ -100,15 +101,23 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_location(content: str, user, current_intent: str):
-        # TODO: Implement
-        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+    def bot_message_location(content: str, user, current_intent: str, latitude: float, longitude: float, address: str):
+        payload = {
+            "latitude": latitude,
+            "longitude":longitude,
+            "name": content,
+            "address": address
+        }
+        msg_type = 'location'
+        message_id = Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
         return message
     
     @staticmethod
-    def bot_message_list_option(content: str, user, current_intent: str):
-        # TODO: Implement
-        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+    def bot_message_list_option(content: str, user, current_intent: str, payload):
+        msg_type = 'interactive'
+        message_id = Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
         return message
 
     @staticmethod
@@ -119,9 +128,13 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_flow(content: str, user, current_intent: str):
+    def bot_message_flow(content: str, user, current_intent: str, payload):
         # TODO: Implement
-        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+        # msg_type = 'interactive'
+        # message_id = Message.send_message(user, msg_type, payload)
+
+        message_id = str(random.randint(1000000, 9999999)) # TODO: to be removed
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
         return message
     
     @staticmethod

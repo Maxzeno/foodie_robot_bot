@@ -1,3 +1,4 @@
+from api.handler.after_recomendation import after_recommendation
 from api.handler.first_location import first_location_hander
 from api.handler.user_preference import user_preference_hander
 from api.models.message import Message, CurrentIntentChoices
@@ -17,34 +18,6 @@ router = Router(tags=["Webhook"])
 
 VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
 
-
-@csrf_exempt
-@router.get("/test-temp")
-def text_temp_verify(request):
-    user = User.objects.all()[2]
-    service = MealRecommendationService()
-    
-    recommended_meal_ids = service.get_recommendations(
-        user=user,
-        num_recommendations_per_period=2,
-    )
-    print("Recommended Meal IDs:", recommended_meal_ids)
-    return HttpResponse("Done", status=200)
-
-@csrf_exempt
-@router.get("/whatsapp")
-def whatsapp_verify(request):
-    print("Verifying webhook", request.GET)
-    mode = request.GET.get("hub.mode")
-    token = request.GET.get("hub.verify_token")
-    challenge = request.GET.get("hub.challenge")
-
-    if mode == "subscribe" and token == VERIFY_TOKEN:
-        return HttpResponse(challenge, status=200)
-
-    return HttpResponse("Error: token mismatch", status=403)
-
-
 @csrf_exempt
 @transaction.atomic
 @router.post('/whatsapp', auth=None)
@@ -62,13 +35,13 @@ def whatsapp_webhook(request):
         reply_message_id = None
         text = None
         json_resp = None
-        
-        if msg_type in ['text']:
-            text = message["text"]["body"]
-        else:
-            if msg_type == 'location':
-                json_resp = message["location"]
+        print("Message:", message)
 
+        if msg_type in {'text'}:
+            text = message["text"]["body"]
+        elif msg_type in {"interactive", "location"}:
+            json_resp = message[msg_type]
+            
         if message.get("context"):
             context = message["context"]
             reply_message_id = context["id"]
@@ -84,7 +57,7 @@ def whatsapp_webhook(request):
         print("Error parsing webhook:", e)
         return {"detail": "Done"}
     
-    print(request.body)
+    print("body:", request.body)
     
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
     
@@ -109,6 +82,50 @@ def whatsapp_webhook(request):
         status = first_location_hander(user, data=json_resp)
         
     elif user.get_intent(reply_message_id) == CurrentIntentChoices.RECOMMENDED_MEALS:
+        status = after_recommendation(user, data=json_resp)
+
+    elif user.get_intent(reply_message_id) == CurrentIntentChoices.MENU_OPTIONS:
+        # TODO: Handle menu options
+        # {'type': 'list_reply', 'list_reply': {'id': 'view-orders', 'title': 'View Orders'}}
         pass
-        
+
     return {"detail": "Done"}
+
+
+@csrf_exempt
+@router.get("/whatsapp")
+def whatsapp_verify(request):
+    print("Verifying webhook", request.GET)
+    mode = request.GET.get("hub.mode")
+    token = request.GET.get("hub.verify_token")
+    challenge = request.GET.get("hub.challenge")
+
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        return HttpResponse(challenge, status=200)
+
+    return HttpResponse("Error: token mismatch", status=403)
+
+
+# TODO: to be removed in production
+@csrf_exempt
+@router.get("/test-temp")
+def text_temp_verify(request):
+    user = User.objects.all()[2]
+    print("User:", user)
+    service = MealRecommendationService()
+
+    # print(service._get_eligible_meals(user))
+
+    # recommend by algo
+    print("Recommended Meal IDs - algo:", service.get_recommendations_by_algo(
+        user=user,
+        num_recommendations_per_period=2,
+    ))
+
+    # recommend by LLM
+    # recommended_meal_ids = service.get_recommendations_by_llm(
+    #     user=user,
+    #     num_recommendations_per_period=2,
+    # )
+    # print("Recommended Meal IDs:", recommended_meal_ids)
+    return HttpResponse("Done", status=200)

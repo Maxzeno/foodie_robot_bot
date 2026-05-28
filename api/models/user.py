@@ -7,7 +7,7 @@ from api.models.base import BaseModel
 from api.models.currency import Currency
 from api.models.meal import Allergy, FitnessGoal, HealthCondition, PreferredCuisine
 from api.models.location import City
-from api.models.message import Message, RoleChoices
+from api.models.message import CurrentIntentChoices, Message, RoleChoices
 from api.utils.generate import generate_unique_code
 import pytz
 from django.utils import timezone
@@ -76,7 +76,7 @@ class User(AbstractUser, BaseModel):
             except Message.DoesNotExist:
                 return None
             
-        message = self.messages.filter(role=RoleChoices.BOT).first()
+        message = self.messages.filter(role=RoleChoices.BOT).exclude(current_intent=CurrentIntentChoices.NO_INTENT).first()
         if message:
             return message.current_intent
         return None

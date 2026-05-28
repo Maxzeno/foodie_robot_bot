@@ -47,7 +47,7 @@ def first_location_hander(user, data: dict):
     # Recommend meals after setting location
     service = MealRecommendationService()
     
-    recommended_meal_map = service.get_recommendations(
+    recommended_meal_map = service.get_recommendations_by_algo(
         user=user,
         num_recommendations_per_period=2,
     )
@@ -55,20 +55,23 @@ def first_location_hander(user, data: dict):
     for period, recommended_meals_list in recommended_meal_map.items():
         recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
         for index, meal in enumerate(recommended_meals):
-            text = f"Your {user.get_time_period()} recommendation, {meal.name}"
+            text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}"
             image_url = meal.image_url.url if meal.image_url else None
             meal_id = str(meal.id)
             
-            if user.get_time_period() == period:
-                Message.bot_message_action_reply(text, user,
-                    current_intent=CurrentIntentChoices.RECOMMENDED_MEALS, 
-                    payload=recommend_product_payload(meal_id, text, image_url))
-
-            Recommendation.objects.create(
+            recomendation_obj = Recommendation.objects.create(
                 user=user,
                 meal=meal,
                 time_of_day=TimeOfDayChoices.get_period(period),
                 choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
                 sent_to_user=True if user.get_time_period() == period else False,
             )
+
+            if user.get_time_period() == period:
+                payload = recommend_product_payload(recomendation_obj.id, text, image_url)
+
+                Message.bot_message_action_reply(text, user,
+                    current_intent=CurrentIntentChoices.RECOMMENDED_MEALS, 
+                    payload=payload)
+
     return True

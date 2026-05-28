@@ -133,4 +133,4 @@ class Meal(BaseModel):
     cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="meals")
 
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.city.name} - {self.fitness_goals} - {self.cuisine} - {self.restricted_health_conditions} - {self.restricted_allergies}"

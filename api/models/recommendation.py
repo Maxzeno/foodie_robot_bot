@@ -11,9 +11,8 @@ class TimeOfDayChoices(models.TextChoices):
     EVENING = 'evening', 'Evening'
 
 
-    def get_time_of_day_as_str(self, value):
-        time_of_day = self.get_time_of_day()
-        now = timezone.now().hour
+    @staticmethod
+    def get_time_of_day_as_str(time_of_day):
         if time_of_day == TimeOfDayChoices.MORNING:
             return "morning"
         elif time_of_day == TimeOfDayChoices.AFTERNOON:
@@ -21,7 +20,8 @@ class TimeOfDayChoices(models.TextChoices):
         else:
             return "evening"
     
-    def get_period(self, value):
+    @staticmethod
+    def get_period(value):
         if value == "morning":
             return TimeOfDayChoices.MORNING
         elif value == "afternoon":

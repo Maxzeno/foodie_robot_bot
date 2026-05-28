@@ -1,4 +1,4 @@
-def recommend_product_payload(recomendation_id, body, image_url):
+def pick_delivery_option(meal_id, body):
     return {
             "type": "button",
             # "header": {
@@ -18,22 +18,22 @@ def recommend_product_payload(recomendation_id, body, image_url):
                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"order-now--{recomendation_id}",
-                            "title": "Order now"
+                            "id": f"current-address--{meal_id}",
+                            "title": "Use Current Address"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"i-love-this-meal--{recomendation_id}",
-                            "title": "I love this meal"
+                            "id": f"new-address--{meal_id}",
+                            "title": "Use a different address"
                         }
                     },
-                    {
+                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"i-hate-this-meal--{recomendation_id}",
-                            "title": "I hate this meal"
+                            "id": "see-all-manu-options",
+                            "title": "See all manu options"
                         }
                     }
                 ]

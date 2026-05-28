@@ -1,11 +1,4 @@
-LLM Prompt: You are a nutritionist and meal recommendation expert. Based on the user's profile and available meals, recomme
-
-
-
-
-
-
-                                                                                                                          end the best meals for morning, afternoon, and evening.
+LLM Prompt: You are a nutritionist and meal recommendation expert. Based on the user's profile and available meals, recommend the best meals for morning, afternoon, and evening.
 
 USER PROFILE:
 {
