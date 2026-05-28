@@ -1,3 +1,5 @@
+BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
+
 * Currency should default to USD
 
 * Filter user groups based on (fitness_goals, health_conditions, allergies, preferred_cuisine - only pick one or non at a time so the combination doesn't get so many) and recommend 4 meals to them but make sure that the two being picked was not recommended to them the previous day or they have marked it as "not liked" or the price is way above their average in a case where they is less than 2 options left or they have not being filtered into a group then manually generate recommendations for them. So I will check the recommendation model and see people who haven't been offered a recommendation then recommend to them. (auto using CRON JOB)
@@ -7,3 +9,7 @@
 * When it's been 22 hours and almost 24 hours since they replied our message last send then send a message telling them that if they don't confirm we will stop sending them recommend till they message or reply us. (auto using CRON JOB)
 
 - Maybe adding the current intent to the message model is better
+
+- If users adds a delivery location for a meal and it is outside the current location we might refuse and then update their city and recommend 2 meals in that new location to them
+
+- Where we strictly expect json and get plain text will respond strictly to them and resend the intended message/action to them

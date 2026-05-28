@@ -14,23 +14,67 @@ class RoleChoices(models.TextChoices):
 
 class Message(BaseModel):
     # TODO: Add more fields (eg. reply_to another message)
+    message_id = models.CharField(max_length=250)
     role = models.CharField(max_length=10, choices=RoleChoices.choices)
     content = models.TextField(null=True, blank=True)
-    image_url = models.URLField(null=True, blank=True)
+    resp = models.JSONField(null=True, blank=True)
+    preview_media = models.FileField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages')
     
     @staticmethod
-    def bot_message(content: str, user: User, image_url: str = None):
+    def bot_message(content: str, user: User, preview_media: str = None):
         print("Bot message:", content)
-        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, image_url=image_url)
+        payload = {"body": content}
+        msg_type = 'text'
+        Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, preview_media=preview_media)
         return message
     
     @staticmethod
-    def user_message(content: str, user: User, image_url: str = None):
-        message = Message.objects.create(role=RoleChoices.USER, content=content, user=user, image_url=image_url)
+    def bot_message_request_location(content: str, user: User, preview_media: str = None):
+        print("Bot message request location:", content)
+        payload = {
+            "type": "location_request_message",
+            "body": {
+                "text": content
+            },
+            "action": {
+                "name": "send_location"
+            }
+        }
+        msg_type = 'interactive'
+        Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, preview_media=preview_media)
         return message
     
-    def send_message(self, content, user):
+    @staticmethod
+    def bot_message_list_option(content: str, user: User, preview_media: str = None):
+        # TODO: Implement
+        print("Bot message list option:", content)
+        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, preview_media=preview_media)
+        return message
+        
+    @staticmethod
+    def bot_message_action_reply(content: str, user: User, preview_media: str = None):
+        # TODO: Implement
+        print("Bot message action reply:", content)
+        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, preview_media=preview_media)
+        return message
+    
+    @staticmethod
+    def bot_message_flow(content: str, user: User, preview_media: str = None):
+        # TODO: Implement
+        print("Bot message flow:", content)
+        message = Message.objects.create(role=RoleChoices.BOT, content=content, user=user, preview_media=preview_media)
+        return message
+    
+    @staticmethod
+    def user_message(message_id: str, resp, content: str, user: User):
+        message = Message.objects.create(role=RoleChoices.USER, message_id=message_id, resp=resp, content=content, user=user)
+        return message
+    
+    @staticmethod
+    def send_message(self, user, msg_type, payload):
         url = settings.WHATSAPP_MESSAGE_BASE_URL
         headers = {
             "Content-Type": "application/json",
@@ -39,10 +83,12 @@ class Message(BaseModel):
         data = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
-            "to": user.phone,  # must be full international format
-            "type": "text",
-            "text": {"body": content}
+            "to": user.phone,
+            "type": msg_type,
         }
+        
+        data[msg_type] = payload
+            
         print(data)
 
         try:
@@ -52,16 +98,6 @@ class Message(BaseModel):
             return response
         except RequestException as e:
             raise RuntimeError(f"Failed to send WhatsApp message: {e}")
-
-    
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None 
-        print("Message save called", self.content, self.role, is_new)
-        print("Saving message, is new:", is_new, self.role, RoleChoices.BOT == self.role, RoleChoices.BOT)
-        if self.role == RoleChoices.BOT and is_new:
-            print("Sending bot message to user:", self.user.phone)
-            self.send_message(self.content, self.user)
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Message from {self.role}: {self.content[:200]}"

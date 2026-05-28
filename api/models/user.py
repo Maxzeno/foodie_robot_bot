@@ -20,12 +20,23 @@ class GenderChoices(models.TextChoices):
 
 class CurrentIntentChoices(models.TextChoices):
     REGISTERED = 'registered', 'Registered'
-    FITNESS_GOAL = 'fitness_goal', 'Fitness Goal'
+    SET_PREFERENCE = 'set_preference', 'Set Preference'
+    UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
+    FIRST_LOCATION = 'first_location', 'First Location'
+    FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
+    RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
 
-intent_summary = {
-    CurrentIntentChoices.REGISTERED: "User has registered", 
-    CurrentIntentChoices.FITNESS_GOAL: "User's fitness goal",
-}
+    # def get_intent_summary(intent):
+    #     summaries = {
+    #         CurrentIntentChoices.REGISTERED: "User has registered",
+    #         CurrentIntentChoices.SET_PREFERENCE: "Setting user preferences",
+    #         CurrentIntentChoices.UPDATE_PREFERENCE: "Updating user preferences",
+    #         CurrentIntentChoices.FIRST_LOCATION: "Setting user's first location",
+    #         CurrentIntentChoices.FIRST_LOCATION_RETRY: "Retrying to set user's first location",
+    #         CurrentIntentChoices.RECOMMENDED_MEALS: "Recommending meals to user",
+    #     }
+    #     return summaries.get(intent, "Unknown intent")
+
 
 class User(AbstractUser, BaseModel):
     email = models.EmailField(unique=True, null=True, blank=True)
