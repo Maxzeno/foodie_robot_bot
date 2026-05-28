@@ -38,8 +38,13 @@ WHATSAPP_MESSAGE_BASE_URL = config('WHATSAPP_MESSAGE_BASE_URL')
 WHATSAPP_API = config('WHATSAPP_API')
 WHATSAPP_API_VERIFY_TOKEN = config('WHATSAPP_API_VERIFY_TOKEN')
 
-GDAL_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\gdal311.dll'
-GEOS_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\geos_c.dll'
+OPENAI_API = config('OPENAI_API')
+
+ADD_GDAL_PATH = config('ADD_GDAL_PATH', default=False, cast=bool)
+
+if ADD_GDAL_PATH:
+    GDAL_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\gdal311.dll'
+    GEOS_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\geos_c.dll'
 
 # Application definition
 

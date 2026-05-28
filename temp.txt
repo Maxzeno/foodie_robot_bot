@@ -1,0 +1,291 @@
+LLM Prompt: You are a nutritionist and meal recommendation expert. Based on the user's profile and available meals, recomme
+
+
+
+
+
+
+                                                                                                                          end the best meals for morning, afternoon, and evening.
+
+USER PROFILE:
+{
+  "gender": null,
+  "fitness_goal": "maintenance",
+  "health_conditions": [
+    "high_cholesterol"
+  ],
+  "allergies": [
+    "seafood"
+  ],
+  "preferred_cuisines": [
+    "chinese",
+    "nigerian"
+  ],
+  "budget": 5000.0,
+  "currency": "NGN",
+  "liked_meals": [],
+  "hated_meals": []
+}
+
+AVAILABLE MEALS:
+[
+  {
+    "id": 22,
+    "name": "Greek Yogurt Bowl",
+    "description": "Effect law whether future professor. Her agent start point when. Evidence type page girl opportunity night position ready. Cause firm prove budget apply region center.",
+    "price": 2933.31,
+    "calories": 863.84,
+    "protein": 48.98,
+    "carbs": 74.18,
+    "fats": 35.18,
+    "fiber": 4.89,
+    "cuisines": [
+      "italian"
+    ],
+    "fitness_goals": [
+      "muscle_gain",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Veggie Burger",
+    "description": "South century discuss prepare thus fish. Yes assume air if manage deep.\nFull over try certain end who time enough. Way base enter experience.",
+    "price": 4489.57,
+    "calories": 913.77,
+    "protein": 11.77,
+    "carbs": 27.49,
+    "fats": 9.98,
+    "fiber": 18.44,
+    "cuisines": [
+      "chinese",
+      "italian"
+    ],
+    "fitness_goals": [
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Pad Thai",
+    "description": "Evidence training maybe true attention raise. Necessary property until four business final. Send local region politics themselves mother front value.",
+    "price": 888.09,
+    "calories": 545.89,
+    "protein": 68.78,
+    "carbs": 99.1,
+    "fats": 5.72,
+    "fiber": 12.81,
+    "cuisines": [
+      "thai",
+      "moroccan"
+    ],
+    "fitness_goals": [
+      "maintenance",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Jollof Rice with Beef",
+    "description": "Soldier shake economy hand.\nTv would return. Middle own production such pick try.",
+    "price": 2124.24,
+    "calories": 162.5,
+    "protein": 82.43,
+    "carbs": 29.82,
+    "fats": 39.31,
+    "fiber": 23.54,
+    "cuisines": [
+      "british"
+    ],
+    "fitness_goals": [
+      "maintenance",
+      "muscle_gain"
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Ofada Rice with Ayamase",
+    "description": "Act daughter career such experience school benefit. Night agency art. Air season mind week blood.\nSomething today suddenly box stop. Lot expect yourself high.",
+    "price": 4012.37,
+    "calories": 859.0,
+    "protein": 18.2,
+    "carbs": 94.6,
+    "fats": 49.65,
+    "fiber": 12.07,
+    "cuisines": [
+      "japanese"
+    ],
+    "fitness_goals": [
+      "maintenance",
+      "muscle_gain"
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Salmon Teriyaki",
+    "description": "Gun across forget measure. Risk government peace already.",
+    "price": 1803.29,
+    "calories": 876.37,
+    "protein": 74.26,
+    "carbs": 83.53,
+    "fats": 16.21,
+    "fiber": 14.28,
+    "cuisines": [
+      "greek"
+    ],
+    "fitness_goals": [
+      "muscle_gain",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 16,
+    "name": "Suya Plate",
+    "description": "For pay show check cause best teach. Old interesting north oil. My its can allow dream.",
+    "price": 3300.52,
+    "calories": 675.48,
+    "protein": 90.86,
+    "carbs": 53.18,
+    "fats": 55.52,
+    "fiber": 24.78,
+    "cuisines": [
+      "french",
+      "ghanaian"
+    ],
+    "fitness_goals": [
+      "maintenance",
+      "muscle_gain"
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Chicken Alfredo",
+    "description": "Word huge either name old go pretty. During hundred another example let item.",
+    "price": 1603.36,
+    "calories": 755.02,
+    "protein": 38.25,
+    "carbs": 95.09,
+    "fats": 26.57,
+    "fiber": 22.51,
+    "cuisines": [
+      "british"
+    ],
+    "fitness_goals": [
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Sushi Platter",
+    "description": "He human positive instead executive may. Price hope stand nation. From yard within military up.\nKeep beyond staff thus per mention sit. Writer those religious record local onto indicate.",
+    "price": 539.03,
+    "calories": 464.61,
+    "protein": 83.42,
+    "carbs": 36.94,
+    "fats": 29.46,
+    "fiber": 16.07,
+    "cuisines": [
+      "indian"
+    ],
+    "fitness_goals": [
+      "maintenance",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Nkwobi",
+    "description": "Gun with physical analysis score best. Nice simply popular can tax recently relationship they. Lot record less few owner dog. Western true toward conference hotel.",
+    "price": 2215.14,
+    "calories": 862.92,
+    "protein": 40.93,
+    "carbs": 61.6,
+    "fats": 46.16,
+    "fiber": 13.21,
+    "cuisines": [
+      "mexican",
+      "italian"
+    ],
+    "fitness_goals": [
+      "muscle_gain",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Yam Porridge",
+    "description": "Behind body us glass thus the road. Expert ready perhaps partner.\nCall raise vote fish instead security subject. More feeling eye strong miss rich law product.",
+    "price": 4848.25,
+    "calories": 596.41,
+    "protein": 10.99,
+    "carbs": 17.99,
+    "fats": 38.87,
+    "fiber": 4.47,
+    "cuisines": [
+      "nigerian"
+    ],
+    "fitness_goals": [
+      "muscle_gain",
+      "weight_loss"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Fajitas",
+    "description": "Player anything week rather. Bill itself argue yeah yourself.\nPretty security expect down necessary training difficult. Stand may none spend sound accept second.",
+    "price": 4496.67,
+    "calories": 188.79,
+    "protein": 31.23,
+    "carbs": 112.24,
+    "fats": 44.26,
+    "fiber": 2.16,
+    "cuisines": [
+      "italian",
+      "nigerian"
+    ],
+    "fitness_goals": [
+      "maintenance"
+    ]
+  },
+  {
+    "id": 1,
+    "name": "Caesar Salad",
+    "description": "Side still detail page.\nLike member never next. Citizen animal writer ground raise. Management serve watch good size last.\nHave mission arm firm day with before. Rate top field culture.",
+    "price": 2637.7,
+    "calories": 456.24,
+    "protein": 28.37,
+    "carbs": 145.52,
+    "fats": 38.7,
+    "fiber": 12.89,
+    "cuisines": [
+      "thai",
+      "greek"
+    ],
+    "fitness_goals": [
+      "weight_loss"
+    ]
+  }
+]
+
+INSTRUCTIONS:
+1. Consider the user's fitness goals, health conditions, allergies, and cuisine preferences
+2. Prioritize meals the user has liked in the past
+3. Avoid meals the user has hated
+4. Consider nutritional balance based on fitness goals
+5. Stay within the user's budget
+6. Provide variety in cuisines and meal types
+7. Morning meals should be lighter with good energy (higher carbs, moderate protein)
+8. Afternoon meals should be balanced and substantial (balanced macros)
+9. Evening meals should support recovery and be easier to digest (higher protein, moderate carbs)
+10. Ensure no meal is recommended more than once across all time periods
+
+RESPONSE FORMAT:
+You must respond with ONLY valid JSON in this exact format:
+{
+  "morning": [1, 2],
+  "afternoon": [3, 4],
+  "evening": [5, 6]
+}
+
+Each time period must contain exactly 2 valid meal IDs from the available meals list above.
+Do not include any other text, explanations, or markdown formatting - just the raw JSON object.

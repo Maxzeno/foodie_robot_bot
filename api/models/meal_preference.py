@@ -16,7 +16,11 @@ class MealPreference(BaseModel):
     meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="meal_preferences")
     preference = models.CharField(max_length=7, choices=MealPreferenceChoices.choices)
     comment = models.TextField(blank=True)
+    
+    class Meta:
+        unique_together = ('user', 'meal')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user} - {self.meal} ({self.sentiment})"
+        return f"{self.user} - {self.meal} ({self.preference})"
     

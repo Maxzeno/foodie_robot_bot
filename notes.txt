@@ -13,3 +13,13 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - If users adds a delivery location for a meal and it is outside the current location we might refuse and then update their city and recommend 2 meals in that new location to them
 
 - Where we strictly expect json and get plain text will respond strictly to them and resend the intended message/action to them
+
+- Aid to reduce the prompt size and to (for cost) or process a number of items at once like people in same city
+
+- Remember to exclude recommendations for the previous day and also tell the llm time of day as well
+
+- Consider building all the recommedation for the pay for a particular user with one prompt and only rebuild it if the user updates preference or health or something like that
+
+- Factor in timezone very important
+
+- Always check on each request that the user has filled all the required fields eg city (gotten from delivery address), preferences, health etc

@@ -10,10 +10,26 @@ from django.http import HttpResponse
 from django.db import transaction
 from django.conf import settings
 
+from api.utils.services.meal_recommendation import MealRecommendationService
+
 
 router = Router(tags=["Webhook"])
 
 VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
+
+
+@csrf_exempt
+@router.get("/test-temp")
+def text_temp_verify(request):
+    user = User.objects.all()[2]
+    service = MealRecommendationService()
+    
+    recommended_meal_ids = service.get_recommendations(
+        user=user,
+        num_recommendations_per_period=2,
+    )
+    print("Recommended Meal IDs:", recommended_meal_ids)
+    return HttpResponse("Done", status=200)
 
 @csrf_exempt
 @router.get("/whatsapp")

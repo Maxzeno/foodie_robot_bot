@@ -1,8 +1,11 @@
 from api.models.address import DeliveryAddress
 from api.models.location import City
+from api.models.meal import Meal
 from api.models.message import Message, CurrentIntentChoices
 from django.contrib.gis.geos import Point
 
+from api.models.recommendation import ChoiceOption, Recommendation, TimeOfDayChoices
+from api.utils.services.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
 
@@ -41,14 +44,31 @@ def first_location_hander(user, data: dict):
     """
     Message.bot_message(text, user, current_intent=CurrentIntentChoices.NO_INTENT)
     
-    # Do some processing and recommend 2 meals for that time of the day
-    # get the image and the meal from db (use ai for the recommendation)
+    # Recommend meals after setting location
+    service = MealRecommendationService()
     
-    text = "Order rice beans and spag"
-    image_url = "https://d1ffknerzfhpen.cloudfront.net/dcdfe210-9947-469b-827a-f5c85eab2d1b-image.jpg"
-    meal_id = "1"
-    Message.bot_message_action_reply(text, user,
-                                     current_intent=CurrentIntentChoices.RECOMMENDED_MEALS, 
-                                     payload=recommend_product_payload(meal_id, text, image_url))
+    recommended_meal_map = service.get_recommendations(
+        user=user,
+        num_recommendations_per_period=2,
+    )
+
+    for period, recommended_meals_list in recommended_meal_map.items():
+        recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
+        for index, meal in enumerate(recommended_meals):
+            text = f"Your {user.get_time_period()} recommendation, {meal.name}"
+            image_url = meal.image_url.url if meal.image_url else None
+            meal_id = str(meal.id)
+            
+            if user.get_time_period() == period:
+                Message.bot_message_action_reply(text, user,
+                    current_intent=CurrentIntentChoices.RECOMMENDED_MEALS, 
+                    payload=recommend_product_payload(meal_id, text, image_url))
+
+            Recommendation.objects.create(
+                user=user,
+                meal=meal,
+                time_of_day=TimeOfDayChoices.get_period(period),
+                choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
+                sent_to_user=True if user.get_time_period() == period else False,
+            )
     return True
-    

@@ -29,29 +29,29 @@ class CuisineChoices(models.TextChoices):
     VEGAN_VEGETARIAN = 'vegan_vegetarian', 'Vegan Vegetarian'
     
     NIGERIAN = 'nigerian', 'Nigerian'
-    # GHANAIAN = 'ghanaian', 'Ghanaian'
-    # ETHIOPIAN = 'ethiopian', 'Ethiopian'
-    # MOROCCAN = 'moroccan', 'Moroccan'
+    GHANAIAN = 'ghanaian', 'Ghanaian'
+    ETHIOPIAN = 'ethiopian', 'Ethiopian'
+    MOROCCAN = 'moroccan', 'Moroccan'
 
-    # ITALIAN = 'italian', 'Italian'
-    # FRENCH = 'french', 'French'
-    # SPANISH = 'spanish', 'Spanish'
-    # GREEK = 'greek', 'Greek'
-    # BRITISH = 'british', 'British'
+    ITALIAN = 'italian', 'Italian'
+    FRENCH = 'french', 'French'
+    SPANISH = 'spanish', 'Spanish'
+    GREEK = 'greek', 'Greek'
+    BRITISH = 'british', 'British'
 
     CHINESE = 'chinese', 'Chinese'
-    # JAPANESE = 'japanese', 'Japanese'
-    # KOREAN = 'korean', 'Korean'
-    # THAI = 'thai', 'Thai'
-    # INDIAN = 'indian', 'Indian'
-    # VIETNAMESE = 'vietnamese', 'Vietnamese'
-    # FILIPINO = 'filipino', 'Filipino'
+    JAPANESE = 'japanese', 'Japanese'
+    KOREAN = 'korean', 'Korean'
+    THAI = 'thai', 'Thai'
+    INDIAN = 'indian', 'Indian'
+    VIETNAMESE = 'vietnamese', 'Vietnamese'
+    FILIPINO = 'filipino', 'Filipino'
 
-    # AMERICAN = 'american', 'American'
-    # MEXICAN = 'mexican', 'Mexican'
-    # BRAZILIAN = 'brazilian', 'Brazilian'
-    # ARGENTINIAN = 'argentinian', 'Argentinian'
-    # CARIBBEAN = 'caribbean', 'Caribbean'
+    AMERICAN = 'american', 'American'
+    MEXICAN = 'mexican', 'Mexican'
+    BRAZILIAN = 'brazilian', 'Brazilian'
+    ARGENTINIAN = 'argentinian', 'Argentinian'
+    CARIBBEAN = 'caribbean', 'Caribbean'
 
 
 class HealthCondition(BaseModel):
@@ -61,6 +61,9 @@ class HealthCondition(BaseModel):
     )
     description = models.TextField(null=True, blank=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Allergy(BaseModel):
     name = models.CharField(
@@ -69,6 +72,9 @@ class Allergy(BaseModel):
     )
     description = models.TextField(null=True, blank=True)
 
+    def __str__(self):
+        return self.name
+    
 
 class FitnessGoal(BaseModel):
     name = models.CharField(
@@ -76,6 +82,9 @@ class FitnessGoal(BaseModel):
         choices=FitnessGoalChoices.choices
     )
     description = models.TextField(null=True, blank=True)
+    
+    def __str__(self):
+        return self.name
 
 
 class PreferredCuisine(BaseModel): # eg. Nigerian, Italian, Chinese
@@ -85,6 +94,9 @@ class PreferredCuisine(BaseModel): # eg. Nigerian, Italian, Chinese
     )
     description = models.TextField(null=True, blank=True)
 
+    def __str__(self):
+        return self.name
+    
 
 class Meal(BaseModel):
     name = models.CharField(max_length=250)
@@ -94,7 +106,7 @@ class Meal(BaseModel):
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='meals')
 
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.ImageField(blank=True, null=True)
 
     available = models.BooleanField(default=True)
 

@@ -9,6 +9,8 @@ from api.models.meal import Allergy, FitnessGoal, HealthCondition, PreferredCuis
 from api.models.location import City
 from api.models.message import Message, RoleChoices
 from api.utils.generate import generate_unique_code
+import pytz
+from django.utils import timezone
 
 
 def unique_user_code():
@@ -79,3 +81,26 @@ class User(AbstractUser, BaseModel):
             return message.current_intent
         return None
     
+    def get_user_timezone(self):
+        if self.city and self.city.timezone:
+            try:
+                return pytz.timezone(self.city.timezone)
+            except pytz.UnknownTimeZoneError:
+                return pytz.UTC
+        return pytz.UTC
+    
+    def get_local_time(self):
+        user_timezone = self.get_user_timezone()
+        utc_now = timezone.now()  # Django's timezone-aware current time (UTC)
+        return utc_now.astimezone(user_timezone)
+    
+    def get_time_period(self):
+        local_time = self.get_local_time()
+        hour = local_time.hour
+        
+        if 5 <= hour < 12:
+            return 'morning'
+        elif 12 <= hour < 17:
+            return 'afternoon'
+        else:
+            return 'evening'

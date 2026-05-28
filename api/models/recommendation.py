@@ -10,6 +10,26 @@ class TimeOfDayChoices(models.TextChoices):
     AFTERNOON = 'afternoon', 'Afternoon'
     EVENING = 'evening', 'Evening'
 
+
+    def get_time_of_day_as_str(self, value):
+        time_of_day = self.get_time_of_day()
+        now = timezone.now().hour
+        if time_of_day == TimeOfDayChoices.MORNING:
+            return "morning"
+        elif time_of_day == TimeOfDayChoices.AFTERNOON:
+            return "afternoon"
+        else:
+            return "evening"
+    
+    def get_period(self, value):
+        if value == "morning":
+            return TimeOfDayChoices.MORNING
+        elif value == "afternoon":
+            return TimeOfDayChoices.AFTERNOON
+        else:
+            return TimeOfDayChoices.EVENING
+
+
 class ChoiceOption(models.TextChoices):
     FIRST = 'first', 'First'
     SECOND = 'second', 'Second'
@@ -21,6 +41,7 @@ class Recommendation(BaseModel):
     time_of_day = models.CharField(max_length=20, choices=TimeOfDayChoices.choices)
     choice_option = models.CharField(max_length=20, choices=ChoiceOption.choices)
     day = models.DateField(default=timezone.now)
+    sent_to_user = models.BooleanField(default=False)
     accepted = models.BooleanField(default=False)
     accepted_at = models.DateTimeField(null=True, blank=True)
 
