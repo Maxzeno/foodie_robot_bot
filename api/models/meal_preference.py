@@ -6,15 +6,15 @@ from api.models.meal import Meal
 from api.models.user import User
 
 
-class SentimentChoices(models.TextChoices):
+class MealPreferenceChoices(models.TextChoices):
     LIKE = 'like', 'Like'
     NEUTRAL = 'neutral', 'Neutral'
     HATE = 'hate', 'Hate'
 
-class Review(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
-    meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="reviews")
-    sentiment = models.CharField(max_length=7, choices=SentimentChoices.choices)
+class MealPreference(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="meal_preferences")
+    meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="meal_preferences")
+    preference = models.CharField(max_length=7, choices=MealPreferenceChoices.choices)
     comment = models.TextField(blank=True)
 
     def __str__(self):

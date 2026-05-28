@@ -2,21 +2,20 @@ from django.contrib import admin
 
 from api.models.address import DeliveryAddress
 from api.models.currency import Currency
-from api.models.location import City, Country, State
+from api.models.location import Country, State, City
 from api.models.meal import Allergy, FitnessGoal, HealthCondition, Meal, PreferredCuisine
+from api.models.meal_preference import MealPreference
 from api.models.order import Order
 from api.models.recommendation import Recommendation
 from api.models.review import Review
 from api.models.user import User
 from api.models.message import Message
-# from leaflet.admin import LeafletGeoAdmin
+from leaflet.admin import LeafletGeoAdmin
 
 
 # Register your models here.
-# admin.site.register(DeliveryAddress, LeafletGeoAdmin)
-# admin.site.register(City, LeafletGeoAdmin)
-admin.site.register(DeliveryAddress)
-admin.site.register(City)
+admin.site.register(DeliveryAddress, LeafletGeoAdmin)
+admin.site.register(City, LeafletGeoAdmin)
 
 admin.site.register(User)
 admin.site.register(State)
@@ -31,3 +30,4 @@ admin.site.register(Order)
 admin.site.register(Review)
 admin.site.register(Currency)
 admin.site.register(Message)
+admin.site.register(MealPreference)

@@ -7,3 +7,4 @@ from api.models.address import *
 from api.models.review import *
 from api.models.currency import *
 from api.models.message import *
+from api.models.meal_preference import *

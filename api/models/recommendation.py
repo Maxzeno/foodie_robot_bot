@@ -25,10 +25,11 @@ class Recommendation(BaseModel):
     accepted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'day', 'time_of_day', 'choice_option'],
-                name='unique_recommendation_per_slot'
-            )
-        ]
+        ordering = ['-created_at']
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=['user', 'day', 'time_of_day', 'choice_option'],
+        #         name='unique_recommendation_per_slot'
+        #     )
+        # ]
         

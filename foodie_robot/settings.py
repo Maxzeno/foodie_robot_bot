@@ -38,19 +38,22 @@ WHATSAPP_MESSAGE_BASE_URL = config('WHATSAPP_MESSAGE_BASE_URL')
 WHATSAPP_API = config('WHATSAPP_API')
 WHATSAPP_API_VERIFY_TOKEN = config('WHATSAPP_API_VERIFY_TOKEN')
 
+GDAL_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\gdal311.dll'
+GEOS_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\geos_c.dll'
+
 # Application definition
 
 INSTALLED_APPS = [
     "jazzmin",
-    # "leaflet",
+    "leaflet",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.gis",
     "corsheaders",
-    "djgeojson",
     "api"
 ]
 
