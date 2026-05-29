@@ -155,7 +155,7 @@ class Message(BaseModel):
         url = settings.WHATSAPP_MESSAGE_BASE_URL
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.WHATSAPP_API}"
+            "Authorization": f"Bearer {settings.WHATSAPP_API_KEY}"
         }
         data = {
             "messaging_product": "whatsapp",
@@ -178,7 +178,7 @@ class Message(BaseModel):
         url = settings.WHATSAPP_MESSAGE_BASE_URL
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.WHATSAPP_API}"
+            "Authorization": f"Bearer {settings.WHATSAPP_API_KEY}"
         }
         
         data = {

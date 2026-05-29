@@ -1,5 +1,3 @@
-from .orchestrator import AIOrchestrator
-from .tools import ToolRegistry
-from .context_manager import ContextManager
+from api.services.ai.orchestrator import FoodBotAIHandler
 
-__all__ = ['AIOrchestrator', 'ToolRegistry', 'ContextManager']
+__all__ = ['FoodBotAIHandler']
