@@ -13,13 +13,13 @@ from api.models.user import User
 from api.models.message import Message
 from leaflet.admin import LeafletGeoAdmin
 
-from django.contrib.postgres.fields import ArrayField
 from django import forms
 
 # Register your models here.
 admin.site.register(DeliveryAddress, LeafletGeoAdmin)
 admin.site.register(City, LeafletGeoAdmin)
 admin.site.register(Restaurant, LeafletGeoAdmin)
+admin.site.register(Order, LeafletGeoAdmin)
 
 admin.site.register(User)
 admin.site.register(State)
@@ -29,7 +29,6 @@ admin.site.register(Allergy)
 admin.site.register(FitnessGoal)
 admin.site.register(PreferredCuisine)
 admin.site.register(Recommendation)
-admin.site.register(Order)
 admin.site.register(Review)
 admin.site.register(Currency)
 admin.site.register(Message)

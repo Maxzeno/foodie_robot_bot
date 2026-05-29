@@ -23,3 +23,5 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - Factor in timezone very important
 
 - Always check on each request that the user has filled all the required fields eg city (gotten from delivery address), preferences, health etc
+
+- Generate all the recommendations for a week and only refetch if they update something crusial

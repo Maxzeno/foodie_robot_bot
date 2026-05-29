@@ -4,7 +4,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 
 from api.models.base import BaseModel
-from api.models.currency import Currency
 from api.models.meal import Allergy, FitnessGoal, HealthCondition, PreferredCuisine
 from api.models.location import City
 from api.models.message import CurrentIntentChoices, Message, RoleChoices
@@ -29,7 +28,7 @@ class User(AbstractUser, BaseModel):
     
     code = models.CharField(max_length=100, unique=True, blank=True)
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
-    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
+    # currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     gender = models.CharField(max_length=10, choices=GenderChoices.choices, null=True, blank=True)

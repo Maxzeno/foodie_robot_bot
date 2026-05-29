@@ -151,33 +151,20 @@ class MealRecommendationService:
             'fitness_goals', 
             'cuisine',
             'meal_preferences',
-        ).select_related('currency')
+        )
         
         return list(queryset[:100])  # Limit to avoid token limits
     
     def _build_user_context(self, user) -> Dict:
-        # user_health_conditions = list(user.health_conditions.values_list('name', flat=True))
-        # user_allergies = list(user.allergies.values_list('name', flat=True))
-        
-        # Define the last 3 days
         today = user.get_local_time().date()
         yesterday = today - timedelta(days=1)
 
-        # Get meal names and days for the last 3 days
-        recent_meals = user.recommendations.filter(
+        # Get only unique recent meal names (deduplicate)
+        recent_meals = list(set(user.recommendations.filter(
             day__in=[today, yesterday]
-        ).values('meal__name', 'day')
+        ).values_list('meal__name', flat=True)))
         
-        recent_meals_list = [
-            {
-                'meal': meal['meal__name'],
-                'recommended_on': meal['day'].strftime('%Y-%m-%d'),
-            } for meal in recent_meals
-        ]
-        
-        # preferred cuisines
         user_preferred_cuisines = list(user.preferred_cuisine.values_list('name', flat=True))
-        # Get user's meal preferences
         liked_meals = list(
             user.meal_preferences.filter(preference='like').values_list('meal__name', flat=True)
         )
@@ -185,42 +172,31 @@ class MealRecommendationService:
             user.meal_preferences.filter(preference='hate').values_list('meal__name', flat=True)
         )
         
-        return {
-            "fitness_goal": user.fitness_goals.name if user.fitness_goals else None,
-            # "health_conditions": user_health_conditions,
-            # "allergies": user_allergies,
-            "preferred_cuisines": user_preferred_cuisines,
-            "liked_meals": liked_meals,
-            "hated_meals": hated_meals,
-            "recently_recommended_meals_by_day": recent_meals_list,
-            "city": user.city.name if user.city else None,
-            # "gender": user.gender,
-            "average_meal_budget": float(user.average_meal_budget) if user.average_meal_budget else None,
-            "currency": user.currency.code if user.currency else None,
-        }
+        # Build compact context - only include non-empty values
+        context = {}
+        
+        if user.fitness_goals:
+            context["goal"] = user.fitness_goals.name
+        if user_preferred_cuisines:
+            context["cuisines"] = user_preferred_cuisines
+        if liked_meals:
+            context["liked"] = liked_meals
+        if hated_meals:
+            context["hated"] = hated_meals
+        if recent_meals:
+            context["recent"] = recent_meals
+        if user.city:
+            context["city"] = user.city.name
+        if user.average_meal_budget:
+            context["budget"] = float(user.average_meal_budget)
+        if user.city:
+            context["curr"] = user.city.currency.code
+
+        return context
     
     def _build_meals_context(self, meals) -> List[Dict]:
-        meals_data = []
-        
-        for meal in meals:
-            meal_data = {
-                "id": meal.id,
-                "name": meal.name,
-                # "description": meal.description,
-                "price": float(meal.price),
-                "currency": meal.currency.code if meal.currency else None,
-                
-                # "calories": float(meal.calories) if meal.calories else None,
-                # "protein": float(meal.protein) if meal.protein else None,
-                # "carbs": float(meal.carbs) if meal.carbs else None,
-                # "fats": float(meal.fats) if meal.fats else None,
-                # "fiber": float(meal.fiber) if meal.fiber else None,
-                # "cuisines": list(meal.cuisine.values_list('name', flat=True)),
-                # "fitness_goals": list(meal.fitness_goals.values_list('name', flat=True)),
-            }
-            meals_data.append(meal_data)
-        
-        return meals_data
+        # Ultra-compact meal format: [id, name, price]
+        return [[m.id, m.name, float(m.price)] for m in meals]
     
     def _call_llm(
         self, 
@@ -254,7 +230,7 @@ class MealRecommendationService:
             print(f"Error calling LLM: {e}")
             # Fallback: return random meals distributed across time periods
             total_needed = num_recommendations_per_period * 3
-            available_ids = [m['id'] for m in meals_context[:total_needed]]
+            available_ids = [m[0] for m in meals_context[:total_needed]]
             
             return {
                 "morning": available_ids[:num_recommendations_per_period],
@@ -269,28 +245,20 @@ class MealRecommendationService:
         num_recommendations_per_period: int,
         user
     ) -> str:
-        prompt = f"""You are a meal recommendation expert.
+        # Ultra-compact prompt with minified JSON
+        prompt = f"""Meal recommendation expert.
 
-RULES:
-- Prioritize user preferences (liked_meals, hated_meals, preferred_cuisines, fitness_goal, average_meal_budget, recently_recommended_meals_by_day, city) when available
-- Introduce variety: don't always pick the "best" options - mix popular and less common meals
-- Ensure diversity across the day - different meal types and cuisines
-- No duplicate meals across time periods
-- Consider budget if provided
-- It's recommended not to repeat meals from the last 3 days but can be done occasionally
-- Consider meal prices and user's budget if provided and currency conversion if needed
+Rules: Prioritize user prefs (liked,hated,cuisines,goal,budget,recent). Mix popular+uncommon. Diverse meals/cuisines per period. No dups. Avoid recent meals when possible. Respect budget.
 
-MEALS:
-{json.dumps(meals_context, indent=2)}
+Meals (id,name,price):
+{json.dumps(meals_context,separators=(',',':'))}
 
-USER:
-{json.dumps(user_context, indent=2)}
+User:
+{json.dumps(user_context,separators=(',',':'))}
 
-NOTES:
-- Recommend {num_recommendations_per_period} meals for each time period with variety.
-- Today's date is {user.get_local_time().date().strftime('%Y-%m-%d')}
-- Return only valid JSON: {{"morning": [id, id], "afternoon": [id, id], "evening": [id, id]}}
-"""
+Recommend {num_recommendations_per_period} per period. Date: {user.get_local_time().date().strftime('%Y-%m-%d')}
+Return: {{"morning":[id,id],"afternoon":[id,id],"evening":[id,id]}}"""
+        
         return prompt
     
     def _parse_llm_response(
@@ -321,7 +289,7 @@ NOTES:
                 raise ValueError("Missing required time period keys")
             
             # Validate and filter meal IDs
-            valid_meal_ids = [m['id'] for m in meals_context]
+            valid_meal_ids = [m[0] for m in meals_context]
             
             result = {}
             for period in required_keys:
@@ -353,4 +321,3 @@ NOTES:
                 "afternoon": [],
                 "evening": []
             }
-            

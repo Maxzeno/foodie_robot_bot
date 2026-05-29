@@ -26,7 +26,7 @@ def pick_delivery_option(meal_id, body):
                         "type": "reply",
                         "reply": {
                             "id": f"new-address--{meal_id}",
-                            "title": "Use a different address"
+                            "title": "Use a new address"
                         }
                     },
                      {

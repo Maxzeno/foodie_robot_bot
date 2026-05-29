@@ -32,7 +32,8 @@ def after_recommendation(user, data: dict):
         Message.bot_message_location(text, user, current_intent=CurrentIntentChoices.NO_INTENT, latitude=latest_delivery_address.point.y, longitude=latest_delivery_address.point.x, address=latest_delivery_address.street_address)
 
         text = f"Great choice {recommendation_obj.meal.name}! Please confirm if we should use your current delivery address or you want to set a new one?"
-        payload = pick_delivery_option(text, text)
+        payload = pick_delivery_option(recommendation_obj.meal.id, text)
+        print("Payload:", payload)
         Message.bot_message_action_reply(text, user, current_intent=CurrentIntentChoices.PICK_DELIVERY_ADDRESS_OPTION, payload=payload)
 
     elif action == 'i-love-this-meal':
