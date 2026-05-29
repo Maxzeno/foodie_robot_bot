@@ -3,10 +3,10 @@ import json
 from typing import List, Dict, Optional
 from openai import OpenAI
 from django.conf import settings
-from django.db import models
 from datetime import timedelta
 from api.models.meal import Meal
 import random
+
 
 class MealRecommendationService:
     def __init__(self):
@@ -33,7 +33,7 @@ class MealRecommendationService:
         meals_context = self._build_meals_context(available_meals)
         
         # Get recommendations from LLM
-        recommendations = self._call_llm(user_context, meals_context, num_recommendations_per_period)
+        recommendations = self._call_llm(user_context, meals_context, num_recommendations_per_period, user)
         
         return recommendations
     
@@ -92,9 +92,9 @@ class MealRecommendationService:
             city=user.city
         )
         
-        # Exclude meals outside budget
-        if user.average_meal_budget:
-            queryset = queryset.filter(price__lte=user.average_meal_budget)
+        # # Exclude meals outside budget
+        # if user.average_meal_budget:
+        #     queryset = queryset.filter(price__lte=user.average_meal_budget)
         
         # Exclude meals with restricted health conditions
         user_health_conditions = user.health_conditions.all()
@@ -115,76 +115,88 @@ class MealRecommendationService:
         if hated_meals:
             queryset = queryset.exclude(id__in=hated_meals)
 
-        # Exclude recently recommended meals
-        today = user.get_local_time().date()
-        yesterday = today - timedelta(days=1)
-        day_before_yesterday = today - timedelta(days=2)
+        # # Exclude recently recommended meals
+        # today = user.get_local_time().date()
+        # yesterday = today - timedelta(days=1)
+        # day_before_yesterday = today - timedelta(days=2)
 
-        recent_meal_ids = user.recommendations.filter(
-            day__in=[yesterday, day_before_yesterday]
-        ).values_list('meal__id', flat=True)
+        # recent_meal_ids = user.recommendations.filter(
+        #     day__in=[yesterday, day_before_yesterday]
+        # ).values_list('meal__id', flat=True)
 
-        if recent_meal_ids:
-            queryset = queryset.exclude(id__in=recent_meal_ids)
-
-        # yesterday = user.get_local_time().date() - timedelta(days=1)
-        # recommended_yesterday = list(user.recommendations.filter(day=yesterday).values_list('meal__id', flat=True))
-        # if recommended_yesterday:
-        #     queryset = queryset.exclude(id__in=recommended_yesterday)
-
+        # if recent_meal_ids:
+        #     queryset = queryset.exclude(id__in=recent_meal_ids)
 
         # Exclude specific meals if provided
         if exclude_meal_ids:
             queryset = queryset.exclude(id__in=exclude_meal_ids)
 
-         # Filter by fitness goals: meals that match user's goal OR have no fitness goals
-        if user.fitness_goals:
-            queryset = queryset.filter(
-                models.Q(fitness_goals=user.fitness_goals) | 
-                models.Q(fitness_goals__isnull=True)
-            ).distinct()
+        #  # Filter by fitness goals: meals that match user's goal OR have no fitness goals
+        # if user.fitness_goals:
+        #     queryset = queryset.filter(
+        #         models.Q(fitness_goals=user.fitness_goals) | 
+        #         models.Q(fitness_goals__isnull=True)
+        #     ).distinct()
         
-        # Filter by preferred cuisine: meals that match user's preferences OR have no cuisine set
-        user_preferred_cuisines = user.preferred_cuisine.all()
-        if user_preferred_cuisines.exists():
-            queryset = queryset.filter(
-                models.Q(cuisine__in=user_preferred_cuisines) | 
-                models.Q(cuisine__isnull=True)
-            ).distinct()
+        # # Filter by preferred cuisine: meals that match user's preferences OR have no cuisine set
+        # user_preferred_cuisines = user.preferred_cuisine.all()
+        # if user_preferred_cuisines.exists():
+        #     queryset = queryset.filter(
+        #         models.Q(cuisine__in=user_preferred_cuisines) | 
+        #         models.Q(cuisine__isnull=True)
+        #     ).distinct()
         
         # Prefetch related data for efficiency
         queryset = queryset.prefetch_related(
             'fitness_goals', 
             'cuisine',
             'meal_preferences',
-            'reviews'
         ).select_related('currency')
         
         return list(queryset[:100])  # Limit to avoid token limits
     
     def _build_user_context(self, user) -> Dict:
-        user_health_conditions = list(user.health_conditions.values_list('name', flat=True))
-        user_allergies = list(user.allergies.values_list('name', flat=True))
-        user_preferred_cuisines = list(user.preferred_cuisine.values_list('name', flat=True))
+        # user_health_conditions = list(user.health_conditions.values_list('name', flat=True))
+        # user_allergies = list(user.allergies.values_list('name', flat=True))
         
+        # Define the last 3 days
+        today = user.get_local_time().date()
+        yesterday = today - timedelta(days=1)
+
+        # Get meal names and days for the last 3 days
+        recent_meals = user.recommendations.filter(
+            day__in=[today, yesterday]
+        ).values('meal__name', 'day')
+        
+        recent_meals_list = [
+            {
+                'meal': meal['meal__name'],
+                'recommended_on': meal['day'].strftime('%Y-%m-%d'),
+            } for meal in recent_meals
+        ]
+        
+        # preferred cuisines
+        user_preferred_cuisines = list(user.preferred_cuisine.values_list('name', flat=True))
         # Get user's meal preferences
         liked_meals = list(
             user.meal_preferences.filter(preference='like').values_list('meal__name', flat=True)
         )
-        # hated_meals = list(
-        #     user.meal_preferences.filter(preference='hate').values_list('meal__name', flat=True)
-        # )
+        hated_meals = list(
+            user.meal_preferences.filter(preference='hate').values_list('meal__name', flat=True)
+        )
         
         return {
             "fitness_goal": user.fitness_goals.name if user.fitness_goals else None,
-            "health_conditions": user_health_conditions,
-            "allergies": user_allergies,
+            # "health_conditions": user_health_conditions,
+            # "allergies": user_allergies,
             "preferred_cuisines": user_preferred_cuisines,
             "liked_meals": liked_meals,
-            # "hated_meals": hated_meals,
+            "hated_meals": hated_meals,
+            "recently_recommended_meals_by_day": recent_meals_list,
+            "city": user.city.name if user.city else None,
             # "gender": user.gender,
-            # "budget": float(user.average_meal_budget) if user.average_meal_budget else None,
-            # "currency": user.currency.code if user.currency else None,
+            "average_meal_budget": float(user.average_meal_budget) if user.average_meal_budget else None,
+            "currency": user.currency.code if user.currency else None,
         }
     
     def _build_meals_context(self, meals) -> List[Dict]:
@@ -195,15 +207,16 @@ class MealRecommendationService:
                 "id": meal.id,
                 "name": meal.name,
                 # "description": meal.description,
-                # "price": float(meal.price),
-
-                "calories": float(meal.calories) if meal.calories else None,
-                "protein": float(meal.protein) if meal.protein else None,
-                "carbs": float(meal.carbs) if meal.carbs else None,
-                "fats": float(meal.fats) if meal.fats else None,
-                "fiber": float(meal.fiber) if meal.fiber else None,
-                "cuisines": list(meal.cuisine.values_list('name', flat=True)),
-                "fitness_goals": list(meal.fitness_goals.values_list('name', flat=True)),
+                "price": float(meal.price),
+                "currency": meal.currency.code if meal.currency else None,
+                
+                # "calories": float(meal.calories) if meal.calories else None,
+                # "protein": float(meal.protein) if meal.protein else None,
+                # "carbs": float(meal.carbs) if meal.carbs else None,
+                # "fats": float(meal.fats) if meal.fats else None,
+                # "fiber": float(meal.fiber) if meal.fiber else None,
+                # "cuisines": list(meal.cuisine.values_list('name', flat=True)),
+                # "fitness_goals": list(meal.fitness_goals.values_list('name', flat=True)),
             }
             meals_data.append(meal_data)
         
@@ -213,12 +226,13 @@ class MealRecommendationService:
         self, 
         user_context: Dict, 
         meals_context: List[Dict], 
-        num_recommendations_per_period: int
+        num_recommendations_per_period: int,
+        user
     ) -> Dict:
         """
         Call the LLM API and parse the response to extract meal IDs for different times of day
         """
-        prompt = self._build_prompt(user_context, meals_context, num_recommendations_per_period)
+        prompt = self._build_prompt(user_context, meals_context, num_recommendations_per_period, user)
         print("LLM Prompt:", prompt)  # Debugging
         
         try:
@@ -252,39 +266,30 @@ class MealRecommendationService:
         self, 
         user_context: Dict, 
         meals_context: List[Dict], 
-        num_recommendations_per_period: int
+        num_recommendations_per_period: int,
+        user
     ) -> str:
-        """
-        Build the prompt for the LLM with structured output requirements
-        """
-        prompt = f"""You are a nutritionist and meal recommendation expert. Based on the user's profile and available meals, recommend the best meals for morning, afternoon, and evening.
+        prompt = f"""You are a meal recommendation expert.
 
-USER PROFILE:
-{json.dumps(user_context, indent=2)}
+RULES:
+- Prioritize user preferences (liked_meals, hated_meals, preferred_cuisines, fitness_goal, average_meal_budget, recently_recommended_meals_by_day, city) when available
+- Introduce variety: don't always pick the "best" options - mix popular and less common meals
+- Ensure diversity across the day - different meal types and cuisines
+- No duplicate meals across time periods
+- Consider budget if provided
+- It's recommended not to repeat meals from the last 3 days but can be done occasionally
+- Consider meal prices and user's budget if provided and currency conversion if needed
 
-AVAILABLE MEALS:
+MEALS:
 {json.dumps(meals_context, indent=2)}
 
-INSTRUCTIONS:
-1. Consider the user's fitness goals, health conditions, allergies, and cuisine preferences
-2. Prioritize meals the user has liked in the past
-3. Consider nutritional balance based on fitness goals
-4. Provide variety in cuisines and meal types
-5. Morning meals should be lighter with good energy (higher carbs, moderate protein)
-6. Afternoon meals should be balanced and substantial (balanced macros)
-7. Evening meals should support recovery and be easier to digest (higher protein, moderate carbs)
-8. Ensure no meal is recommended more than once across all time periods
+USER:
+{json.dumps(user_context, indent=2)}
 
-RESPONSE FORMAT:
-You must respond with ONLY valid JSON in this exact format:
-{{
-  "morning": [1, 2],
-  "afternoon": [3, 4],
-  "evening": [5, 6]
-}}
-
-Each time period must contain exactly {num_recommendations_per_period} valid meal IDs from the available meals list above.
-Do not include any other text, explanations, or markdown formatting - just the raw JSON object.
+NOTES:
+- Recommend {num_recommendations_per_period} meals for each time period with variety.
+- Today's date is {user.get_local_time().date().strftime('%Y-%m-%d')}
+- Return only valid JSON: {{"morning": [id, id], "afternoon": [id, id], "evening": [id, id]}}
 """
         return prompt
     
@@ -294,9 +299,6 @@ Do not include any other text, explanations, or markdown formatting - just the r
         meals_context: List[Dict],
         num_recommendations_per_period: int
     ) -> Dict:
-        """
-        Parse the LLM response to extract meal IDs for different times of day
-        """
         try:
             # Try to parse as JSON
             response_text = response_text.strip()

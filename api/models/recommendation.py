@@ -1,33 +1,8 @@
 from django.db import models
 from api.models.base import BaseModel
-from api.models.meal import Meal
+from api.models.meal import Meal, TimeOfDayChoices
 from api.models.user import User
 from django.utils import timezone
-
-
-class TimeOfDayChoices(models.TextChoices):
-    MORNING = 'morning', 'Morning'
-    AFTERNOON = 'afternoon', 'Afternoon'
-    EVENING = 'evening', 'Evening'
-
-
-    @staticmethod
-    def get_time_of_day_as_str(time_of_day):
-        if time_of_day == TimeOfDayChoices.MORNING:
-            return "morning"
-        elif time_of_day == TimeOfDayChoices.AFTERNOON:
-            return "afternoon"
-        else:
-            return "evening"
-    
-    @staticmethod
-    def get_period(value):
-        if value == "morning":
-            return TimeOfDayChoices.MORNING
-        elif value == "afternoon":
-            return TimeOfDayChoices.AFTERNOON
-        else:
-            return TimeOfDayChoices.EVENING
 
 
 class ChoiceOption(models.TextChoices):

@@ -1,10 +1,10 @@
 from api.models.address import DeliveryAddress
 from api.models.location import City
-from api.models.meal import Meal
+from api.models.meal import Meal, TimeOfDayChoices
 from api.models.message import Message, CurrentIntentChoices
 from django.contrib.gis.geos import Point
 
-from api.models.recommendation import ChoiceOption, Recommendation, TimeOfDayChoices
+from api.models.recommendation import ChoiceOption, Recommendation
 from api.utils.services.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 

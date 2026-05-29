@@ -3,24 +3,27 @@ from django.contrib import admin
 from api.models.address import DeliveryAddress
 from api.models.currency import Currency
 from api.models.location import Country, State, City
-from api.models.meal import Allergy, FitnessGoal, HealthCondition, Meal, PreferredCuisine
+from api.models.meal import Allergy, FitnessGoal, HealthCondition, Meal, PreferredCuisine, TimeOfDayChoices
 from api.models.meal_preference import MealPreference
 from api.models.order import Order
 from api.models.recommendation import Recommendation
+from api.models.restaurant import Restaurant
 from api.models.review import Review
 from api.models.user import User
 from api.models.message import Message
 from leaflet.admin import LeafletGeoAdmin
 
+from django.contrib.postgres.fields import ArrayField
+from django import forms
 
 # Register your models here.
 admin.site.register(DeliveryAddress, LeafletGeoAdmin)
 admin.site.register(City, LeafletGeoAdmin)
+admin.site.register(Restaurant, LeafletGeoAdmin)
 
 admin.site.register(User)
 admin.site.register(State)
 admin.site.register(Country)
-admin.site.register(Meal)
 admin.site.register(HealthCondition)
 admin.site.register(Allergy)
 admin.site.register(FitnessGoal)
@@ -31,3 +34,24 @@ admin.site.register(Review)
 admin.site.register(Currency)
 admin.site.register(Message)
 admin.site.register(MealPreference)
+
+class MealAdminForm(forms.ModelForm):
+    times_of_day = forms.MultipleChoiceField(
+        choices=TimeOfDayChoices.choices,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+    class Meta:
+        model = Meal
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Load existing values into the form
+        if self.instance.pk and self.instance.times_of_day:
+            self.initial['times_of_day'] = self.instance.times_of_day
+
+@admin.register(Meal)
+class MealAdmin(admin.ModelAdmin):
+    form = MealAdminForm

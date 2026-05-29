@@ -1,7 +1,35 @@
 from django.db import models
 from api.models.base import BaseModel
-from api.models.currency import Currency
 from api.models.location import City
+from django.contrib.postgres.fields import ArrayField
+
+from api.models.restaurant import Restaurant
+
+
+class TimeOfDayChoices(models.TextChoices):
+    MORNING = 'morning', 'Morning'
+    AFTERNOON = 'afternoon', 'Afternoon'
+    EVENING = 'evening', 'Evening'
+
+
+    @staticmethod
+    def get_time_of_day_as_str(time_of_day):
+        if time_of_day == TimeOfDayChoices.MORNING:
+            return "morning"
+        elif time_of_day == TimeOfDayChoices.AFTERNOON:
+            return "afternoon"
+        else:
+            return "evening"
+    
+    @staticmethod
+    def get_period(value):
+        if value == "morning":
+            return TimeOfDayChoices.MORNING
+        elif value == "afternoon":
+            return TimeOfDayChoices.AFTERNOON
+        else:
+            return TimeOfDayChoices.EVENING
+
 
 class HealthConditionChoices(models.TextChoices):
     DIABETES = 'diabetes', 'Diabetes'
@@ -96,19 +124,30 @@ class PreferredCuisine(BaseModel): # eg. Nigerian, Italian, Chinese
 
     def __str__(self):
         return self.name
-    
+
 
 class Meal(BaseModel):
     name = models.CharField(max_length=250)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='meals')
+
     description = models.TextField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='meals')
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='meals')
 
     image_url = models.ImageField(blank=True, null=True)
 
     available = models.BooleanField(default=True)
+
+    times_of_day = ArrayField(
+        models.CharField(
+            max_length=50,
+            choices=TimeOfDayChoices.choices,
+        ),
+        default=list,
+        blank=True,
+        help_text="Times of day this meal is go for (e.g., morning, afternoon, evening)"
+    )
 
     # Nutritional info
     calories = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)

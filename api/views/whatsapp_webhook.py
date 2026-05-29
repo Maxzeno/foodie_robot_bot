@@ -110,22 +110,22 @@ def whatsapp_verify(request):
 @csrf_exempt
 @router.get("/test-temp")
 def text_temp_verify(request):
-    user = User.objects.all()[2]
+    user = User.objects.all()[4]
     print("User:", user)
     service = MealRecommendationService()
 
     # print(service._get_eligible_meals(user))
 
     # recommend by algo
-    print("Recommended Meal IDs - algo:", service.get_recommendations_by_algo(
-        user=user,
-        num_recommendations_per_period=2,
-    ))
-
-    # recommend by LLM
-    # recommended_meal_ids = service.get_recommendations_by_llm(
+    # print("Recommended Meal IDs - algo:", service.get_recommendations_by_algo(
     #     user=user,
     #     num_recommendations_per_period=2,
-    # )
-    # print("Recommended Meal IDs:", recommended_meal_ids)
+    # ))
+
+    # recommend by LLM
+    recommended_meal_ids = service.get_recommendations_by_llm(
+        user=user,
+        num_recommendations_per_period=2,
+    )
+    print("Recommended Meal IDs:", recommended_meal_ids)
     return HttpResponse("Done", status=200)
