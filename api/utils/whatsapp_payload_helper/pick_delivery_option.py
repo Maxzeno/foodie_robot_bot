@@ -32,8 +32,8 @@ def pick_delivery_option(meal_id, body):
                      {
                         "type": "reply",
                         "reply": {
-                            "id": "see-all-manu-options",
-                            "title": "See all manu options"
+                            "id": f"see-all-manu-options--{meal_id}",
+                            "title": "Quick actions menu"
                         }
                     }
                 ]

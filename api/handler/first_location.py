@@ -13,7 +13,7 @@ def first_location_hander(user, data: dict):
     if data is None or data.get('latitude') is None or data.get('longitude') is None:
         text = """Please we could not get your location, can you try sending it again?
         """
-        Message.bot_message_request_location(text, user, current_intent=CurrentIntentChoices.FIRST_LOCATION_RETRY)
+        Message.bot_message_request_location(text, user, current_intent=CurrentIntentChoices.FIRST_LOCATION)
         return False
     
     address = data.get('address')
@@ -25,7 +25,7 @@ def first_location_hander(user, data: dict):
     if city is None:
         text = """Please we are not in your location yet, can you try another location?
         """
-        Message.bot_message_request_location(text, user, current_intent=CurrentIntentChoices.FIRST_LOCATION_RETRY)
+        Message.bot_message_request_location(text, user, current_intent=CurrentIntentChoices.FIRST_LOCATION)
         return False
     
     delivery_address = DeliveryAddress.objects.create(

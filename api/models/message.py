@@ -20,7 +20,7 @@ class CurrentIntentChoices(models.TextChoices):
     SET_PREFERENCE = 'set_preference', 'Set Preference'
     UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
     FIRST_LOCATION = 'first_location', 'First Location'
-    FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
+    # FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
     RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
 
     PICK_DELIVERY_ADDRESS_OPTION = 'pick_delivery_address_option', 'Pick Delivery Address Option'
@@ -50,7 +50,9 @@ class Message(BaseModel):
         blank=True,
         related_name="replies"
     )
+    metadata = models.JSONField(null=True, blank=True)
     
+
     class Meta:
         ordering = ['-created_at']
         constraints = [
@@ -85,7 +87,7 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_request_location(content: str, user, current_intent: str):
+    def bot_message_request_location(content: str, user, current_intent: str, metadata: dict=None):
         payload = {
             "type": "location_request_message",
             "body": {
@@ -97,7 +99,7 @@ class Message(BaseModel):
         }
         msg_type = 'interactive'
         message_id = Message.send_message(user, msg_type, payload)
-        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
         return message
     
     @staticmethod

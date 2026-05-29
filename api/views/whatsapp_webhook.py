@@ -1,4 +1,6 @@
+from api.handler.add_new_address import add_new_address_hander
 from api.handler.after_recomendation import after_recommendation
+from api.handler.delivery_address_option import delivery_address_option
 from api.handler.first_location import first_location_hander
 from api.handler.user_preference import user_preference_hander
 from api.models.message import Message, CurrentIntentChoices
@@ -74,20 +76,25 @@ def whatsapp_webhook(request):
     if not user:
         status = new_user_hander(phone=phone, message_id=sender_message_id, content=text, resp=json_resp)
     
+    elif user.get_intent(reply_message_id) == CurrentIntentChoices.MENU_OPTIONS:
+        # TODO: Handle navigation options
+        # {'type': 'list_reply', 'list_reply': {'id': 'view-orders', 'title': 'View Orders'}}
+        pass
+
     elif user.get_intent(reply_message_id) == CurrentIntentChoices.SET_PREFERENCE:
         status = user_preference_hander(user, data=json_resp)
     
-    elif (user.get_intent(reply_message_id) == CurrentIntentChoices.FIRST_LOCATION 
-          or user.get_intent(reply_message_id) == CurrentIntentChoices.FIRST_LOCATION_RETRY):
+    elif user.get_intent(reply_message_id) == CurrentIntentChoices.FIRST_LOCATION:
         status = first_location_hander(user, data=json_resp)
         
     elif user.get_intent(reply_message_id) == CurrentIntentChoices.RECOMMENDED_MEALS:
         status = after_recommendation(user, data=json_resp)
-
-    elif user.get_intent(reply_message_id) == CurrentIntentChoices.MENU_OPTIONS:
-        # TODO: Handle menu options
-        # {'type': 'list_reply', 'list_reply': {'id': 'view-orders', 'title': 'View Orders'}}
-        pass
+    
+    elif user.get_intent(reply_message_id) == CurrentIntentChoices.PICK_DELIVERY_ADDRESS_OPTION:
+        status = delivery_address_option(user, data=json_resp)
+    
+    elif user.get_intent(reply_message_id) == CurrentIntentChoices.ADD_NEW_ORDER_DELIVERY_ADDRESS:
+        status = add_new_address_hander(user, data=json_resp, reply_message_id=reply_message_id)
 
     return {"detail": "Done"}
 

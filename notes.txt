@@ -25,3 +25,5 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - Always check on each request that the user has filled all the required fields eg city (gotten from delivery address), preferences, health etc
 
 - Generate all the recommendations for a week and only refetch if they update something crusial
+
+- After this point and click method I will also support them just typing stuff So if they type just text and they are not a just created user - if they reply to a message we know it's that message they are requesting an action else if they don't we can use the last bot message with an intent as the target message. Then we use AI to analyze the options and see what option the user is referring to and then perform that action

@@ -19,10 +19,8 @@ def after_recommendation(user, data: dict):
         recommendation_obj.accepted = True
         recommendation_obj.save()
     except Exception as e:   
-        text = "Sorry, we could not process your action."
-        # maybe also send a message to try again
-        Message.bot_message(text, user, current_intent=CurrentIntentChoices.NO_INTENT)
-        show_menu_options(user)
+        text = "Sorry, we could not process your request. Would you like to see the Quick Actions."
+        show_menu_options(user, text)
         return False
 
     if action == 'order-now':
