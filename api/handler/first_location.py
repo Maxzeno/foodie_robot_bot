@@ -5,7 +5,7 @@ from api.models.message import Message, CurrentIntentChoices
 from django.contrib.gis.geos import Point
 
 from api.models.recommendation import ChoiceOption, Recommendation
-from api.utils.services.meal_recommendation import MealRecommendationService
+from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
 

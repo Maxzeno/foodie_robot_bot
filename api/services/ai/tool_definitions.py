@@ -91,7 +91,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_delivery_location",
-                "description": "Save user's delivery location and detect the city. This will update the user's city based on the coordinates. If location is not in a supported city, user will be notified.",
+                "description": "Save user's delivery location and detect the city based on the coordinates",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -120,7 +120,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "generate_meal_recommendations",
-                "description": "Generate personalized meal recommendations for the current time period (morning, afternoon, or evening)",
+                "description": "Generate personalized meal recommendations",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -154,16 +154,228 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "request_delivery_location",
-                "description": "Use this to request the user to share their delivery location via WhatsApp location sharing feature. This is needed if the user has not provided a delivery location yet or wants to add a new delivery location.",
+                "description": "Request the user to share their delivery location via WhatsApp location sharing feature",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "message_to_user": {
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "like_or_hate_meal",
+                "description": "Like or hate meal",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "meal_id": {
+                            "type": "integer",
+                            "description": "ID of the meal"
+                        },
+                        "action": {
                             "type": "string",
-                            "description": "The message to send to the user telling them to share their location. examples: We haved Saved your fitness goals now please share your delivery location. or Please share your delivery location so I can save it. etc"
+                            "enum": ["like", "hate"],
+                            "description": "Like or hate meal depends on action"
+                        }
+                    },
+                    "required": ["meal_id", "action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "place_order",
+                "description": "Place an order for a meal with specified quantity (number of plates)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "meal_id": {
+                            "type": "integer",
+                            "description": "ID of the meal to order"
+                        },
+                        "quantity": {
+                            "type": "integer",
+                            "description": "Number of plates to order (default: 1)"
+                        },
+                        "delivery_address_id": {
+                            "type": "integer",
+                            "description": "Specific delivery address ID (optional, uses default if not provided)"
+                        },
+                        "special_instructions": {
+                            "type": "string",
+                            "description": "Special requests or notes for the order (optional)"
+                        }
+                    },
+                    "required": ["meal_id", "quantity"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_order_status",
+                "description": "Get the status of a specific order or the latest order",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "order_id": {
+                            "type": "integer",
+                            "description": "ID of the order to check (optional, gets latest order if not provided)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_order_history",
+                "description": "Get user's order history with pagination",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page": {
+                            "type": "integer",
+                            "description": "Page number to retrieve (default: 1)"
                         },
                     },
-                    "required": ["message_to_user"]
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_meals",
+                "description": "Search for meals by name or description (returns max 5 results)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search term for meal name or description"
+                        },
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_meal_details",
+                "description": "Get complete details about a specific meal including nutrition, price, and availability",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "meal_id": {
+                            "type": "integer",
+                            "description": "ID of the meal"
+                        }
+                    },
+                    "required": ["meal_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_user_profile",
+                "description": "Get user's profile including allergies, preferred cuisines, average budget, health conditions, and fitness goal",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "update_average_budget",
+                "description": "Update user's average meal budget (currency depends on user's city)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "budget_amount": {
+                            "type": "number",
+                            "description": "New average budget amount per meal"
+                        }
+                    },
+                    "required": ["budget_amount"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_user_meal_preferences",
+                "description": "Get meals that user has liked or hated",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "is_liked": {
+                            "type": "boolean",
+                            "description": "is liked if true else disliked"
+                        },
+                        "page": {
+                            "type": "integer",
+                            "description": "Page number to retrieve (default: 1)"
+                        },
+                    },
+                    "required": ["is_liked"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_payment_status",
+                "description": "Get payment status for the latest order. Use when user asks 'have I paid?' or 'is my payment confirmed?'",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "contact_support",
+                "description": "Contact customer support with an issue or question",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "review_last_ordered_meal",
+                "description": "Submit a review for a meal that was ordered. Sentiment can be like, neutral, or hate",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["like", "neutral", "hate"],
+                            "description": "User's sentiment about the meal"
+                        },
+                        "review_text": {
+                            "type": "string",
+                            "description": "Optional review comment from user"
+                        },
+                    },
+                    "required": ["sentiment"]
                 }
             }
         }

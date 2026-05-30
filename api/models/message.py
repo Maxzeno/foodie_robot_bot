@@ -6,7 +6,7 @@ import requests
 from django.conf import settings
 from requests.exceptions import RequestException
 import random
-
+from typing import List
 
 class RoleChoices(models.TextChoices):
     USER = 'user', 'User'
@@ -14,21 +14,24 @@ class RoleChoices(models.TextChoices):
 
 
 class CurrentIntentChoices(models.TextChoices):
-    NO_INTENT = 'no_intent', 'No Intent'
-    MENU_OPTIONS = 'menu_options', 'Menu Options'
-    REGISTERED = 'registered', 'Registered'
-    SET_PREFERENCE = 'set_preference', 'Set Preference'
-    UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
-    FIRST_LOCATION = 'first_location', 'First Location'
-    # FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
-    RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
+    NO_INTENT = 'no_intent', 'No intent'
+    NEEDS_REPLY = 'needs_reply', 'Needs reply'
+    COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
 
-    PICK_DELIVERY_ADDRESS_OPTION = 'pick_delivery_address_option', 'Pick Delivery Address Option'
-    ADD_NEW_ORDER_DELIVERY_ADDRESS = 'add_new_order_delivery_address', 'Add New Order Delivery Address'
+    # MENU_OPTIONS = 'menu_options', 'Menu Options'
+    # REGISTERED = 'registered', 'Registered'
+    # SET_PREFERENCE = 'set_preference', 'Set Preference'
+    # UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
+    # FIRST_LOCATION = 'first_location', 'First Location'
+    # # FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
+    # RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
 
-    NUMBER_OF_PLATES = 'number_of_plates', 'Number of Plates'
-    PAY_FOR_ORDER = 'pay_for_order', 'Pay for Order'
-    ORDER_PLACED = 'order_placed', 'Order Placed'
+    # PICK_DELIVERY_ADDRESS_OPTION = 'pick_delivery_address_option', 'Pick Delivery Address Option'
+    # ADD_NEW_ORDER_DELIVERY_ADDRESS = 'add_new_order_delivery_address', 'Add New Order Delivery Address'
+
+    # NUMBER_OF_PLATES = 'number_of_plates', 'Number of Plates'
+    # PAY_FOR_ORDER = 'pay_for_order', 'Pay for Order'
+    # ORDER_PLACED = 'order_placed', 'Order Placed'
 
     # add order status, updates, review of the food, etc
 
@@ -64,9 +67,14 @@ class Message(BaseModel):
                 name="bot_messages_require_current_intent",
             )
         ]
+
+    def get_content_meta(self):
+        if self.metadata:
+            return f"{self.content} - metadata: {self.metadata}"
+        return self.content or ""
     
     @staticmethod
-    def bot_message(content: str, user, current_intent: str):
+    def bot_message(content: str, user, current_intent: str=CurrentIntentChoices.NO_INTENT):
         payload = {"body": content}
         msg_type = 'text'
         message_id = Message.send_message(user, msg_type, payload)
@@ -87,7 +95,7 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_request_location(content: str, user, current_intent: str, metadata: dict=None):
+    def bot_message_request_location(content: str, user, current_intent: str=CurrentIntentChoices.NO_INTENT, metadata: dict=None):
         payload = {
             "type": "location_request_message",
             "body": {
@@ -123,12 +131,37 @@ class Message(BaseModel):
         return message
 
     @staticmethod
-    def bot_message_action_reply(content: str, user, current_intent: str, payload):
+    def bot_message_action_reply(content: str, user, payload, current_intent: str=CurrentIntentChoices.NO_INTENT, metadata=None):
         msg_type = 'interactive'
         message_id = Message.send_message(user, msg_type, payload)
-        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
         return message
     
+    @staticmethod
+    def bot_message_action_reply_simple(content: str, user, action_replies: List[str], current_intent: str=CurrentIntentChoices.NO_INTENT, metadata=None):
+        msg_type = 'interactive'
+        payload = {
+            "type": "button",
+            "body": {
+                "text": content
+            },
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": reply.strip().lower().replace(" ", "-"),
+                            "title": reply
+                        }
+                    } for reply in action_replies
+                ]
+            }
+        }
+        message_id = Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
+        return message
+    
+
     @staticmethod
     def bot_message_flow(content: str, user, current_intent: str, payload):
         # TODO: Implement

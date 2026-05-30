@@ -10,7 +10,7 @@ import random
 
 class MealRecommendationService:
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API)
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def get_recommendations_by_llm(
         self, 

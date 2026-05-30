@@ -1,13 +1,9 @@
 from api.models.address import DeliveryAddress
 from api.models.location import City
-from api.models.meal import Meal, TimeOfDayChoices
 from api.models.message import Message, CurrentIntentChoices
 from django.contrib.gis.geos import Point
 
-from api.models.recommendation import ChoiceOption, Recommendation
-from api.utils.services.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper import number_of_plates
-from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
 
 def add_new_address_hander(user, data: dict, reply_message_id: str):

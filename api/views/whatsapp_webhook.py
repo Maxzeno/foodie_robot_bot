@@ -1,4 +1,4 @@
-from api.models.message import Message, CurrentIntentChoices
+from api.models.message import Message
 import json
 from ninja import Router
 from api.models.user import User
@@ -8,7 +8,7 @@ from django.db import transaction
 from django.conf import settings
 
 from api.services.ai.orchestrator import FoodBotAIHandler
-from api.utils.services.meal_recommendation import MealRecommendationService
+from api.services.recommendation.meal_recommendation import MealRecommendationService
 
 
 router = Router(tags=["Webhook"])
@@ -35,6 +35,7 @@ def whatsapp_webhook(request):
 
         if msg_type == 'text':
             text = message["text"]["body"]
+            
         elif msg_type == "location":
             json_resp = message[msg_type]
             address = json_resp.get('address')
@@ -42,6 +43,15 @@ def whatsapp_webhook(request):
             latitude = json_resp.get('latitude')
             longitude = json_resp.get('longitude')
             text = f"Location - name: {name}, address: {address}, latitude: {latitude}, longitude: {longitude}"
+        
+        elif msg_type == "interactive":
+            interactive = message["interactive"]
+            interactive_type = interactive.get("type")
+            if interactive_type == "button_reply":
+                text = interactive["button_reply"]["title"]
+            elif interactive_type == "list_reply":
+                text = interactive["list_reply"]["title"]
+            json_resp = interactive
  
         if message.get("context"):
             context = message["context"]
@@ -61,18 +71,18 @@ def whatsapp_webhook(request):
     if found_msg:
         return {"detail": "Done"}
     
-    user = User.objects.filter(phone=phone).first()
-    if not user:
-        user = User.objects.create(phone=phone)
+    user, created = User.objects.get_or_create(phone=phone)
 
     Message.user_message(message_id=sender_message_id, 
         resp=json_resp, content=text, 
         user=user, enable_typing_indicator=True, reply_message_id=reply_message_id)
-
-    # We need to run the user input through the LLM to determine intent
-    response_message = FoodBotAIHandler(user).process_message()
-    if response_message:
-        Message.bot_message(response_message, user=user, current_intent=CurrentIntentChoices.NO_INTENT)
+    
+    if created:
+        Message.bot_message("Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please share your fitness goal (weight loss, muscle gain, or maintenance)?", user=user)
+    else:        
+        response_message = FoodBotAIHandler(user, sender_message_id, reply_message_id).process_message()
+        if response_message:
+            Message.bot_message(response_message, user=user)
 
     return {"detail": "Done"}
 
