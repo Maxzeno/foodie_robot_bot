@@ -1,18 +1,17 @@
 def get_tool_definitions():
-    """Returns the list of tool definitions for OpenAI function calling."""
+    """Optimized tool definitions with reduced token usage."""
     return [
         {
             "type": "function",
             "function": {
                 "name": "save_fitness_goal",
-                "description": "Save user's fitness goal",
+                "description": "Save fitness goal",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "fitness_goal": {
                             "type": "string",
-                            "enum": ["weight_loss", "muscle_gain", "maintenance"],
-                            "description": "User's fitness goal"
+                            "enum": ["weight_loss", "muscle_gain", "maintenance"]
                         }
                     },
                     "required": ["fitness_goal"]
@@ -23,7 +22,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_health_conditions",
-                "description": "Save user's health conditions/issues",
+                "description": "Save health conditions",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -32,8 +31,7 @@ def get_tool_definitions():
                             "items": {
                                 "type": "string",
                                 "enum": ["diabetes", "hypertension", "high_cholesterol", "anemia", "celiac", "lactose_intolerance"]
-                            },
-                            "description": "List of user's health conditions"
+                            }
                         }
                     },
                     "required": ["health_conditions"]
@@ -44,7 +42,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_allergies",
-                "description": "Save user's food allergies",
+                "description": "Save food allergies",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -53,8 +51,7 @@ def get_tool_definitions():
                             "items": {
                                 "type": "string",
                                 "enum": ["peanuts", "seafood", "dairy", "gluten", "eggs", "soy", "tree_nuts"]
-                            },
-                            "description": "List of food allergies"
+                            }
                         }
                     },
                     "required": ["allergies"]
@@ -65,7 +62,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_cuisine_preferences",
-                "description": "Save user's preferred cuisines",
+                "description": "Save cuisine preferences",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -79,8 +76,7 @@ def get_tool_definitions():
                                     "chinese", "japanese", "korean", "thai", "indian", "vietnamese", "filipino",
                                     "american", "mexican", "brazilian", "argentinian", "caribbean"
                                 ]
-                            },
-                            "description": "List of preferred cuisines"
+                            }
                         }
                     },
                     "required": ["cuisine_preferences"]
@@ -91,26 +87,14 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_delivery_location",
-                "description": "Save user's delivery location and detect the city based on the coordinates",
+                "description": "Save delivery location with coordinates",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "latitude": {
-                            "type": "number",
-                            "description": "Latitude of delivery location"
-                        },
-                        "longitude": {
-                            "type": "number",
-                            "description": "Longitude of delivery location"
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "The name of the location (e.g., Home, Work, etc.)"
-                        },
-                        "address": {
-                            "type": "string",
-                            "description": "Street address or description of location"
-                        }
+                        "latitude": {"type": "number"},
+                        "longitude": {"type": "number"},
+                        "name": {"type": "string"},
+                        "address": {"type": "string"}
                     },
                     "required": ["latitude", "longitude"]
                 }
@@ -126,8 +110,7 @@ def get_tool_definitions():
                     "properties": {
                         "time_of_day": {
                             "type": "string",
-                            "enum": ["morning", "afternoon", "evening"],
-                            "description": "Which meal time to generate recommendations for"
+                            "enum": ["morning", "afternoon", "evening"]
                         }
                     }
                 }
@@ -137,14 +120,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_nutritional_info",
-                "description": "Get detailed nutritional information for a specific meal",
+                "description": "Get meal nutrition details",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "meal_id": {
-                            "type": "integer",
-                            "description": "ID of the meal"
-                        }
+                        "meal_id": {"type": "integer"}
                     },
                     "required": ["meal_id"]
                 }
@@ -154,11 +134,10 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "request_delivery_location",
-                "description": "Request the user to share their delivery location via WhatsApp location sharing feature",
+                "description": "Request user to share location via WhatsApp",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                    },
+                    "properties": {},
                     "required": []
                 }
             }
@@ -167,18 +146,14 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "like_or_hate_meal",
-                "description": "Like or hate meal",
+                "description": "Like or dislike a meal",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "meal_id": {
-                            "type": "integer",
-                            "description": "ID of the meal"
-                        },
+                        "meal_id": {"type": "integer"},
                         "action": {
                             "type": "string",
-                            "enum": ["like", "hate"],
-                            "description": "Like or hate meal depends on action"
+                            "enum": ["like", "hate"]
                         }
                     },
                     "required": ["meal_id", "action"]
@@ -189,26 +164,14 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "place_order",
-                "description": "Place an order for a meal with specified quantity (number of plates)",
+                "description": "Place meal order with quantity",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "meal_id": {
-                            "type": "integer",
-                            "description": "ID of the meal to order"
-                        },
-                        "quantity": {
-                            "type": "integer",
-                            "description": "Number of plates to order (default: 1)"
-                        },
-                        "delivery_address_id": {
-                            "type": "integer",
-                            "description": "Specific delivery address ID (optional, uses default if not provided)"
-                        },
-                        "special_instructions": {
-                            "type": "string",
-                            "description": "Special requests or notes for the order (optional)"
-                        }
+                        "meal_id": {"type": "integer"},
+                        "quantity": {"type": "integer"},
+                        "delivery_address_id": {"type": "integer"},
+                        "special_instructions": {"type": "string"}
                     },
                     "required": ["meal_id", "quantity"]
                 }
@@ -218,14 +181,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_order_status",
-                "description": "Get the status of a specific order or the latest order",
+                "description": "Get order status (latest if no ID)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "order_id": {
-                            "type": "integer",
-                            "description": "ID of the order to check (optional, gets latest order if not provided)"
-                        }
+                        "order_id": {"type": "integer"}
                     },
                     "required": []
                 }
@@ -235,14 +195,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_order_history",
-                "description": "Get user's order history with pagination",
+                "description": "Get order history",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "page": {
-                            "type": "integer",
-                            "description": "Page number to retrieve (default: 1)"
-                        },
+                        "page": {"type": "integer"}
                     },
                     "required": []
                 }
@@ -252,14 +209,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "search_meals",
-                "description": "Search for meals by name or description (returns max 5 results)",
+                "description": "Search meals by name (max 5 results)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search term for meal name or description"
-                        },
+                        "query": {"type": "string"}
                     },
                     "required": ["query"]
                 }
@@ -269,14 +223,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_meal_details",
-                "description": "Get complete details about a specific meal including nutrition, price, and availability",
+                "description": "Get meal details (nutrition, price, availability)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "meal_id": {
-                            "type": "integer",
-                            "description": "ID of the meal"
-                        }
+                        "meal_id": {"type": "integer"}
                     },
                     "required": ["meal_id"]
                 }
@@ -286,7 +237,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_user_profile",
-                "description": "Get user's profile including allergies, preferred cuisines, average budget, health conditions, and fitness goal",
+                "description": "Get user profile (allergies, cuisines, budget, health, fitness)",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -298,14 +249,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "update_average_budget",
-                "description": "Update user's average meal budget (currency depends on user's city)",
+                "description": "Update average meal budget",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "budget_amount": {
-                            "type": "number",
-                            "description": "New average budget amount per meal"
-                        }
+                        "budget_amount": {"type": "number"}
                     },
                     "required": ["budget_amount"]
                 }
@@ -315,18 +263,12 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_user_meal_preferences",
-                "description": "Get meals that user has liked or hated/disliked",
+                "description": "Get liked or disliked meals",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "is_liked": {
-                            "type": "boolean",
-                            "description": "is liked if true else disliked"
-                        },
-                        "page": {
-                            "type": "integer",
-                            "description": "Page number to retrieve (default: 1)"
-                        },
+                        "is_liked": {"type": "boolean"},
+                        "page": {"type": "integer"}
                     },
                     "required": ["is_liked"]
                 }
@@ -336,7 +278,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_payment_status",
-                "description": "Get payment status for the latest order. Use when user asks 'have I paid?' or 'is my payment confirmed?'",
+                "description": "Get payment status for latest order",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -348,11 +290,10 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "contact_support",
-                "description": "Contact customer support with an issue or question",
+                "description": "Contact customer support",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                    },
+                    "properties": {},
                     "required": []
                 }
             }
@@ -361,19 +302,15 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "review_last_ordered_meal",
-                "description": "Submit a review for a meal that was ordered. Sentiment can be like, neutral, or hate",
+                "description": "Review last ordered meal",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "sentiment": {
                             "type": "string",
-                            "enum": ["like", "neutral", "hate"],
-                            "description": "User's sentiment about the meal"
+                            "enum": ["like", "neutral", "hate"]
                         },
-                        "review_text": {
-                            "type": "string",
-                            "description": "Optional review comment from user"
-                        },
+                        "review_text": {"type": "string"}
                     },
                     "required": ["sentiment"]
                 }
@@ -383,11 +320,10 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_current_location",
-                "description": "Get user's current delivery location",
+                "description": "Get current delivery location",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                    },
+                    "properties": {},
                     "required": []
                 }
             }

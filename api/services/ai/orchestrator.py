@@ -7,18 +7,24 @@ from api.models.user import User
 from api.models.message import Message, RoleChoices
 from api.services.ai.tool_definitions import get_tool_definitions
 from api.services.ai import tool_handlers
+from api.services.ai.embedding_filter import ToolEmbeddingFilter
 
 
 class FoodBotAIHandler:
-    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano"): # gpt-5-nano gpt-4.1-nano
+    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano", use_embedding_filter: bool = True, top_k_tools: int = 5): # gpt-5-nano gpt-4.1-nano
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = model 
+        self.model = model
         self.user = user
+        self.use_embedding_filter = use_embedding_filter
+        self.top_k_tools = top_k_tools
 
         # Register available tools/functions
-        self.tools = get_tool_definitions()
+        self.all_tools = get_tool_definitions()
         self.tool_functions = self._register_tool_functions()
-        
+
+        # Initialize embedding filter
+        self.embedding_filter = ToolEmbeddingFilter(self.client)
+
         self.reply_message = Message.objects.filter(message_id=reply_message_id, role=RoleChoices.BOT).first()
         self.sender_message = Message.objects.filter(message_id=sender_message_id, role=RoleChoices.USER).first()
     
@@ -48,19 +54,26 @@ class FoodBotAIHandler:
         }
 
     def get_conversation_history(self) -> List[Dict]:
+        # Static system prompt for prompt caching (OpenAI automatically caches repeated content >1024 tokens)
         messages = [
             {
                 "role": "system",
-                "content": f"""
-WhatsApp bot. Ask only one question at a time. Period: {self.user.get_time_period()}.
-- For unknown requests, say you can't help.
-- Be concise and user friendly.
-- Avoid long or deep reasoning. Prefer quick, direct responses and tool use.
-- limit responses to 100 words.
-- Always use the request_delivery_location tool when the user is to set or update their delivery location.
-"""
+                "content": """You are a WhatsApp food ordering bot. Follow these guidelines:
+- Ask only one question at a time
+- For unknown requests, say you can't help
+- Be concise and user friendly
+- Avoid long or deep reasoning. Prefer quick, direct responses and tool use
+- Limit responses to 100 words
+- Always use the request_delivery_location tool when the user wants to set or update their delivery location"""
             }
         ]
+
+        # Add dynamic context as a separate system message (won't break cache)
+        if self.user:
+            messages.append({
+                "role": "system",
+                "content": f"Current time period: {self.user.get_time_period()}"
+            })
 
         if self.reply_message and self.sender_message:
             messages.append({
@@ -95,23 +108,46 @@ WhatsApp bot. Ask only one question at a time. Period: {self.user.get_time_perio
         # Get conversation  (Including the current user message)
         messages = self.get_conversation_history()
 
-        # LLM API call
+        # Get the latest user message for tool filtering
+        user_message = next(
+            (msg["content"] for msg in reversed(messages) if msg["role"] == "user"),
+            ""
+        )
+
+        # Filter tools using embedding similarity if enabled
+        if self.use_embedding_filter and user_message:
+            tools = self.embedding_filter.filter_tools(
+                user_query=user_message,
+                all_tools=self.all_tools,
+                top_k=self.top_k_tools
+            )
+            print(f"Using {len(tools)} filtered tools (from {len(self.all_tools)} total)")
+        else:
+            tools = self.all_tools
+            print(f"Using all {len(tools)} tools (filtering disabled)")
+
+        # LLM API call with automatic prompt caching
+        # OpenAI automatically caches static prompt prefixes (system prompts, tool definitions)
+        # Cache is reused when the same prefix is sent, reducing costs by ~50-90%
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            tools=self.tools,
+            tools=tools,
             tool_choice="auto",
             # max_completion_tokens=150,
             reasoning_effort="low" # minimal
         )
 
-        print("LLM usage:", response.usage)
+        # Log usage including cache hits
+        usage = response.usage
+        print(f"LLM usage: {usage}")
+
         response_message = response.choices[0].message
         messages.append(response_message)
 
         if not response_message.tool_calls:
             return response_message.content
-        
+
         print("Tool call detected:", response_message.tool_calls)
         # Execute each tool call
         for tool_call in response_message.tool_calls[:5]:

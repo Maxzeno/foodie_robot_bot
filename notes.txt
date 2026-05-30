@@ -37,3 +37,14 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - Since bot messages can get long add a field called llm content if set use it instead of the actual message eg ids then for content let the llm something was cropped etc
 - I will pass in just the names of the functions an tell the llm bases on the input what functions does it think it needs to call then when it lists it i will only pass the tools listed in the next llm call so it can select and call it with the arguments if any
 - I will enforce the first llm must pick exactly 2 tools best related tools then i will pass those 2 into it. so even if the prompt doesn't look like it needs a tool it most pick something related just incase
+
+
+- Find a way to use this for food recommendation: Embedding-based filtering
+-- I could create the meals in a city embedding and then later filter out to get top options
+
+
+please go into the api/services/recommendation folder and optimize the get meal recommendation logic      
+  also if possible use embeddings to implement it goal is to reduce cost and recommend meals the user will  
+  love to buy (it's very important) but think through it because recommending the same meal as yestarday    
+  might be weird but make it a very good and converting recommedation system but still bases on they        
+  fitness goals health, around their budget, in their city etc

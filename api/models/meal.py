@@ -171,5 +171,9 @@ class Meal(BaseModel):
     restricted_allergies = models.ManyToManyField(Allergy, blank=True, related_name="meals")
     cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="meals")
 
+    # Embedding for ML-based recommendations (1536-dim vector for text-embedding-3-small)
+    embedding = models.JSONField(null=True, blank=True, help_text="Cached embedding vector for similarity search")
+    embedding_generated_at = models.DateTimeField(null=True, blank=True, help_text="When the embedding was last generated")
+
     def __str__(self):
         return f"{self.name} - {self.city.name} - {self.fitness_goals} - {self.cuisine} - {self.restricted_health_conditions} - {self.restricted_allergies}"

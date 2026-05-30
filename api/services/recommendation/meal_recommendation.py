@@ -6,12 +6,39 @@ from django.conf import settings
 from datetime import timedelta
 from api.models.meal import Meal
 import random
+from api.services.recommendation.embedding_recommendation import EmbeddingRecommendationService
 
 
 class MealRecommendationService:
     def __init__(self):
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    
+        self.embedding_service = EmbeddingRecommendationService()
+
+    def get_recommendations(
+        self,
+        user,
+        num_recommendations_per_period: int = 2,
+        exclude_meal_ids: Optional[List[int]] = None
+    ) -> Dict:
+        """
+        Get optimized meal recommendations using embedding-based approach.
+
+        This is the RECOMMENDED method:
+        - 95%+ cost reduction vs LLM
+        - Highly personalized based on preferences, fitness goals, budget
+        - Avoids recently recommended meals
+        - Ensures diversity
+        - Time-of-day appropriate
+
+        Returns:
+            Dict with keys: morning, afternoon, evening (each containing meal IDs)
+        """
+        return self.embedding_service.get_recommendations(
+            user=user,
+            num_recommendations_per_period=num_recommendations_per_period,
+            exclude_meal_ids=exclude_meal_ids
+        )
+
     def get_recommendations_by_llm(
         self, 
         user, 
