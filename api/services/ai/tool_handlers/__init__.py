@@ -1,6 +1,6 @@
 from .others import generate_meal_recommendations, get_nutritional_info
 from .preference import save_health_conditions, save_allergies, save_cuisine_preferences, save_fitness_goal
-from .location import save_delivery_location, request_delivery_location
+from .location import save_delivery_location, request_delivery_location, get_current_location
 from .meal_like_or_hate import like_or_hate_meal
 from .order import place_order, get_order_status, get_order_history
 from .meal_search import search_meals, get_meal_details

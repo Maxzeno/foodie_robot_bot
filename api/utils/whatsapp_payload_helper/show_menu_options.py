@@ -1,4 +1,4 @@
-def pick_delivery_option(text):
+def show_menu_options(text):
     return {
         "type": "list",
         # "header": {

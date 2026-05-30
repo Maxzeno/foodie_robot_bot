@@ -34,3 +34,4 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 ----- Implement two step tool call to reduce the input tokens passed into the call make first call to kind of determine what category of tools to load then make second call to choose the exact tool then call it eg. first might be location -> then the second chooses update location
 
 - Use action reply to say get page 2 etc
+- Since bot messages can get long add a field called llm content if set use it instead of the actual message

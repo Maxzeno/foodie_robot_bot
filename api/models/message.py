@@ -18,30 +18,13 @@ class CurrentIntentChoices(models.TextChoices):
     NEEDS_REPLY = 'needs_reply', 'Needs reply'
     COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
 
-    # MENU_OPTIONS = 'menu_options', 'Menu Options'
-    # REGISTERED = 'registered', 'Registered'
-    # SET_PREFERENCE = 'set_preference', 'Set Preference'
-    # UPDATE_PREFERENCE = 'update_preference', 'Update Preference'
-    # FIRST_LOCATION = 'first_location', 'First Location'
-    # # FIRST_LOCATION_RETRY = 'first_location_retry', 'First Location Retry'
-    # RECOMMENDED_MEALS = 'recommended_meals', 'Recommended Meals'
-
-    # PICK_DELIVERY_ADDRESS_OPTION = 'pick_delivery_address_option', 'Pick Delivery Address Option'
-    # ADD_NEW_ORDER_DELIVERY_ADDRESS = 'add_new_order_delivery_address', 'Add New Order Delivery Address'
-
-    # NUMBER_OF_PLATES = 'number_of_plates', 'Number of Plates'
-    # PAY_FOR_ORDER = 'pay_for_order', 'Pay for Order'
-    # ORDER_PLACED = 'order_placed', 'Order Placed'
-
-    # add order status, updates, review of the food, etc
-
-    # TODO: Add more menu options intents eg. Order the current recommendation (first or second), see orders and status, see/update liked/hated meals, see/update preferences, etc.
-
 
 class Message(BaseModel):
     message_id = models.CharField(max_length=250, unique=True)
     role = models.CharField(max_length=10, choices=RoleChoices.choices)
     content = models.TextField(null=True, blank=True)
+    # llm_content = models.TextField(null=True, blank=True) # smarter (usually shorter and has key info) content if set used inplace of the actually content when passed into the llm messages
+
     resp = models.JSONField(null=True, blank=True)
     preview_media = models.FileField(null=True, blank=True)
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name='messages')
@@ -124,7 +107,7 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_list_option(content: str, user, current_intent: str, payload):
+    def bot_message_list_option(content: str, user, payload, current_intent: str=CurrentIntentChoices.NO_INTENT):
         msg_type = 'interactive'
         message_id = Message.send_message(user, msg_type, payload)
         message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)

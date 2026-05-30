@@ -1,8 +1,8 @@
 from api.models.message import Message
 from api.models.message import CurrentIntentChoices
-from api.utils.whatsapp_payload_helper.show_menu_options import pick_delivery_option
+from api.utils.whatsapp_payload_helper.show_menu_options import show_menu_options
 
 
 def show_menu_options(user, text="Here are some quick actions menu"):
-    payload = pick_delivery_option(text)
-    Message.bot_message_list_option(text, user, current_intent=CurrentIntentChoices.MENU_OPTIONS, payload=payload)
+    payload = show_menu_options(text)
+    Message.bot_message_list_option(text, user, payload=payload)

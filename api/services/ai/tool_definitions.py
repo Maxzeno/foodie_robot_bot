@@ -315,7 +315,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_user_meal_preferences",
-                "description": "Get meals that user has liked or hated",
+                "description": "Get meals that user has liked or hated/disliked",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -376,6 +376,19 @@ def get_tool_definitions():
                         },
                     },
                     "required": ["sentiment"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_current_location",
+                "description": "Get user's current delivery location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                    },
+                    "required": []
                 }
             }
         }

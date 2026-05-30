@@ -7,8 +7,6 @@ from api.models.order import Order
 from api.models.recommendation import Recommendation
 from api.models.user import User
 from api.utils.menu_options import show_menu_options
-from api.utils.whatsapp_payload_helper.pick_delivery_option import pick_delivery_option
-from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
 
 def like_or_hate_meal(user: User, meal_id: int, action: str):

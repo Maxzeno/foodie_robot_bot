@@ -10,7 +10,7 @@ from api.services.ai import tool_handlers
 
 
 class FoodBotAIHandler:
-    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano"):
+    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano"): # gpt-5-nano gpt-4.1-nano
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = model 
         self.user = user
@@ -43,7 +43,8 @@ class FoodBotAIHandler:
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
             "get_payment_status": tool_handlers.get_payment_status,
             "contact_support": tool_handlers.contact_support,
-            "review_last_ordered_meal": tool_handlers.review_last_ordered_meal
+            "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
+            "get_current_location": tool_handlers.get_current_location,
         }
 
     def get_conversation_history(self) -> List[Dict]:
@@ -51,8 +52,12 @@ class FoodBotAIHandler:
             {
                 "role": "system",
                 "content": f"""
-WhatsApp bot. Ask 1 question at a time. Period: {self.user.get_time_period()}. 
-For unknown requests, say you can't help. Be concise.
+WhatsApp bot. Ask only one question at a time. Period: {self.user.get_time_period()}.
+- For unknown requests, say you can't help.
+- Be concise and user friendly.
+- Avoid long or deep reasoning. Prefer quick, direct responses and tool use.
+- limit responses to 100 words.
+- Always use the request_delivery_location tool when the user is to set or update their delivery location.
 """
             }
         ]
@@ -95,12 +100,15 @@ For unknown requests, say you can't help. Be concise.
             model=self.model,
             messages=messages,
             tools=self.tools,
-            tool_choice="auto"
+            tool_choice="auto",
+            # max_completion_tokens=150,
+            reasoning_effort="low" # minimal
         )
 
+        print("LLM usage:", response.usage)
         response_message = response.choices[0].message
         messages.append(response_message)
-        
+
         if not response_message.tool_calls:
             return response_message.content
         

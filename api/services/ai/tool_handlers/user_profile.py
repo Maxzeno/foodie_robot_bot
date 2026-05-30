@@ -121,7 +121,7 @@ def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> Dict:
 
         if not meal_preferences.exists():
             Message.bot_message(
-                f"You haven't {"liked" if is_liked else "disliked"} any meals yet. Start exploring meals and let us know what you think!",
+                f"You haven't {"liked" if is_liked else "disliked"} any meals yet. Start exploring meals and let us know what you think!" if  page == 1 else f"You have no more {"liked" if is_liked else "disliked"} meals to show.",
                 user=user
             )
             return False

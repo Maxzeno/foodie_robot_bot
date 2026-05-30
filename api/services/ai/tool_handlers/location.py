@@ -17,7 +17,7 @@ def save_delivery_location(
     longitude: float,
     name: Optional[str] = None,
     address: Optional[str] = None
-) -> Dict:
+) -> bool:
     is_new = user.city is None
     try:
         # Detect city from coordinates
@@ -94,7 +94,7 @@ def save_delivery_location(
         return False
 
 
-def request_delivery_location(user: User) -> Dict:
+def request_delivery_location(user: User) -> bool:
     try:
         message = Message.bot_message_request_location(
             content="Please share your delivery location.",
@@ -110,3 +110,15 @@ def request_delivery_location(user: User) -> Dict:
         Message.bot_message("Something went wrong when trying to request your delivery location.", user=user)
         return False
     
+
+def get_current_location(user: User) -> bool:
+    try:
+        text = f"Your current delivery address"
+        
+        latest_delivery_address = DeliveryAddress.objects.filter(user=user).first()
+        Message.bot_message_location(latest_delivery_address.name or text, user, latitude=latest_delivery_address.point.y, longitude=latest_delivery_address.point.x, address=latest_delivery_address.street_address)
+
+        return True
+    except Exception as e:
+        Message.bot_message("Something went wrong when trying to get your current delivery location.", user=user)
+        return False
