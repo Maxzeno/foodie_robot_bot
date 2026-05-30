@@ -94,7 +94,7 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_location(content: str, user, current_intent: str, latitude: float, longitude: float, address: str):
+    def bot_message_location(content: str, user, latitude: float, longitude: float, address: str, current_intent: str=CurrentIntentChoices.NO_INTENT):
         payload = {
             "latitude": latitude,
             "longitude":longitude,

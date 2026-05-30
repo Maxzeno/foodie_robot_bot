@@ -34,4 +34,6 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 ----- Implement two step tool call to reduce the input tokens passed into the call make first call to kind of determine what category of tools to load then make second call to choose the exact tool then call it eg. first might be location -> then the second chooses update location
 
 - Use action reply to say get page 2 etc
-- Since bot messages can get long add a field called llm content if set use it instead of the actual message
+- Since bot messages can get long add a field called llm content if set use it instead of the actual message eg ids then for content let the llm something was cropped etc
+- I will pass in just the names of the functions an tell the llm bases on the input what functions does it think it needs to call then when it lists it i will only pass the tools listed in the next llm call so it can select and call it with the arguments if any
+- I will enforce the first llm must pick exactly 2 tools best related tools then i will pass those 2 into it. so even if the prompt doesn't look like it needs a tool it most pick something related just incase

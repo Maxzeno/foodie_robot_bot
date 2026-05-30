@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from api.models.user import User
 from api.models.meal_preference import MealPreference
-from api.models.address import DeliveryAddress
 from api.models.message import Message
 
 
@@ -120,17 +119,24 @@ def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> Dict:
         ).select_related('meal', 'meal__restaurant')[offset:offset + limit]
 
         if not meal_preferences.exists():
-            Message.bot_message(
-                f"You haven't {"liked" if is_liked else "disliked"} any meals yet. Start exploring meals and let us know what you think!" if  page == 1 else f"You have no more {"liked" if is_liked else "disliked"} meals to show.",
-                user=user
-            )
+            if  page == 1:
+                Message.bot_message(
+                    f"You haven't {'liked' if is_liked else 'disliked'} any meals yet. Start exploring meals and let us know what you think!" ,
+                    user=user
+                )
+            else:
+                Message.bot_message(
+                    f"You have no more {'liked' if is_liked else 'disliked'} meals to show.",
+                    user=user
+                )
+
             return False
 
         message = "🍽️ Your Meal Preferences\n\n"
 
         # Add liked meals
         if meal_preferences.exists():
-            message += f"Meals You {"liked" if is_liked else "disliked"}:\n"
+            message += f"Meals You {'liked' if is_liked else 'disliked'}:\n"
             for i, pref in enumerate(meal_preferences, 1):
                 meal = pref.meal
                 message += f"{i}. {meal.name} - {meal.restaurant.name}\n"
