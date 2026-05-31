@@ -108,10 +108,6 @@ def get_tool_definitions():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "time_of_day": {
-                            "type": "string",
-                            "enum": ["morning", "afternoon", "evening"]
-                        }
                     }
                 }
             }
@@ -134,7 +130,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "request_delivery_location",
-                "description": "Request user to share location",
+                "description": "Use this tool when the user wants to set or update their delivery location",
                 "parameters": {
                     "type": "object",
                     "properties": {},

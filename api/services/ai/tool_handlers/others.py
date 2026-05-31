@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Dict
 
 from api.models.message import Message
 from api.models.user import User
@@ -10,8 +10,8 @@ from api.utils.whatsapp_payload_helper.recommend_product import recommend_produc
 
 def meal_recommendations(
     user: User,
-    time_of_day: Optional[str] = None
 ) -> Dict:
+    time_of_day = user.get_time_period()
     try:
         found_recommendations = Recommendation.objects.filter(user=user, time_of_day=time_of_day, day=user.get_local_time())[:2]
         if found_recommendations:

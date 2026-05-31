@@ -38,27 +38,35 @@ class FoodBotAIHandler:
     
     def _register_tool_functions(self) -> Dict:
         return {
-            "save_fitness_goal": tool_handlers.save_fitness_goal,
-            "save_health_conditions": tool_handlers.save_health_conditions,
-            "save_allergies": tool_handlers.save_allergies,
-            "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
-            "save_delivery_location": tool_handlers.save_delivery_location,
-            "update_average_budget": tool_handlers.update_average_budget,
             "meal_recommendations": tool_handlers.meal_recommendations,
+            "save_delivery_location": tool_handlers.save_delivery_location,
+            "request_delivery_location": tool_handlers.request_delivery_location,
+            # TODO: To be removed to reduce token usage
+            "get_current_location": tool_handlers.get_current_location,
             
             "place_order": tool_handlers.place_order,
             "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
-            "request_delivery_location": tool_handlers.request_delivery_location,
-            "get_current_location": tool_handlers.get_current_location,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
             
             "get_user_profile": tool_handlers.get_user_profile,
-            "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
             "like_or_hate_meal": tool_handlers.like_or_hate_meal,
+            # TODO: To be removed to reduce token usage
+            "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
             
             "contact_support": tool_handlers.contact_support,
             "show_menu_options": tool_handlers.show_menu_options,
+            
+            # TODO: To be implemented
+            # "request_update_info": tool_handlers.request_update_info,
+            # "update_info": tool_handlers.update_info,
+            # TODO: Potentially tobe replaced with a more modular registration system
+            
+            "save_fitness_goal": tool_handlers.save_fitness_goal,
+            "save_health_conditions": tool_handlers.save_health_conditions,
+            "save_allergies": tool_handlers.save_allergies,
+            "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
+            "update_average_budget": tool_handlers.update_average_budget,
             
             # TODO: potentially to be removed 
             "search_meals": tool_handlers.search_meals,
@@ -77,16 +85,9 @@ class FoodBotAIHandler:
 - Be concise and user friendly
 - Avoid long or deep reasoning. Prefer quick, direct responses and tool use
 - Limit responses to 100 words
-- Always use the request_delivery_location tool when the user wants to set or update their delivery location"""
+"""
             }
         ]
-
-        # Add dynamic context as a separate system message (won't break cache)
-        if self.user:
-            messages.append({
-                "role": "system",
-                "content": f"Current time period: {self.user.get_time_period()}"
-            })
 
         if self.reply_message and self.sender_message:
             messages.append({
@@ -100,7 +101,7 @@ class FoodBotAIHandler:
             })
 
         else:   
-            # Get recent messages from database (last 10 messages for context)
+            # Get recent messages from database
             db_messages = Message.objects.filter(user=self.user).order_by('-created_at')[:5]
             db_messages = reversed(db_messages)  # Oldest first
             for msg in db_messages:
@@ -121,15 +122,9 @@ class FoodBotAIHandler:
         # Get conversation  (Including the current user message)
         messages = self.get_conversation_history()
 
-        # Build context from recent user messages (last 3) for better tool filtering
         recent_user_messages = [
             msg["content"] for msg in reversed(messages)
         ]
-
-        # recent_user_messages = [
-        #     msg["content"] for msg in reversed(messages)
-        #     if msg["role"] == "user"
-        # ][:3]  # Last 3 user messages
 
         # Combine recent messages for context-aware filtering
         user_context = " | ".join(reversed(recent_user_messages))
@@ -149,7 +144,7 @@ class FoodBotAIHandler:
 
         # LLM API call with automatic prompt caching
         # OpenAI automatically caches static prompt prefixes (system prompts, tool definitions)
-        # Cache is reused when the same prefix is sent, reducing costs by ~50-90%
+        # Cache is reused when the same prefix is sent, reducing costs
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,

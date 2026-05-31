@@ -111,7 +111,7 @@ Note: Your currency is set to {currency_code} based on your delivery location.
 
 def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> Dict:
     try:
-        limit: int = 5
+        limit: int = 3
         offset = (page - 1) * limit
         meal_preferences = MealPreference.objects.filter(
             user=user,

@@ -48,6 +48,10 @@
           {
             "type": "Form",
             "name": "delivery_form",
+            "init-values": {
+              "number_of_plates": 1,
+              "address_choice": "keep_current"
+            },
             "children": [
               {
                 "type": "TextHeading",

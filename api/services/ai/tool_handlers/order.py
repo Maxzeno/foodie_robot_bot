@@ -8,6 +8,20 @@ from api.models.order import Order, OrderStatus
 from api.models.address import DeliveryAddress
 from api.models.message import Message
 
+# Format status message
+ORDER_STATUS_EMOJI = {
+    OrderStatus.PENDING: "⏳",
+    OrderStatus.DISPATCHED: "🚗",
+    OrderStatus.ARRIVED: "📍",
+    OrderStatus.RECEIVED: "✅"
+}
+
+ORDER_STATUS_MESSAGE = {
+    OrderStatus.PENDING: "Your order is being prepared",
+    OrderStatus.DISPATCHED: "Your order is on the way",
+    OrderStatus.ARRIVED: "Your order has arrived",
+    OrderStatus.RECEIVED: "Order completed"
+}
 
 def place_order(
     user: User,
@@ -114,8 +128,6 @@ def place_order(
 
 📍 Delivery to: {delivery_address.street_address}
 
-⏱️ Estimated delivery: 30-45 minutes
-
 💳 Please proceed to payment to confirm your order.
 Payment Link: [Payment link will be generated here]
 """.strip()
@@ -154,38 +166,18 @@ def get_order_status(user: User, order_id: Optional[int] = None) -> Dict:
                 )
                 return False
 
-        # Format status message
-        status_emoji = {
-            OrderStatus.PENDING: "⏳",
-            OrderStatus.DISPATCHED: "🚗",
-            OrderStatus.ARRIVED: "📍",
-            OrderStatus.RECEIVED: "✅"
-        }
-
-        status_messages = {
-            OrderStatus.PENDING: "Your order is being prepared",
-            OrderStatus.DISPATCHED: "Your order is on the way",
-            OrderStatus.ARRIVED: "Your order has arrived",
-            OrderStatus.RECEIVED: "Order completed"
-        }
-
         currency_symbol = order.currency.symbol
         payment_status = "✅ Paid" if order.paid else "⏳ Payment pending"
 
         message = f"""
-📦 Order Status: {status_emoji.get(order.status, '📋')} {order.get_status_display()}
-
 Order #{order.code}
 🍽️ {order.meal.name}
 🔢 Quantity: {order.quantity} plate(s)
 💰 Total: {currency_symbol}{order.total_price:,.2f}
 💳 Payment: {payment_status}
 
-{status_messages.get(order.status, 'Processing your order')}
+Status: {ORDER_STATUS_EMOJI.get(order.status, '📋')} {ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
 """.strip()
-
-        if order.status == OrderStatus.DISPATCHED:
-            message += "\n\n⏱️ Estimated arrival: 15-20 minutes"
 
         Message.bot_message(message, user=user)
 
@@ -203,7 +195,7 @@ Order #{order.code}
 def get_order_history(user: User, page: int = 1) -> Dict:
     try:
         # Calculate offset
-        limit: int = 5
+        limit: int = 3
         offset = (page - 1) * limit
 
         # Get orders
@@ -228,24 +220,17 @@ def get_order_history(user: User, page: int = 1) -> Dict:
         message = f"📋 Your Order History (Page {page}):\n\n"
 
         for i, order in enumerate(orders, 1):
-            status_emoji = {
-                OrderStatus.PENDING: "⏳",
-                OrderStatus.DISPATCHED: "🚗",
-                OrderStatus.ARRIVED: "📍",
-                OrderStatus.RECEIVED: "✅"
-            }
-
-            payment_emoji = "✅" if order.paid else "⏳"
+            payment_status = "✅ Paid" if order.paid else "⏳ Payment pending"
 
             message += f"""
 {offset + i}. Order #{order.code}
    🍽️ {order.meal.name}
-   🔢 {order.quantity} plate(s)
-   💰 {currency_symbol}{order.total_price:,.2f}
-   {status_emoji.get(order.status, '📋')} {order.get_status_display()}
+   🔢 Quantity: {order.quantity} plate(s)
+   💰 Total: {currency_symbol}{order.total_price:,.2f}
+   {ORDER_STATUS_EMOJI.get(order.status, '📋')} Status: {ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
    
-   💳 {payment_emoji} {'Paid' if order.paid else 'Payment not confirmed yet'}
-   📅 {order.created_at.strftime('%b %d, %Y')}
+   💳 Payment: {payment_status}
+   📅 Ordered on: {order.created_at.strftime('%b %d, %Y')}
 
 """.strip() + "\n\n"
 

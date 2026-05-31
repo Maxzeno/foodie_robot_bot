@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python manage.py makemigrations:*)",
       "Bash(python -m py_compile:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(if not exist \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\utils\" mkdir \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\utils\")"
     ],
     "deny": [],
     "ask": []
