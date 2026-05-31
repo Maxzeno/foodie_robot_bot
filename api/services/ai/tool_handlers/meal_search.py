@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Dict
 from django.db.models import Q
 
 from api.models.user import User
@@ -46,7 +46,6 @@ def search_meals(user: User, query: str) -> Dict:
             message += f"""
 {i}. {meal.name}
    💰 {currency_symbol}{meal.price:,.2f}
-   🏪 {meal.restaurant.name}
    🍽️ {cuisines if cuisines else 'Various'}
    📝 {meal.description[:80]}{'...' if len(meal.description) > 80 else ''}
 
@@ -104,7 +103,6 @@ def get_meal_details(user: User, meal_id: int) -> Dict:
 {meal.description}
 
 💰 Price: {currency_symbol}{meal.price:,.2f}
-🏪 Restaurant: {meal.restaurant.name}
 📍 Available in: {meal.city.name}
 ⏰ Meal times: {times_of_day if times_of_day else 'Anytime'}
 🍽️ Cuisine: {cuisines if cuisines else 'Various'}

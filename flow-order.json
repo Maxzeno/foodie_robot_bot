@@ -1,0 +1,116 @@
+{
+  "version": "7.2",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "DELIVERY_DETAILS": []
+  },
+  "screens": [
+    {
+      "id": "DELIVERY_DETAILS",
+      "title": "Order Details",
+      "data": {
+        "current_address": {
+          "type": "string",
+          "__example__": "123 Main Street, Port Harcourt, Rivers State"
+        },
+        "maps_url": {
+          "type": "string",
+          "__example__": "https://maps.google.com/?q=4.8156,7.0498"
+        },
+        "address_options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "keep_current",
+              "title": "Yes, use current address"
+            },
+            {
+              "id": "change_address",
+              "title": "No, I want to change it"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "delivery_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "Complete Your Order"
+              },
+              {
+                "type": "TextInput",
+                "label": "Number of plates",
+                "name": "number_of_plates",
+                "input-type": "number",
+                "helper-text": "How many plates would you like to order?",
+                "required": true,
+                "min-chars": 1
+              },
+              {
+                "type": "TextBody",
+                "text": "Current delivery address:"
+              },
+              {
+                "type": "TextCaption",
+                "text": "${data.current_address}"
+              },
+              {
+                "type": "EmbeddedLink",
+                "text": "View on Google Maps",
+                "on-click-action": {
+                  "name": "open_url",
+                  "url": "${data.maps_url}"
+                }
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Use this delivery address?",
+                "name": "address_choice",
+                "data-source": "${data.address_options}",
+                "required": true
+              },
+              {
+                "type": "TextArea",
+                "label": "Special instructions",
+                "name": "notes",
+                "helper-text": "Add any delivery notes or food preferences",
+                "required": false,
+                "max-length": 300
+              },
+              {
+                "type": "Footer",
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "number_of_plates": "${form.number_of_plates}",
+                    "address_choice": "${form.address_choice}",
+                    "delivery_address": "${data.current_address}",
+                    "notes": "${form.notes}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "terminal": true
+    }
+  ]
+}

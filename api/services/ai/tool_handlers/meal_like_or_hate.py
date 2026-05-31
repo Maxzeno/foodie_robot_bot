@@ -1,12 +1,9 @@
-from api.models.address import DeliveryAddress
 from api.models.meal import Meal
 from api.models.meal_preference import MealPreference, MealPreferenceChoices
 from api.models.message import Message
 from api.models.message import Message, CurrentIntentChoices
-from api.models.order import Order
-from api.models.recommendation import Recommendation
 from api.models.user import User
-from api.utils.menu_options import show_menu_options
+from api.services.ai.tool_handlers.menu_options import show_menu_options
 
 
 def like_or_hate_meal(user: User, meal_id: int, action: str):

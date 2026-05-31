@@ -105,7 +105,6 @@ def place_order(
 
 📋 Order #{order.code}
 🍽️ {meal.name}
-📍 Restaurant: {meal.restaurant.name}
 🔢 Quantity: {quantity} plate(s)
 
 💰 Price Breakdown:
@@ -244,7 +243,8 @@ def get_order_history(user: User, page: int = 1) -> Dict:
    🔢 {order.quantity} plate(s)
    💰 {currency_symbol}{order.total_price:,.2f}
    {status_emoji.get(order.status, '📋')} {order.get_status_display()}
-   💳 {payment_emoji} {'Paid' if order.paid else 'Pending'}
+   
+   💳 {payment_emoji} {'Paid' if order.paid else 'Payment not confirmed yet'}
    📅 {order.created_at.strftime('%b %d, %Y')}
 
 """.strip() + "\n\n"

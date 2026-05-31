@@ -181,7 +181,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_order_status",
-                "description": "Get order status (latest if no ID)",
+                "description": "Get order status - this including the payment status (latest if no ID)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -277,18 +277,6 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "get_payment_status",
-                "description": "Get payment status for latest order",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "contact_support",
                 "description": "Contact customer support",
                 "parameters": {
@@ -321,6 +309,18 @@ def get_tool_definitions():
             "function": {
                 "name": "get_current_location",
                 "description": "Get current delivery location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "show_menu_options",
+                "description": "Show when user wants menu options, quick actions, settings etc.",
                 "parameters": {
                     "type": "object",
                     "properties": {},

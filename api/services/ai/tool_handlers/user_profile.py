@@ -132,14 +132,14 @@ def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> Dict:
 
             return False
 
-        message = "🍽️ Your Meal Preferences\n\n"
+        message = f"🍽️ Your Meal Preferences (Page {page}):\n\n"
 
         # Add liked meals
         if meal_preferences.exists():
             message += f"Meals You {'liked' if is_liked else 'disliked'}:\n"
             for i, pref in enumerate(meal_preferences, 1):
                 meal = pref.meal
-                message += f"{i}. {meal.name} - {meal.restaurant.name}\n"
+                message += f"{i}. {meal.name}\n"
             message += "\n"
 
         message += "We use these preferences to improve your recommendations!"

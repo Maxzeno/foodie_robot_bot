@@ -43,24 +43,27 @@ class FoodBotAIHandler:
             "save_allergies": tool_handlers.save_allergies,
             "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
             "save_delivery_location": tool_handlers.save_delivery_location,
-
+            "update_average_budget": tool_handlers.update_average_budget,
             "meal_recommendations": tool_handlers.meal_recommendations,
-            "get_nutritional_info": tool_handlers.get_nutritional_info,
             
-            "get_payment_status": tool_handlers.get_payment_status,
             "place_order": tool_handlers.place_order,
-            "get_meal_details": tool_handlers.get_meal_details,
+            "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
             "request_delivery_location": tool_handlers.request_delivery_location,
-            "like_or_hate_meal": tool_handlers.like_or_hate_meal,
+            "get_current_location": tool_handlers.get_current_location,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
-            "search_meals": tool_handlers.search_meals,
+            
             "get_user_profile": tool_handlers.get_user_profile,
-            "update_average_budget": tool_handlers.update_average_budget,
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
+            "like_or_hate_meal": tool_handlers.like_or_hate_meal,
+            
             "contact_support": tool_handlers.contact_support,
-            "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
-            "get_current_location": tool_handlers.get_current_location,
+            "show_menu_options": tool_handlers.show_menu_options,
+            
+            # TODO: potentially to be removed 
+            "search_meals": tool_handlers.search_meals,
+            "get_nutritional_info": tool_handlers.get_nutritional_info,
+            "get_meal_details": tool_handlers.get_meal_details,
         }
 
     def get_conversation_history(self) -> List[Dict]:

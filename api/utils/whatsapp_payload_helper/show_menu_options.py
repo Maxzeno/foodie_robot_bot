@@ -1,52 +1,88 @@
-def show_menu_options(text):
+def show_menu_options_payload(text):
     return {
         "type": "list",
-        # "header": {
-        #     "type": "text",
-        #     "text": "<MESSAGE_HEADER_TEXT>"
-        # },
         "body": {
             "text": text,
         },
-        # "footer": {
-        #     "text": "<MESSAGE_FOOTER_TEXT>"
-        # },
+        "footer": {
+            "text": "Select an option to proceed"
+        },
         "action": {
-            "button": "Options",
+            "button": "Quick Options",
             "sections": [
                 {
-                    "title": "User profile",
+                    "title": "Meals & Recommendations",
                     "rows": [
                         {
-                            "id": "update-preference",
-                            "title": "Update Preferences",
-                            "description": "Update your food preferences, allergies, fitness goals, etc"
+                            "id": "meal-recommendations",
+                            "title": "Get Meal Recommendations",
+                            "description": "Get personalized meal suggestions"
                         }
                     ]
                 },
                 {
-                    "title": "Order",
+                    "title": "Orders",
                     "rows": [
                         {
                             "id": "view-orders",
-                            "title": "View Orders",
+                            "title": "View Order History",
+                            "description": "View your past orders"
                         },
                         {
-                            "id": "order-current-recommendation",
-                            "title": "Current Recommendation",
+                            "id": "order-status",
+                            "title": "Current Order Status",
+                            "description": "Track your current order"
                         }
                     ]
                 },
                 {
-                    "title": "Meal Likes and Dislikes",
+                    "title": "Profile",
                     "rows": [
                         {
-                            "id": "view-liked-meals",
-                            "title": "View Liked Meals",
+                            "id": "view-profile",
+                            "title": "View Profile",
+                            "description": "View your profile info"
+                        },
+                    ]
+                },
+                {
+                    "title": "Update Preferences",
+                    "rows": [
+                        {
+                            "id": "update-allergies",
+                            "title": "Update Allergies",
+                            "description": "Update food allergies"
                         },
                         {
-                            "id": "view-hate-meals",
-                            "title": "View Disliked Meals",
+                            "id": "update-health",
+                            "title": "Update Health Conditions",
+                            "description": "Update health conditions"
+                        },
+                        {
+                            "id": "update-fitness",
+                            "title": "Update Fitness Goals",
+                            "description": "Update fitness goals"
+                        },
+                        {
+                            "id": "update-cuisine",
+                            "title": "Update Preferred Cuisine",
+                            
+                            "description": "Update cuisine preferences"
+                        },
+                        {
+                            "id": "update-budget",
+                            "title": "Update Average Budget",
+                            "description": "Set meal budget"
+                        }
+                    ]
+                },
+                {
+                    "title": "Support",
+                    "rows": [
+                        {
+                            "id": "contact-support",
+                            "title": "Contact Support",
+                            "description": "Get help from customer support"
                         }
                     ]
                 }

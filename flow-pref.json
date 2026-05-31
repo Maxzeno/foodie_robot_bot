@@ -1,0 +1,261 @@
+{
+  "version": "7.2",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "HEALTH_QUESTIONNAIRE": []
+  },
+  "screens": [
+    {
+      "id": "HEALTH_QUESTIONNAIRE",
+      "title": "Health & Fitness Profile",
+      "data": {
+        "currency": {
+          "type": "string",
+          "__example__": "USD"
+        },
+        "fitness_goals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "0_weight_loss",
+              "title": "Weight Loss"
+            },
+            {
+              "id": "1_muscle_gain",
+              "title": "Muscle Gain"
+            },
+            {
+              "id": "2_general_fitness",
+              "title": "General Fitness"
+            },
+            {
+              "id": "3_strength_training",
+              "title": "Strength Training"
+            },
+            {
+              "id": "4_endurance",
+              "title": "Endurance Training"
+            },
+            {
+              "id": "5_flexibility",
+              "title": "Flexibility & Mobility"
+            }
+          ]
+        },
+        "health_conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "0_diabetes",
+              "title": "Diabetes"
+            },
+            {
+              "id": "1_high_blood_pressure",
+              "title": "High Blood Pressure"
+            },
+            {
+              "id": "2_heart_condition",
+              "title": "Heart Condition"
+            },
+            {
+              "id": "3_arthritis",
+              "title": "Arthritis"
+            },
+            {
+              "id": "4_thyroid_disorder",
+              "title": "Thyroid Disorder"
+            },
+            {
+              "id": "5_none",
+              "title": "None of the above"
+            }
+          ]
+        },
+        "allergies_diet": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "0_dairy",
+              "title": "Dairy"
+            },
+            {
+              "id": "1_gluten",
+              "title": "Gluten"
+            },
+            {
+              "id": "2_nuts",
+              "title": "Nuts"
+            },
+            {
+              "id": "3_shellfish",
+              "title": "Shellfish"
+            },
+            {
+              "id": "4_eggs",
+              "title": "Eggs"
+            },
+            {
+              "id": "5_soy",
+              "title": "Soy"
+            },
+            {
+              "id": "6_red_meat",
+              "title": "Red Meat"
+            },
+            {
+              "id": "7_none",
+              "title": "None of the above"
+            }
+          ]
+        },
+        "preferred_cuisines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "0_mediterranean",
+              "title": "Mediterranean"
+            },
+            {
+              "id": "1_asian",
+              "title": "Asian"
+            },
+            {
+              "id": "2_american",
+              "title": "American"
+            },
+            {
+              "id": "3_italian",
+              "title": "Italian"
+            },
+            {
+              "id": "4_mexican",
+              "title": "Mexican"
+            },
+            {
+              "id": "5_indian",
+              "title": "Indian"
+            },
+            {
+              "id": "6_middle_eastern",
+              "title": "Middle Eastern"
+            },
+            {
+              "id": "7_vegan_vegetarian",
+              "title": "Vegan/Vegetarian"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "health_form",
+            "children": [
+              {
+                "type": "TextSubheading",
+                "text": "Let's create your personalized health & fitness profile"
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "What is your primary fitness goal?",
+                "name": "fitness_goal",
+                "data-source": "${data.fitness_goals}",
+                "required": true
+              },
+              {
+                "type": "CheckboxGroup",
+                "label": "Do you have any of these health conditions? (Select all that apply)",
+                "name": "health_conditions",
+                "data-source": "${data.health_conditions}",
+                "required": true
+              },
+              {
+                "type": "CheckboxGroup",
+                "label": "Any food allergies or dietary restrictions? (Select all that apply)",
+                "name": "allergies_diet",
+                "data-source": "${data.allergies_diet}",
+                "required": true
+              },
+              {
+                "type": "CheckboxGroup",
+                "label": "Which cuisines do you enjoy? (Select all that apply)",
+                "name": "preferred_cuisines",
+                "data-source": "${data.preferred_cuisines}",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "label": "Average meal budget?",
+                "name": "meal_budget",
+                "input-type": "number",
+                "helper-text": "Enter amount per meal (${data.currency})",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Create My Profile",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "fitness_goal": "${form.fitness_goal}",
+                    "health_conditions": "${form.health_conditions}",
+                    "allergies_diet": "${form.allergies_diet}",
+                    "preferred_cuisines": "${form.preferred_cuisines}",
+                    "meal_budget": "${form.meal_budget}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "terminal": true
+    }
+  ]
+}
