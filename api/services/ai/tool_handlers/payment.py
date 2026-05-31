@@ -1,15 +1,11 @@
 from typing import Dict
 
 from api.models.user import User
-from api.models.order import Order, OrderStatus
+from api.models.order import Order
 from api.models.message import Message
 
 
 def get_payment_status(user: User) -> Dict:
-    """
-    Get payment status for the latest order.
-    Users typically ask "have I paid?" or "is my payment confirmed?" after paying.
-    """
     try:
         # Get latest order
         order = Order.objects.filter(user=user).order_by('-created_at').first()

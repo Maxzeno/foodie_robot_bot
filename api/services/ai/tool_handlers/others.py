@@ -1,154 +1,105 @@
 from typing import Optional, Dict
-from django.utils import timezone
-from django.db.models import Q
 
+from api.models.message import Message
 from api.models.user import User
-from api.models.meal import Meal
+from api.models.meal import Meal, TimeOfDayChoices
 from api.models.recommendation import Recommendation, ChoiceOption
+from api.services.recommendation.meal_recommendation import MealRecommendationService
+from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
 
-def generate_meal_recommendations(
+def meal_recommendations(
     user: User,
     time_of_day: Optional[str] = None
 ) -> Dict:
     try:
-        # Determine time of day if not specified
-        if not time_of_day:
-            time_of_day = user.get_time_period()
+        found_recommendations = Recommendation.objects.filter(user=user, time_of_day=time_of_day, day=user.get_local_time())[:2]
+        if found_recommendations:
+            for recom in found_recommendations:
+                meal = recom.meal
+                text = f"Your {recom.choice_option.lower()} {time_of_day} meal recommendation, {meal.name}"
+                image_url = meal.image_url.url if meal.image_url else None
+                meal_id = str(meal.id)
+                
+                payload = recommend_product_payload(recom.id, text, image_url)
 
-        # Get user's city, fitness goals, allergies, health conditions
-        city = user.city
-        fitness_goal = user.fitness_goals
-        allergies = user.allergies.all()
-        health_conditions = user.health_conditions.all()
-        preferred_cuisines = user.preferred_cuisine.all()
-        budget = user.average_meal_budget
-
-        # Build query
-        query = Q(available=True, times_of_day__contains=[time_of_day])
-
-        if city:
-            query &= Q(city=city)
-
-        if fitness_goal:
-            query &= Q(fitness_goals=fitness_goal)
-
-        # Exclude meals with restricted allergies or health conditions
-        if allergies.exists():
-            query &= ~Q(restricted_allergies__in=allergies)
-
-        if health_conditions.exists():
-            query &= ~Q(restricted_health_conditions__in=health_conditions)
-
-        # Filter by budget if specified
-        if budget:
-            query &= Q(price__lte=budget)
-
-        # Get meals
-        meals = Meal.objects.filter(query).distinct()
-
-        # Prefer meals matching cuisine preferences if available
-        if preferred_cuisines.exists():
-            preferred_meals = meals.filter(cuisine__in=preferred_cuisines).distinct()
-            if preferred_meals.exists():
-                meals = preferred_meals
-
-        # Get 2 random meals for recommendations
-        recommendations_list = list(meals.order_by('?')[:2])
-
-        if len(recommendations_list) < 2:
-            return {
-                "success": False,
-                "message": f"Not enough meals available for {time_of_day}. Please adjust your preferences or try a different time.",
-                "recommendations": []
-            }
-
-        # Create recommendation records
-        today = timezone.now().date()
-
-        # Clear old recommendations for this time slot
-        Recommendation.objects.filter(
+                Message.bot_message_action_reply(text, user,
+                    payload=payload,
+                    metadata={
+                        "meal_id": meal_id, 
+                        "recomendation_id": recom.id,
+                        "description": "Users can order, like or hate meal"
+                        }
+                )
+            return True
+            
+        service = MealRecommendationService()
+        
+        recommended_meal_dict = service.get_recommendations(
             user=user,
-            day=today,
-            time_of_day=time_of_day
-        ).delete()
-
-        # Create new recommendations
-        rec1 = Recommendation.objects.create(
-            user=user,
-            meal=recommendations_list[0],
-            time_of_day=time_of_day,
-            choice_option=ChoiceOption.FIRST,
-            day=today
+            num_recommendations_per_period=2,
         )
+        
+        recommended_meals = Meal.objects.filter(id__in=recommended_meal_dict.get(time_of_day, []))
+        
+        for index, meal in enumerate(recommended_meals):
+            text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}"
+            image_url = meal.image_url.url if meal.image_url else None
+            meal_id = str(meal.id)
+            
+            recomendation_obj = Recommendation.objects.create(
+                user=user,
+                meal=meal,
+                time_of_day=TimeOfDayChoices.get_period(time_of_day),
+                choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
+                sent_to_user=True if user.get_time_period() == time_of_day else False,
+                day=user.get_local_time()
+            )
 
-        rec2 = Recommendation.objects.create(
-            user=user,
-            meal=recommendations_list[1],
-            time_of_day=time_of_day,
-            choice_option=ChoiceOption.SECOND,
-            day=today
-        )
+            if user.get_time_period() == time_of_day:
+                payload = recommend_product_payload(recomendation_obj.id, text, image_url)
 
-        # Format response
-        def format_meal(meal: Meal):
-            return {
-                "id": meal.id,
-                "name": meal.name,
-                "description": meal.description,
-                "price": float(meal.price),
-                "restaurant": meal.restaurant.name,
-                "calories": float(meal.calories) if meal.calories else None,
-                "protein": f"{float(meal.protein)}g" if meal.protein else None,
-            }
-
-        return {
-            "success": True,
-            "time_of_day": time_of_day,
-            "recommendations": [
-                format_meal(recommendations_list[0]),
-                format_meal(recommendations_list[1])
-            ]
-        }
+                Message.bot_message_action_reply(text, user,
+                    payload=payload,
+                    metadata={
+                        "meal_id": meal_id, 
+                        "recomendation_id": recomendation_obj.id,
+                        "description": "Users can order, like or hate meal"
+                        }
+                )
+        return True
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error generating recommendations: {str(e)}",
-            "recommendations": []
-        }
+        Message.bot_message("Error generating meal recommendations", user=user)
+        return False
 
 
 def get_nutritional_info(user: User, meal_id: int) -> Dict:
     try:
         meal = Meal.objects.get(id=meal_id)
-
-        return {
-            "success": True,
-            "meal_id": meal_id,
-            "meal_name": meal.name,
-            "nutrition": {
-                "calories": float(meal.calories) if meal.calories else None,
-                "protein": f"{float(meal.protein)}g" if meal.protein else None,
-                "carbs": f"{float(meal.carbs)}g" if meal.carbs else None,
-                "fats": f"{float(meal.fats)}g" if meal.fats else None,
-                "fiber": f"{float(meal.fiber)}g" if meal.fiber else None,
-                "sugar": f"{float(meal.sugar)}g" if meal.sugar else None,
-                "sodium": f"{float(meal.sodium)}mg" if meal.sodium else None,
-                "cholesterol": f"{float(meal.cholesterol)}mg" if meal.cholesterol else None,
-                "serving_size": f"{float(meal.serving_amount_g)}g" if meal.serving_amount_g else None,
-            },
-            "restaurant": meal.restaurant.name,
-            "restricted_allergies": [a.name for a in meal.restricted_allergies.all()],
-            "restricted_health_conditions": [h.name for h in meal.restricted_health_conditions.all()],
-        }
+        Message.bot_message(
+            f"Nutritional info for {meal.name}: "
+            f"Calories: {float(meal.calories) if meal.calories else 'N/A'}, "
+            f"Protein: {f'{float(meal.protein)}g' if meal.protein else 'N/A'}, "
+            f"Carbs: {f'{float(meal.carbs)}g' if meal.carbs else 'N/A'}, "
+            f"Fats: {f'{float(meal.fats)}g' if meal.fats else 'N/A'}, "
+            f"Fiber: {f'{float(meal.fiber)}g' if meal.fiber else 'N/A'}, "
+            f"Sugar: {f'{float(meal.sugar)}g' if meal.sugar else 'N/A'}, "
+            f"Sodium: {f'{float(meal.sodium)}mg' if meal.sodium else 'N/A'}, "
+            f"Cholesterol: {f'{float(meal.cholesterol)}mg' if meal.cholesterol else 'N/A'}, "
+            f"Serving Size: {f'{float(meal.serving_amount_g)}g' if meal.serving_amount_g else 'N/A'}, "
+            
+            f"allergies: {', '.join([a.name for a in user.allergies.all()])}, "
+            f"fitness_goals: {user.fitness_goals}, "
+            f"health_conditions: {', '.join([h.name for h in user.health_conditions.all()])}, "
+            f"preferred_cuisines: {', '.join([c.name for c in user.preferred_cuisine.all()])}, ",
+            user=user
+        )
+        return True
     except Meal.DoesNotExist:
-        return {
-            "success": False,
-            "message": f"Meal with ID {meal_id} not found"
-        }
+        Message.bot_message("Meal info not found", user=user)
+        
+        return False
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error getting nutritional info: {str(e)}"
-        }
+        Message.bot_message("Error fetching nutritional info", user=user)
+        return False

@@ -71,7 +71,8 @@ class ToolEmbeddingFilter:
         self,
         user_query: str,
         all_tools: List[Dict],
-        top_k: int = 5
+        top_k: int = 5,
+        essential_tool_names: List[str] = None
     ) -> List[Dict]:
         """
         Filter tools based on semantic similarity to user query.
@@ -80,32 +81,54 @@ class ToolEmbeddingFilter:
             user_query: The user's message/query
             all_tools: List of all available tool definitions
             top_k: Number of most relevant tools to return
+            essential_tool_names: List of tool names that should always be included
 
         Returns:
-            List of top K most relevant tools
+            List of top K most relevant tools plus essential tools
         """
+        essential_tool_names = essential_tool_names or []
+
+        # Separate essential tools from others
+        essential_tools = []
+        other_tools = []
+
+        for tool in all_tools:
+            tool_name = tool.get("function", {}).get("name", "")
+            if tool_name in essential_tool_names:
+                essential_tools.append(tool)
+            else:
+                other_tools.append(tool)
+
         # Generate embedding for user query
         query_embedding = self._get_embedding(user_query)
 
-        # Calculate similarity scores for each tool
+        # Calculate similarity scores for non-essential tools
         tool_scores: List[Tuple[Dict, float]] = []
 
-        for tool in all_tools:
+        for tool in other_tools:
             tool_embedding = self._get_cached_tool_embedding(tool)
             similarity = self._cosine_similarity(query_embedding, tool_embedding)
             tool_scores.append((tool, similarity))
 
-        # Sort by similarity (highest first) and take top K
+        # Sort by similarity (highest first)
         tool_scores.sort(key=lambda x: x[1], reverse=True)
-        filtered_tools = [tool for tool, score in tool_scores[:top_k]]
+
+        # Calculate how many additional tools we need (after essential tools)
+        additional_tools_needed = max(0, top_k - len(essential_tools))
+        filtered_tools = [tool for tool, score in tool_scores[:additional_tools_needed]]
+
+        # Combine essential tools + filtered tools
+        final_tools = essential_tools + filtered_tools
 
         # Log for debugging
-        print(f"Tool filtering results (top {top_k}):")
-        for tool, score in tool_scores[:top_k]:
+        print(f"Tool filtering results:")
+        print(f"  Essential tools: {len(essential_tools)}")
+        print(f"  Filtered tools (top {additional_tools_needed}):")
+        for tool, score in tool_scores[:additional_tools_needed]:
             tool_name = tool.get("function", {}).get("name", "unknown")
-            print(f"  - {tool_name}: {score:.3f}")
+            print(f"    - {tool_name}: {score:.3f}")
 
-        return filtered_tools
+        return final_tools
 
     def precompute_tool_embeddings(self, all_tools: List[Dict]):
         """

@@ -130,12 +130,12 @@ def whatsapp_verify(request):
 @csrf_exempt
 @router.get("/test-temp")
 def text_temp_verify(request):
-    user = User.objects.all()[4]
+    user = User.objects.filter(phone="2349077745730").first()
     print("User:", user)
     service = MealRecommendationService()
 
     # recommend by LLM
-    recommended_meal_ids = service.get_recommendations_by_llm(
+    recommended_meal_ids = service.get_recommendations(
         user=user,
         num_recommendations_per_period=2,
     )

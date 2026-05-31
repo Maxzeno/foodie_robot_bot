@@ -1,8 +1,8 @@
-from typing import Optional, Dict
+from typing import Optional
 from django.contrib.gis.geos import Point
 
 from api.models.meal import Meal, TimeOfDayChoices
-from api.models.message import CurrentIntentChoices, Message
+from api.models.message import Message
 from api.models.recommendation import ChoiceOption, Recommendation
 from api.models.user import User
 from api.models.location import City
@@ -54,7 +54,7 @@ def save_delivery_location(
         
         service = MealRecommendationService()
         
-        recommended_meal_map = service.get_recommendations_by_algo(
+        recommended_meal_map = service.get_recommendations(
             user=user,
             num_recommendations_per_period=2,
         )
@@ -72,13 +72,13 @@ def save_delivery_location(
                     time_of_day=TimeOfDayChoices.get_period(period),
                     choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
                     sent_to_user=True if user.get_time_period() == period else False,
+                    day=user.get_local_time()
                 )
 
                 if user.get_time_period() == period:
                     payload = recommend_product_payload(recomendation_obj.id, text, image_url)
 
                     Message.bot_message_action_reply(text, user,
-                        current_intent=CurrentIntentChoices.RECOMMENDED_MEALS, 
                         payload=payload,
                         metadata={
                             "meal_id": meal_id, 

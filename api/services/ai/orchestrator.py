@@ -11,7 +11,7 @@ from api.services.ai.embedding_filter import ToolEmbeddingFilter
 
 
 class FoodBotAIHandler:
-    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano", use_embedding_filter: bool = True, top_k_tools: int = 5): # gpt-5-nano gpt-4.1-nano
+    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano", use_embedding_filter: bool = False, top_k_tools: int = 3): # gpt-5-nano gpt-4.1-nano
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = model
         self.user = user
@@ -25,6 +25,14 @@ class FoodBotAIHandler:
         # Initialize embedding filter
         self.embedding_filter = ToolEmbeddingFilter(self.client)
 
+        # Define essential tools that should always be available (regardless of embedding filter)
+        # These are critical tools that provide core functionality or act as fallbacks
+        self.essential_tools = [
+            "generate_meal_recommendations",  # Core feature
+            "place_order",  # Core conversion action
+            "contact_support"  # Fallback for any issues
+        ]
+
         self.reply_message = Message.objects.filter(message_id=reply_message_id, role=RoleChoices.BOT).first()
         self.sender_message = Message.objects.filter(message_id=sender_message_id, role=RoleChoices.USER).first()
     
@@ -35,19 +43,21 @@ class FoodBotAIHandler:
             "save_allergies": tool_handlers.save_allergies,
             "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
             "save_delivery_location": tool_handlers.save_delivery_location,
-            "generate_meal_recommendations": tool_handlers.generate_meal_recommendations,
+
+            "meal_recommendations": tool_handlers.meal_recommendations,
             "get_nutritional_info": tool_handlers.get_nutritional_info,
+            
+            "get_payment_status": tool_handlers.get_payment_status,
+            "place_order": tool_handlers.place_order,
+            "get_meal_details": tool_handlers.get_meal_details,
             "request_delivery_location": tool_handlers.request_delivery_location,
             "like_or_hate_meal": tool_handlers.like_or_hate_meal,
-            "place_order": tool_handlers.place_order,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
             "search_meals": tool_handlers.search_meals,
-            "get_meal_details": tool_handlers.get_meal_details,
             "get_user_profile": tool_handlers.get_user_profile,
             "update_average_budget": tool_handlers.update_average_budget,
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
-            "get_payment_status": tool_handlers.get_payment_status,
             "contact_support": tool_handlers.contact_support,
             "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
             "get_current_location": tool_handlers.get_current_location,
@@ -108,18 +118,26 @@ class FoodBotAIHandler:
         # Get conversation  (Including the current user message)
         messages = self.get_conversation_history()
 
-        # Get the latest user message for tool filtering
-        user_message = next(
-            (msg["content"] for msg in reversed(messages) if msg["role"] == "user"),
-            ""
-        )
+        # Build context from recent user messages (last 3) for better tool filtering
+        recent_user_messages = [
+            msg["content"] for msg in reversed(messages)
+        ]
+
+        # recent_user_messages = [
+        #     msg["content"] for msg in reversed(messages)
+        #     if msg["role"] == "user"
+        # ][:3]  # Last 3 user messages
+
+        # Combine recent messages for context-aware filtering
+        user_context = " | ".join(reversed(recent_user_messages))
 
         # Filter tools using embedding similarity if enabled
-        if self.use_embedding_filter and user_message:
+        if self.use_embedding_filter and user_context:
             tools = self.embedding_filter.filter_tools(
-                user_query=user_message,
+                user_query=user_context,
                 all_tools=self.all_tools,
-                top_k=self.top_k_tools
+                top_k=self.top_k_tools,
+                essential_tool_names=self.essential_tools
             )
             print(f"Using {len(tools)} filtered tools (from {len(self.all_tools)} total)")
         else:

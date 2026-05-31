@@ -103,8 +103,8 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "generate_meal_recommendations",
-                "description": "Generate personalized meal recommendations",
+                "name": "meal_recommendations",
+                "description": "Generate/show personalized meal recommendations",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -134,7 +134,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "request_delivery_location",
-                "description": "Request user to share location via WhatsApp",
+                "description": "Request user to share location",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -209,7 +209,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "search_meals",
-                "description": "Search meals by name (max 5 results)",
+                "description": "Search meals by name",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -223,7 +223,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_meal_details",
-                "description": "Get meal details (nutrition, price, availability)",
+                "description": "Get meal details",
                 "parameters": {
                     "type": "object",
                     "properties": {

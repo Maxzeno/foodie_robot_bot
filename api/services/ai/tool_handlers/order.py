@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 from decimal import Decimal
-from django.db.models import Q
 
+from api.models.location import City
 from api.models.user import User
 from api.models.meal import Meal
 from api.models.order import Order, OrderStatus
@@ -17,6 +17,20 @@ def place_order(
     special_instructions: Optional[str] = None
 ) -> Dict:
     try:
+        if not user.city:
+            Message.bot_message(
+                "Please set your delivery location first before placing an order.",
+                user=user
+            )
+            return False
+        
+        if quantity < 1:
+            Message.bot_message(
+                "Quantity must be at least 1. Please specify a valid quantity.",
+                user=user
+            )
+            return False
+        
         # Validate meal
         try:
             meal = Meal.objects.get(id=meal_id, available=True)
@@ -53,7 +67,14 @@ def place_order(
                 user=user
             )
             return False
-
+        
+        address_city = City.get_city_by_coordinates(delivery_address.point.x, delivery_address.point.y)
+        if address_city != user.city:
+            Message.bot_message(
+                "Your selected delivery address is outside your current city. Please update your delivery address or change your delivery location.",
+                user=user
+            )
+            return False
         # Calculate pricing
         meal_price = meal.price * quantity
         delivery_fee = Decimal('500.00')  # TODO: Calculate based on distance
