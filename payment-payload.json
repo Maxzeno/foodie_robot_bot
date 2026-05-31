@@ -1,0 +1,140 @@
+{
+    "event.type": "transaction_success",
+    "data": {
+        "amount": "106.05",
+        "requestamount": "105.0",
+        "delivered": "1",
+        "vended": "1",
+        "failed": "0",
+        "debited": "1",
+        "mode": "1",
+        "processing": "0",
+        "meta": {
+            "charge_customer": true,
+            "processing_fee": "0",
+            "orderId": "3",
+            "skipReceipt": true,
+            "fee_structure": {
+                "fee": "0.01",
+                "channels": {
+                    "link_wallet": {
+                        "fee": "0.04",
+                        "percent": true,
+                        "commission": "0",
+                        "charge_customer": false
+                    },
+                    "apple_pay": {
+                        "fee": "0.04",
+                        "percent": true,
+                        "commission": "0",
+                        "charge_customer": false
+                    },
+                    "payment_card": {
+                        "USD": {
+                            "fee": "0.039",
+                            "percent": true,
+                            "commission": "0",
+                            "charge_customer": false
+                        },
+                        "fee": "0.04",
+                        "charge_customer": false,
+                        "percent": true,
+                        "commission": "0",
+                        "NGN": {
+                            "flat": "0",
+                            "fee": "0.015",
+                            "feeThreshold": {
+                                "max": "1000",
+                                "min": "0"
+                            },
+                            "commission": "0",
+                            "percent": true,
+                            "charge_customer": false
+                        }
+                    },
+                    "momo_pay": {
+                        "flat": "0",
+                        "fee": "0.0175",
+                        "feeThreshold": {
+                            "max": "2000",
+                            "min": "0"
+                        },
+                        "commission": "0",
+                        "percent": true,
+                        "charge_customer": false
+                    },
+                    "beyonic": {
+                        "flat": "0",
+                        "fee": "0.03",
+                        "percent": true,
+                        "commission": "0",
+                        "charge_customer": false
+                    },
+                    "google_pay": {
+                        "fee": "0.04",
+                        "percent": true,
+                        "commission": "0",
+                        "charge_customer": false
+                    },
+                    "transfer_pay": {
+                        "fee": "0.01",
+                        "feeThreshold": {
+                            "max": "2000",
+                            "min": "0"
+                        },
+                        "commission": "0",
+                        "percent": true,
+                        "charge_customer": false
+                    },
+                    "paystack_apple_pay": {
+                        "fee": "0.04",
+                        "percent": true,
+                        "commission": "0",
+                        "charge_customer": false
+                    }
+                },
+                "feeThreshold": {
+                    "max": "2000",
+                    "min": "0"
+                },
+                "commission": "0",
+                "percent": true,
+                "charge_customer": false
+            },
+            "channel_fee_charge_customer": true,
+            "payment_methods": "sterling,fcmb_online,vendy_connect,kuda_pay,opay_connect,payment_card,transfer_pay,sterling_wallet,paystack_apple_pay,apple_pay,google_pay,link_wallet,mobile_money",
+            "commission": "0",
+            "payment_link": true,
+            "total": "106.05",
+            "bill_currency": "ngn",
+            "narration":"Request from Foodie Robot LT for \xe2\x82\xa6105.00",
+            "paymentRef": "pyr_xuUUomvp02lUXxoU",
+            "payer": "EMMANUEL CHIDERA NWAEGUNWA (100004     - 9077745730)",
+            "skipInvoice": true,
+            "bill_amount": "106.05",
+            "channel_fee": "0",
+            "fee": "1.05",
+            "bill_rate": "1",
+            "account_display_name": "Sterling(9455****601)"
+        },
+        "refid": "880659194654696706",
+        "vendref": "880659194654696706",
+        "currency": "ngn",
+        "device": "others",
+        "os_version": "10.15.7",
+        "request": "Generate payment link",
+        "msisdn": "2349077745730",
+        "reason": "77cf7b1e-ca76-4719-8780-73b26c2a2fea vended successfully",
+        "raw_reason": "Successful transaction",
+        "client": "77cf7b1e-ca76-4719-8780-73b26c2a2fea",
+        "channel": "transfer_pay",
+        "method": "whatsapp",
+        "account": "VND-TMP-1475454407502179",
+        "created_on": "2025-10-23 14:56:36",
+        "updated_on": "2025-10-23 14:56:36",
+        "delivered_date": "2025-10-23 14:56:36",
+        "vended_date": "2025-10-23 15:06:26",
+        "debited_date": "2025-10-23 15:06:26",
+        "page": "transfer-page"
+    }
+}

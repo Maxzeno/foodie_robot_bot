@@ -53,7 +53,7 @@ class Message(BaseModel):
 
     def get_content_meta(self):
         if self.metadata:
-            return f"{self.content} - metadata: {self.metadata}"
+            return f"{self.content} - metadata (for internal use only don't show user): {self.metadata}"
         return self.content or ""
     
     @staticmethod
@@ -115,6 +115,25 @@ class Message(BaseModel):
 
     @staticmethod
     def bot_message_action_reply(content: str, user, payload, current_intent: str=CurrentIntentChoices.NO_INTENT, metadata=None):
+        msg_type = 'interactive'
+        message_id = Message.send_message(user, msg_type, payload)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
+        return message
+    
+    def bot_message_url_cta(content: str, action_text: str, action_url: str, user, current_intent: str=CurrentIntentChoices.NO_INTENT, metadata: dict=None):
+        payload = {
+            "type": "cta_url",
+            "body": {
+                "text": content
+            },
+            "action": {
+            "name": "cta_url",
+                "parameters": {
+                    "display_text": action_text,
+                    "url": action_url
+                }
+            },
+        }
         msg_type = 'interactive'
         message_id = Message.send_message(user, msg_type, payload)
         message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)

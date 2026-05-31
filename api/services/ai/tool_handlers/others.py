@@ -32,6 +32,12 @@ def meal_recommendations(
                         }
                 )
             return True
+        
+        if user.city == None:
+            Message.bot_message_request_location(
+            content="To start getting meal recommendations, please share your delivery location.",
+            user=user,
+        )
             
         service = MealRecommendationService()
         

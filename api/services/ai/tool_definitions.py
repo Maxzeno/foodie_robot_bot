@@ -130,7 +130,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "request_delivery_location",
-                "description": "Use this tool when the user wants to set or update their delivery location",
+                "description": "Always use this tool when the user wants to set or update their delivery address (Very important you use this instead of prompting them to type it out)",
                 "parameters": {
                     "type": "object",
                     "properties": {},

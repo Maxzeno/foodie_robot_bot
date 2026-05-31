@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import cloudinary
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,7 +39,22 @@ WHATSAPP_MESSAGE_BASE_URL = config('WHATSAPP_MESSAGE_BASE_URL')
 WHATSAPP_API_KEY = config('WHATSAPP_API_KEY')
 WHATSAPP_API_VERIFY_TOKEN = config('WHATSAPP_API_VERIFY_TOKEN')
 
+VENDY_PUBLIC_KEY = config('VENDY_PUBLIC_KEY')
+VENDY_SECRET_HASH = config('VENDY_SECRET_HASH')
+
 OPENAI_API_KEY = config('OPENAI_API_KEY')
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME')
+CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY')
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET')
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True
+)
 
 ADD_GDAL_PATH = config('ADD_GDAL_PATH', default=False, cast=bool)
 
@@ -59,6 +75,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "corsheaders",
+    "cloudinary_storage",
+    "cloudinary",
     "api"
 ]
 
@@ -150,6 +168,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Media files configuration
+MEDIA_URL = '/media/'
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

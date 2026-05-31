@@ -7,6 +7,8 @@ from api.models.meal import Meal
 from api.models.order import Order, OrderStatus
 from api.models.address import DeliveryAddress
 from api.models.message import Message
+import requests
+from django.conf import settings
 
 # Format status message
 ORDER_STATUS_EMOJI = {
@@ -22,6 +24,34 @@ ORDER_STATUS_MESSAGE = {
     OrderStatus.ARRIVED: "Your order has arrived",
     OrderStatus.RECEIVED: "Order completed"
 }
+
+def payment_link(order: Order):
+    # url = "https://api.staging.myvendy.com/public/transactions/payment-url"
+    url = "https://api.myvendy.com/public/transactions/payment-url"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.VENDY_PUBLIC_KEY}"
+    }
+
+    payload = {
+        "amount": float(order.total_price),
+        "msisdn": order.user.phone,
+        "currency": "NGN",
+        "channel": "whatsapp",
+        "meta": {
+            "orderId": order.id
+        },
+        "charge_customer": True,
+        "product": "transactions"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()['data']['meta']['payment_link_url']
+    return None
+
 
 def place_order(
     user: User,
@@ -91,7 +121,7 @@ def place_order(
             return False
         # Calculate pricing
         meal_price = meal.price * quantity
-        delivery_fee = Decimal('500.00')  # TODO: Calculate based on distance
+        delivery_fee = Decimal('10.00')  # TODO: Calculate based on distance
         total_price = meal_price + delivery_fee
 
         # Create order
@@ -112,6 +142,14 @@ def place_order(
             pickup_street_address=meal.restaurant.street_address if hasattr(meal.restaurant, 'street_address') else None,
         )
 
+        payment_url = payment_link(order)
+        if not payment_url:
+            Message.bot_message(
+                "Sorry, we couldn't generate a payment link at the moment. Please try again later.",
+                user=user
+            )
+            return False
+        
         # Format message
         currency_symbol = user.city.currency.symbol
         message = f"""
@@ -126,13 +164,14 @@ def place_order(
 • Delivery: {currency_symbol}{delivery_fee:,.2f}
 • Total: {currency_symbol}{total_price:,.2f}
 
-📍 Delivery to: {delivery_address.street_address}
+📍 Delivery to: 
+• Address: {delivery_address.street_address or 'Last set address'} 
+• View address: https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x}
 
 💳 Please proceed to payment to confirm your order.
-Payment Link: [Payment link will be generated here]
 """.strip()
 
-        Message.bot_message(message, user=user)
+        Message.bot_message_url_cta(message, action_text="Pay now", action_url=payment_url, user=user)
 
         return True
 
@@ -167,7 +206,7 @@ def get_order_status(user: User, order_id: Optional[int] = None) -> Dict:
                 return False
 
         currency_symbol = order.currency.symbol
-        payment_status = "✅ Paid" if order.paid else "⏳ Payment pending"
+        payment_status = "Paid" if order.paid else "Pending"
 
         message = f"""
 Order #{order.code}
@@ -220,7 +259,7 @@ def get_order_history(user: User, page: int = 1) -> Dict:
         message = f"📋 Your Order History (Page {page}):\n\n"
 
         for i, order in enumerate(orders, 1):
-            payment_status = "✅ Paid" if order.paid else "⏳ Payment pending"
+            payment_status = "Paid" if order.paid else "Pending"
 
             message += f"""
 {offset + i}. Order #{order.code}

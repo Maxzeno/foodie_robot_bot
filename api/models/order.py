@@ -55,4 +55,5 @@ class Order(BaseModel):
         if not self.code:
             self.code = unique_order_code()
 
+        # TODO: calculate total price and delivery fee
         super().save(*args, **kwargs)
