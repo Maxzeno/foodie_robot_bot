@@ -3,12 +3,15 @@ from django.contrib.gis.geos import Point
 
 from api.models.meal import Meal, TimeOfDayChoices
 from api.models.message import Message
+from api.models.order import Order
 from api.models.recommendation import ChoiceOption, Recommendation
 from api.models.user import User
 from api.models.location import City
 from api.models.address import DeliveryAddress
+from api.services.ai.tool_handlers.order import place_order
 from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
+from datetime import timedelta
 
 
 def save_delivery_location(
@@ -16,7 +19,7 @@ def save_delivery_location(
     latitude: float,
     longitude: float,
     name: Optional[str] = None,
-    address: Optional[str] = None
+    address: Optional[str] = None,
 ) -> bool:
     is_new = user.city is None
     try:
@@ -50,6 +53,11 @@ def save_delivery_location(
 
         # Recommend meals after setting location if they change city
         if not is_new and old_city == city:
+            order = Order.objects.filter(user=user).first()
+            # also check that the time is not to far apart from current time
+            time_diff = user.get_local_time() - order.created_at
+            if order and order.paid == False and time_diff < timedelta(hours=6):
+                place_order(user=user, meal_id=order.meal.id, quantity=order.quantity, special_instructions=order.note, recreated_with_new_address=True)
             return True
         
         service = MealRecommendationService()

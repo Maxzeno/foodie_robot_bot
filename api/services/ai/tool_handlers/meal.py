@@ -17,7 +17,7 @@ def meal_recommendations(
         if found_recommendations:
             for recom in found_recommendations:
                 meal = recom.meal
-                text = f"Your {recom.choice_option.lower()} {time_of_day} meal recommendation, {meal.name}"
+                text = f"Your {recom.choice_option.lower()} {time_of_day} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
                 image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
                 

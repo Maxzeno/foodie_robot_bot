@@ -70,6 +70,18 @@ def payment_webhook(request):
             print(f"Payment amount below expected. Expected: {expected_amount}, Got: {request_amount}")
             return HttpResponse(f"Payment amount below expected. Expected: {expected_amount}, Got: {request_amount}", status=400)
         
+        if (request_amount - order.delivery_fee) < order.meal.price:
+            order.amount_paid = request_amount
+            order.paid = False
+            order.save()
+
+            Message.bot_message(
+                f"Your payment for order #{order.code} is less than the meal price. Please reach our support team at {settings.CUSTOMER_SUPPORT_NUMBER}.",
+                user=order.user
+            )
+            return HttpResponse(f"Meal price has been update please contact admin", status=400)
+        
+
         # Verify transaction status
         delivered = data.get("delivered") == "1"
         vended = data.get("vended") == "1"

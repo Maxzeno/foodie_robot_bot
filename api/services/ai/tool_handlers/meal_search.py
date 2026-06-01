@@ -114,7 +114,7 @@ def get_meal_details(user: User, meal_id: int) -> Dict:
         # Add nutrition info if available
         if meal.calories:
             message += f"""
-
+\n
 📊 Nutrition (per serving):
 • Calories: {float(meal.calories):.0f} kcal
 • Protein: {float(meal.protein):.1f}g

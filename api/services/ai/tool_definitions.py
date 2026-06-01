@@ -158,16 +158,15 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "place_order",
-                "description": "Place meal order with quantity",
+                "description": "Place meal order",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "meal_id": {"type": "integer"},
-                        "quantity": {"type": "integer"},
-                        "delivery_address_id": {"type": "integer"},
+                        "number_of_plates": {"type": "integer"},
                         "special_instructions": {"type": "string"}
                     },
-                    "required": ["meal_id", "quantity"]
+                    "required": ["meal_id", "number_of_plates"]
                 }
             }
         },

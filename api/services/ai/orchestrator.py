@@ -79,10 +79,9 @@ class FoodBotAIHandler:
         messages = [
 {
   "role": "system",
-  "content": "You are a WhatsApp food bot. Always use tools. Only reply to ask for needed info (be concise). Never expose metadata but use them internally."
-},
+  "content": "You are a WhatsApp food bot. Always use tools, except when asking for needed info (be concise). For generic, out-of-context, or unhandled requests, call show_menu_options. Never expose metadata; use it internally."
+}
         ]
-
         if self.reply_message and self.sender_message:
             messages.append({
                 "role": "user",

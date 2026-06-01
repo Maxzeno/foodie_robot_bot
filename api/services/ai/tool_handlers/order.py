@@ -56,9 +56,10 @@ def payment_link(order: Order):
 def place_order(
     user: User,
     meal_id: int,
-    quantity: int = 1,
-    delivery_address_id: Optional[int] = None,
-    special_instructions: Optional[str] = None
+    number_of_plates: int = 1,
+    # delivery_address_id: Optional[int] = None,
+    special_instructions: Optional[str] = None,
+    recreated_with_new_address: bool = False
 ) -> Dict:
     try:
         if not user.city:
@@ -68,9 +69,9 @@ def place_order(
             )
             return False
         
-        if quantity < 1:
+        if number_of_plates < 1:
             Message.bot_message(
-                "Quantity must be at least 1. Please specify a valid quantity.",
+                "Number of plates must be at least 1.",
                 user=user
             )
             return False
@@ -94,16 +95,15 @@ def place_order(
             return False
 
         # Get delivery address
-        if delivery_address_id:
-            try:
-                delivery_address = DeliveryAddress.objects.get(id=delivery_address_id, user=user)
-            except DeliveryAddress.DoesNotExist:
-                delivery_address = DeliveryAddress.objects.filter(user=user, is_default=True).first()
-        else:
-            delivery_address = DeliveryAddress.objects.filter(user=user, is_default=True).first()
+        # if delivery_address_id:
+        #     try:
+        #         delivery_address = DeliveryAddress.objects.get(id=delivery_address_id, user=user)
+        #     except DeliveryAddress.DoesNotExist:
+        #         delivery_address = DeliveryAddress.objects.filter(user=user).first()
+        # else:
+        #     delivery_address = DeliveryAddress.objects.filter(user=user).first()
 
-        if not delivery_address:
-            delivery_address = DeliveryAddress.objects.filter(user=user).first()
+        delivery_address = DeliveryAddress.objects.filter(user=user).first()
 
         if not delivery_address:
             Message.bot_message(
@@ -120,7 +120,7 @@ def place_order(
             )
             return False
         # Calculate pricing
-        meal_price = meal.price * quantity
+        meal_price = meal.price * number_of_plates
         delivery_fee = Decimal('10.00')  # TODO: Calculate based on distance
         total_price = meal_price + delivery_fee
 
@@ -128,7 +128,7 @@ def place_order(
         order = Order.objects.create(
             user=user,
             meal=meal,
-            quantity=quantity,
+            quantity=number_of_plates,
             status=OrderStatus.PENDING,
             note=special_instructions or "",
             currency=user.city.currency,
@@ -153,11 +153,11 @@ def place_order(
         # Format message
         currency_symbol = user.city.currency.symbol
         message = f"""
-✅ Order placed successfully!
+✅ {"Order placed successfully!" if recreated_with_new_address else "Your last Order recreated with your new address" }
 
 📋 Order #{order.code}
 🍽️ {meal.name}
-🔢 Quantity: {quantity} plate(s)
+🔢 Quantity: {number_of_plates} plate(s)
 
 💰 Price Breakdown:
 • Meal: {currency_symbol}{meal_price:,.2f}
@@ -166,7 +166,7 @@ def place_order(
 
 📍 Delivery to: 
 • Address: {delivery_address.street_address or 'Last set address'} 
-• View address: https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x}
+• View current delivery address: https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x} (You can update the delivery address if this isn’t your desired location.)
 
 💳 Please proceed to payment to confirm your order.
 """.strip()
