@@ -57,7 +57,7 @@ def save_delivery_location(
             # also check that the time is not to far apart from current time
             time_diff = user.get_local_time() - order.created_at
             if order and order.paid == False and time_diff < timedelta(hours=6):
-                place_order(user=user, meal_id=order.meal.id, quantity=order.quantity, special_instructions=order.note, recreated_with_new_address=True)
+                place_order(user=user, meal_id=order.meal.id, number_of_plates=order.quantity, special_instructions=order.note, recreated_with_new_address=True)
             return True
         
         service = MealRecommendationService()

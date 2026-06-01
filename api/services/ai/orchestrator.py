@@ -28,7 +28,7 @@ class FoodBotAIHandler:
         # Define essential tools that should always be available (regardless of embedding filter)
         # These are critical tools that provide core functionality or act as fallbacks
         self.essential_tools = [
-            "generate_meal_recommendations",  # Core feature
+            "meal_recommendations",  # Core feature
             "place_order",  # Core conversion action
             "contact_support"  # Fallback for any issues
         ]
@@ -79,7 +79,7 @@ class FoodBotAIHandler:
         messages = [
 {
   "role": "system",
-  "content": "You are a WhatsApp food bot. Always use tools, except when asking for needed info (be concise). For generic, out-of-context, or unhandled requests, call show_menu_options. Never expose metadata; use it internally."
+  "content": "You are a WhatsApp food bot. Always use tools, except when asking for needed info (be concise, specific to tool parameters and never assume values that are not in the prompt). For generic, out-of-context, or unhandled requests, call show_menu_options. Never expose metadata; use it internally."
 }
         ]
         if self.reply_message and self.sender_message:

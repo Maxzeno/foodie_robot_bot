@@ -153,7 +153,7 @@ def place_order(
         # Format message
         currency_symbol = user.city.currency.symbol
         message = f"""
-✅ {"Order placed successfully!" if recreated_with_new_address else "Your last Order recreated with your new address" }
+✅ {"Order placed successfully!" if recreated_with_new_address == False else "Your last Order recreated with your new address" }
 
 📋 Order #{order.code}
 🍽️ {meal.name}

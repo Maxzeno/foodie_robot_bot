@@ -42,7 +42,7 @@ def whatsapp_webhook(request):
             name = json_resp.get('name')
             latitude = json_resp.get('latitude')
             longitude = json_resp.get('longitude')
-            text = f"Location - name: {name}, address: {address}, latitude: {latitude}, longitude: {longitude}"
+            text = f"Location - name: {name or ''}, address: {address or ''}, latitude: {latitude}, longitude: {longitude}"
         
         elif msg_type == "interactive":
             interactive = message["interactive"]
