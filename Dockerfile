@@ -1,23 +1,30 @@
 FROM python:3.11.4-slim-bullseye
 WORKDIR /app
 
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libpq-dev
+# Install GDAL + PostgreSQL headers (needed by psycopg2) + cleanup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin \
+    libgdal-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file and install dependencies
+# Optional: let pip know where to find GDAL headers
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+# Copy and install Python dependencies
 COPY ./requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy the rest of the code
 COPY . /app
 
-# Run pre_run.sh script (will remove this because might run on every docker run)
+# Make sure your pre_run script is executable
 RUN chmod +x /app/pre_run.sh
-ENTRYPOINT ["/app/pre_run.sh"]
 
-# Default command to run the Django application
-CMD ["gunicorn", "ctt.wsgi", "-b", "0.0.0.0:8000"]
+# Set the entrypoint and default command
+ENTRYPOINT ["/app/pre_run.sh"]
+CMD ["gunicorn", "foodie_robot.wsgi", "-b", "0.0.0.0:8000"]

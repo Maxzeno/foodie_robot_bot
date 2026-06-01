@@ -169,6 +169,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static'
+]
+
 # Media files configuration
 MEDIA_URL = '/media/'
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
@@ -185,6 +191,14 @@ AUTH_USER_MODEL = 'api.User'
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOWED_ORIGINS = []
 CORS_ALLOWED_ORIGIN_REGEXES = []
+CORS_ALLOWED_ORIGINS = []
 CSRF_TRUSTED_ORIGINS = []
+
+for host in _ALLOWED_HOST.split():
+    CSRF_TRUSTED_ORIGINS.append(f'http://{host}')
+    CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
+
+for host in _ALLOWED_HOST.split():
+    CORS_ALLOWED_ORIGINS.append(f'http://{host}')
+    CORS_ALLOWED_ORIGINS.append(f'https://{host}')
