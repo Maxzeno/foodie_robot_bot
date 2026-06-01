@@ -53,7 +53,7 @@ class Message(BaseModel):
 
     def get_content_meta(self):
         if self.metadata:
-            return f"{self.content} - metadata (for internal use only don't show user): {self.metadata}"
+            return f"{self.content} - metadata: {self.metadata}"
         return self.content or ""
     
     @staticmethod

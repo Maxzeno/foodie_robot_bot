@@ -8,6 +8,8 @@ from api.models.meal import AllergyChoices, CuisineChoices, FitnessGoal, HealthC
 def save_fitness_goal(user: User, fitness_goal: str) -> Dict:
     is_new = user.city is None
     try:
+        fitness_goal = fitness_goal.replace(" ", "_").lower()
+
         fitness_goal_obj = FitnessGoal.objects.filter(name=fitness_goal).first()
         if not fitness_goal_obj:
             Message.bot_message("We couldn't find the fitness goal you specified. Please try again (weight loss, muscle gain, or maintenance)?", user=user)
@@ -28,6 +30,8 @@ def save_fitness_goal(user: User, fitness_goal: str) -> Dict:
 def save_health_conditions(user: User, health_conditions: List[str]) -> Dict:
     is_new = user.city is None
     try:
+        health_conditions = [item.replace(" ", "_") for item in health_conditions]
+
         if not health_conditions:
             user.health_conditions.clear()
             if is_new:
@@ -52,6 +56,8 @@ def save_health_conditions(user: User, health_conditions: List[str]) -> Dict:
 def save_allergies(user: User, allergies: List[str]) -> Dict:
     is_new = user.city is None
     try:
+        allergies = [item.replace(" ", "_") for item in allergies]
+            
         if not allergies:
             user.allergies.clear()
             if is_new:
@@ -74,7 +80,10 @@ def save_allergies(user: User, allergies: List[str]) -> Dict:
 
 def save_cuisine_preferences(user: User, cuisine_preferences: List[str]) -> Dict:
     is_new = user.city is None
+
     try:
+        cuisine_preferences = [item.replace("/", "_") for item in cuisine_preferences]
+
         if not cuisine_preferences:
             user.preferred_cuisine.clear()
             if is_new:

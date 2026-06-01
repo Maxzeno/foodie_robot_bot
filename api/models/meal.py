@@ -39,6 +39,10 @@ class HealthConditionChoices(models.TextChoices):
     CELIAC = 'celiac', 'Celiac Disease'
     LACTOSE_INTOLERANCE = 'lactose_intolerance', 'Lactose Intolerance'
 
+    @classmethod
+    def list_values(cls):
+        return [choice.value.replace('_', ' ') for choice in cls]
+
 class AllergyChoices(models.TextChoices):
     PEANUTS = 'peanuts', 'Peanuts'
     SEAFOOD = 'seafood', 'Seafood'
@@ -48,10 +52,18 @@ class AllergyChoices(models.TextChoices):
     SOY = 'soy', 'Soy'
     TREE_NUTS = 'tree_nuts', 'Tree Nuts'
 
+    @classmethod
+    def list_values(cls):
+        return [choice.value.replace('_', ' ') for choice in cls]
+    
 class FitnessGoalChoices(models.TextChoices):
     WEIGHT_LOSS = 'weight_loss', 'Weight Loss'
     MUSCLE_GAIN = 'muscle_gain', 'Muscle Gain'
     MAINTENANCE = 'maintenance', 'Maintenance'
+    
+    @classmethod
+    def list_values(cls):
+        return [choice.value.replace('_', ' ') for choice in cls]
 
 class CuisineChoices(models.TextChoices):
     VEGAN_VEGETARIAN = 'vegan_vegetarian', 'Vegan Vegetarian'
@@ -80,6 +92,10 @@ class CuisineChoices(models.TextChoices):
     BRAZILIAN = 'brazilian', 'Brazilian'
     ARGENTINIAN = 'argentinian', 'Argentinian'
     CARIBBEAN = 'caribbean', 'Caribbean'
+
+    @classmethod
+    def list_values(cls):
+        return [choice.value.replace('_', '/') for choice in cls]
 
 
 class HealthCondition(BaseModel):

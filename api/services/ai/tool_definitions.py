@@ -1,3 +1,6 @@
+from api.models.meal import AllergyChoices, CuisineChoices, FitnessGoalChoices, HealthConditionChoices
+
+
 def get_tool_definitions():
     """Optimized tool definitions with reduced token usage."""
     return [
@@ -11,7 +14,7 @@ def get_tool_definitions():
                     "properties": {
                         "fitness_goal": {
                             "type": "string",
-                            "enum": ["weight_loss", "muscle_gain", "maintenance"]
+                            "enum": FitnessGoalChoices.list_values()
                         }
                     },
                     "required": ["fitness_goal"]
@@ -22,7 +25,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_health_conditions",
-                "description": "Save health conditions",
+                "description": "Save health conditions (empty array if none)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -30,7 +33,7 @@ def get_tool_definitions():
                             "type": "array",
                             "items": {
                                 "type": "string",
-                                "enum": ["diabetes", "hypertension", "high_cholesterol", "anemia", "celiac", "lactose_intolerance"]
+                                "enum": HealthConditionChoices.list_values()
                             }
                         }
                     },
@@ -42,7 +45,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_allergies",
-                "description": "Save food allergies",
+                "description": "Save food allergies (empty array if none)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -50,7 +53,7 @@ def get_tool_definitions():
                             "type": "array",
                             "items": {
                                 "type": "string",
-                                "enum": ["peanuts", "seafood", "dairy", "gluten", "eggs", "soy", "tree_nuts"]
+                                "enum": AllergyChoices.list_values()
                             }
                         }
                     },
@@ -62,7 +65,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_cuisine_preferences",
-                "description": "Save cuisine preferences",
+                "description": "Save cuisine preferences (empty array if none)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -70,12 +73,7 @@ def get_tool_definitions():
                             "type": "array",
                             "items": {
                                 "type": "string",
-                                "enum": [
-                                    "vegan_vegetarian", "nigerian", "ghanaian", "ethiopian", "moroccan",
-                                    "italian", "french", "spanish", "greek", "british",
-                                    "chinese", "japanese", "korean", "thai", "indian", "vietnamese", "filipino",
-                                    "american", "mexican", "brazilian", "argentinian", "caribbean"
-                                ]
+                                "enum": CuisineChoices.list_values()
                             }
                         }
                     },
@@ -87,7 +85,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "save_delivery_location",
-                "description": "Save delivery location with coordinates",
+                "description": "Save delivery location",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -112,20 +110,20 @@ def get_tool_definitions():
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_nutritional_info",
-                "description": "Get meal nutrition details",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "meal_id": {"type": "integer"}
-                    },
-                    "required": ["meal_id"]
-                }
-            }
-        },
+        # {
+        #     "type": "function",
+        #     "function": {
+        #         "name": "get_nutritional_info",
+        #         "description": "Get meal nutrition details",
+        #         "parameters": {
+        #             "type": "object",
+        #             "properties": {
+        #                 "meal_id": {"type": "integer"}
+        #             },
+        #             "required": ["meal_id"]
+        #         }
+        #     }
+        # },
         {
             "type": "function",
             "function": {
@@ -201,20 +199,20 @@ def get_tool_definitions():
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "search_meals",
-                "description": "Search meals by name",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"}
-                    },
-                    "required": ["query"]
-                }
-            }
-        },
+        # {
+        #     "type": "function",
+        #     "function": {
+        #         "name": "search_meals",
+        #         "description": "Search meals by name",
+        #         "parameters": {
+        #             "type": "object",
+        #             "properties": {
+        #                 "query": {"type": "string"}
+        #             },
+        #             "required": ["query"]
+        #         }
+        #     }
+        # },
         {
             "type": "function",
             "function": {

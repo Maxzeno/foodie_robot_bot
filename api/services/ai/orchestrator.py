@@ -60,8 +60,8 @@ class FoodBotAIHandler:
             # TODO: To be implemented
             # "request_update_info": tool_handlers.request_update_info,
             # "update_info": tool_handlers.update_info,
-            # TODO: Potentially tobe replaced with a more modular registration system
-            
+
+            # TODO: Potentially to be replaced with a more modular registration system
             "save_fitness_goal": tool_handlers.save_fitness_goal,
             "save_health_conditions": tool_handlers.save_health_conditions,
             "save_allergies": tool_handlers.save_allergies,
@@ -69,24 +69,18 @@ class FoodBotAIHandler:
             "update_average_budget": tool_handlers.update_average_budget,
             
             # TODO: potentially to be removed 
-            "search_meals": tool_handlers.search_meals,
-            "get_nutritional_info": tool_handlers.get_nutritional_info,
+            # "search_meals": tool_handlers.search_meals,
+            # "get_nutritional_info": tool_handlers.get_nutritional_info,
             "get_meal_details": tool_handlers.get_meal_details,
         }
 
     def get_conversation_history(self) -> List[Dict]:
         # Static system prompt for prompt caching (OpenAI automatically caches repeated content >1024 tokens)
         messages = [
-            {
-                "role": "system",
-                "content": """You are a WhatsApp food ordering bot. Follow these guidelines:
-- Ask only one question at a time
-- For unknown requests, say you can't help
-- Be concise and user friendly
-- Avoid long or deep reasoning. Prefer quick, direct responses and tool use
-- Limit responses to 100 words
-"""
-            }
+{
+  "role": "system",
+  "content": "You are a WhatsApp food bot. Always use tools. Only reply to ask for needed info (be concise). Never expose metadata but use them internally."
+},
         ]
 
         if self.reply_message and self.sender_message:
