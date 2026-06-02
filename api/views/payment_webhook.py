@@ -7,8 +7,8 @@ from decimal import Decimal
 from api.models.message import Message
 from api.models.order import Order
 
-from api.models.referral_earning import ReferralEarning
 from api.models.settings import AppSettings
+from api.utils.balance import add_referral_earning
 
 router = Router(tags=["Webhook"])
 
@@ -105,22 +105,22 @@ def payment_webhook(request):
         if order.user and order.user.referred_by and order.user.orders.filter(paid=True).count() == 1:
             setting = AppSettings.get_settings()
 
-            referral_bonus = order.meal.city.referral_bonus
+            city = order.meal.city
             referrer = order.user.referred_by
-            referrer.current_referral_earnings += referral_bonus
-            referrer.save()
-            ReferralEarning.objects.create(
-                user=referrer,
+
+            # Use the utility function to add referral earning
+            # This automatically creates ReferralEarning, updates UserBalance, and legacy field
+            add_referral_earning(
+                referred_by_user=referrer,
                 referred_user=order.user,
-                amount=referral_bonus,
-                currency=order.meal.city.currency
+                city=city
             )
-            
-            if referral_bonus > 0:
+
+            if city.referral_bonus > 0:
                 link = f"https://wa.me/{setting.whatsapp_phone_number}?text=Hi, i was referred by #{referrer.code}"
-                
+
                 Message.bot_message(
-                    f"🎉 You've earned a referral bonus of {order.meal.city.currency.code} {referral_bonus} for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
+                    f"🎉 You've earned a referral bonus of {city.currency.symbol}{city.referral_bonus} ({city.currency.code}) for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
                     user=referrer
                 )
         

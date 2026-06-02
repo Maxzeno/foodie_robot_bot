@@ -43,3 +43,5 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 -- I could create the meals in a city embedding and then later filter out to get top options
 
 - Implement the order flow with whatsapp flow and allow for update of delivery address before order creation.
+- Implement meal reorder with the order code or a recommendation, also maybe by find and order eg. order rice and beans
+ 

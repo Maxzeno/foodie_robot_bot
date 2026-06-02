@@ -48,7 +48,6 @@ class User(AbstractUser, BaseModel):
     health_conditions = models.ManyToManyField(HealthCondition, blank=True, related_name="users")
     allergies = models.ManyToManyField(Allergy, blank=True, related_name="users")
     preferred_cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="user")
-    current_referral_earnings = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
     referred_by = models.ForeignKey(
         "self",

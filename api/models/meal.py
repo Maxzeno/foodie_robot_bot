@@ -4,6 +4,7 @@ from api.models.location import City
 from django.contrib.postgres.fields import ArrayField
 
 from api.models.restaurant import Restaurant
+from api.utils.generate import generate_unique_code
 
 
 class TimeOfDayChoices(models.TextChoices):
@@ -141,8 +142,11 @@ class PreferredCuisine(BaseModel): # eg. Nigerian, Italian, Chinese
     def __str__(self):
         return self.name
 
+def unique_meal_code():
+    return generate_unique_code(Meal, field='code')
 
 class Meal(BaseModel):
+    code = models.CharField(max_length=100, unique=True, blank=True, null=True)
     name = models.CharField(max_length=250)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='meals')
 
@@ -193,3 +197,10 @@ class Meal(BaseModel):
 
     def __str__(self):
         return f"{self.name} - {self.city.name} - {self.fitness_goals} - {self.cuisine} - {self.restricted_health_conditions} - {self.restricted_allergies}"
+
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = unique_meal_code()
+
+        super().save(*args, **kwargs)

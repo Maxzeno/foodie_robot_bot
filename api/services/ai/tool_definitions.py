@@ -1,4 +1,5 @@
 from api.models.meal import AllergyChoices, CuisineChoices, FitnessGoalChoices, HealthConditionChoices
+from api.models.user_balance import BalanceType
 
 
 def get_tool_definitions():
@@ -166,7 +167,7 @@ def get_tool_definitions():
                         "number_of_plates": {"type": "integer"},
                         "special_instructions": {"type": "string"}
                     },
-                    "required": ["meal_id", "number_of_plates"]
+                    "required": ["meal_id"]
                 }
             }
         },
@@ -340,7 +341,12 @@ def get_tool_definitions():
                 "description": "Show user balance (referral earnings etc)",
                 "parameters": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "balance_type": {
+                            "type": "string",
+                            "enum": BalanceType.list_values()
+                        }
+                    },
                     "required": []
                 }
             }

@@ -19,6 +19,9 @@ from django import forms
 
 from api.models.withdrawal import Withdrawal
 
+# Import admin configurations
+from api.admin.user_balance_admin import UserBalanceAdmin
+
 # Register your models here.
 admin.site.register(DeliveryAddress, LeafletGeoAdmin)
 admin.site.register(City, LeafletGeoAdmin)

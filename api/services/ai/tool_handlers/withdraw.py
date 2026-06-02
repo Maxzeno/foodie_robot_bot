@@ -4,7 +4,7 @@ from api.models.user import User
 
 def make_withdraw(
     user: User,
-    amount: float,
+    currency: str,
     account_number: str,
     bank_name: str,
 ) -> bool:

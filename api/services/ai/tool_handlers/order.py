@@ -56,12 +56,21 @@ def payment_link(order: Order):
 def place_order(
     user: User,
     meal_id: int,
-    number_of_plates: int = 1,
+    number_of_plates: int=None,
     # delivery_address_id: Optional[int] = None,
     special_instructions: Optional[str] = None,
     recreated_with_new_address: bool = False
 ) -> Dict:
     try:
+        if not number_of_plates:
+            Message.bot_message(
+                "How many plates would you like to order?",
+                user=user,
+                metadata={
+                    "meal_id": meal_id, 
+                    "description": "User can order meal"
+                }
+            ) 
         if not user.city:
             Message.bot_message(
                 "Please set your delivery location first before placing an order.",
