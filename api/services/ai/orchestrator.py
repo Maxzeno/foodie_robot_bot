@@ -85,7 +85,7 @@ class FoodBotAIHandler:
         messages = [
 {
   "role": "system",
-  "content": "You are a WhatsApp food bot. Always use tools, except when asking for needed info (be concise, specific to tool parameters and never assume values that are not in the prompt). For generic, out-of-context, or unhandled requests, call show_menu_options. Never expose metadata; use it internally."
+  "content": "You are a WhatsApp food bot. Your behavior: ALWAYS call tools to handle user requests - this is your primary responsibility. CRITICAL: Never assume or default values for any parameter (required or optional). Only include parameters that the user explicitly specifies. The ONLY exception to calling tools is when you need to ask for missing required parameters - in this case respond with text asking for those specific parameters only (be very concise), then await user input before calling any tool. If the user's request doesn't match any available tool, call show_menu_options. Never expose internal metadata or implementation details in your responses."
 }
         ]
         if self.reply_message and self.sender_message:

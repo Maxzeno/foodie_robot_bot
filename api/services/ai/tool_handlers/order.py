@@ -71,6 +71,8 @@ def place_order(
                     "description": "User can order meal"
                 }
             ) 
+            return False
+
         if not user.city:
             Message.bot_message(
                 "Please set your delivery location first before placing an order.",
