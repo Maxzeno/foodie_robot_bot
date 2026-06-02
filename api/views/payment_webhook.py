@@ -6,7 +6,9 @@ from django.http import HttpResponse
 from decimal import Decimal
 from api.models.message import Message
 from api.models.order import Order
-from django.conf import settings
+
+from api.models.referral_earning import ReferralEarning
+from api.models.settings import AppSettings
 
 router = Router(tags=["Webhook"])
 
@@ -74,9 +76,11 @@ def payment_webhook(request):
             order.amount_paid = request_amount
             order.paid = False
             order.save()
+            
+            setting = AppSettings.get_settings()
 
             Message.bot_message(
-                f"Your payment for order #{order.code} is less than the meal price. Please reach our support team at {settings.CUSTOMER_SUPPORT_NUMBER}.",
+                f"Your payment for order #{order.code} is less than the meal price. Please reach our support team at {setting.whatsapp_support_phone_number}.",
                 user=order.user
             )
             return HttpResponse(f"Meal price has been update please contact admin", status=400)
@@ -96,6 +100,29 @@ def payment_webhook(request):
         order.amount_paid = request_amount
         order.paid = True
         order.save()
+        
+        # check if first order paid for and if referred, give referral bonus
+        if order.user and order.user.referred_by and order.user.orders.filter(paid=True).count() == 1:
+            setting = AppSettings.get_settings()
+
+            referral_bonus = order.meal.city.referral_bonus
+            referrer = order.user.referred_by
+            referrer.current_referral_earnings += referral_bonus
+            referrer.save()
+            ReferralEarning.objects.create(
+                user=referrer,
+                referred_user=order.user,
+                amount=referral_bonus,
+                currency=order.meal.city.currency
+            )
+            
+            if referral_bonus > 0:
+                link = f"https://wa.me/{setting.whatsapp_phone_number}?text=Hi, i was referred by #{referrer.code}"
+                
+                Message.bot_message(
+                    f"🎉 You've earned a referral bonus of {order.meal.city.currency.code} {referral_bonus} for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
+                    user=referrer
+                )
         
         print(f"Order {order_id} confirmed. Request amount: {request_amount}")
         

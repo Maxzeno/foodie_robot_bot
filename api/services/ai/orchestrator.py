@@ -68,6 +68,12 @@ class FoodBotAIHandler:
             "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
             "update_average_budget": tool_handlers.update_average_budget,
             
+            # referral and balance tools
+            "referral_link": tool_handlers.referral_link,
+            "show_balance": tool_handlers.show_balance,
+            # "make_withdraw": tool_handlers.make_withdraw,
+            
+            
             # TODO: potentially to be removed 
             # "search_meals": tool_handlers.search_meals,
             # "get_nutritional_info": tool_handlers.get_nutritional_info,

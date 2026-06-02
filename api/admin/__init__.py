@@ -7,13 +7,17 @@ from api.models.meal import Allergy, FitnessGoal, HealthCondition, Meal, Preferr
 from api.models.meal_preference import MealPreference
 from api.models.order import Order
 from api.models.recommendation import Recommendation
+from api.models.referral_earning import ReferralEarning
 from api.models.restaurant import Restaurant
 from api.models.review import Review
+from api.models.settings import AppSettings
 from api.models.user import User
 from api.models.message import Message
 from leaflet.admin import LeafletGeoAdmin
 
 from django import forms
+
+from api.models.withdrawal import Withdrawal
 
 # Register your models here.
 admin.site.register(DeliveryAddress, LeafletGeoAdmin)
@@ -33,6 +37,9 @@ admin.site.register(Review)
 admin.site.register(Currency)
 admin.site.register(Message)
 admin.site.register(MealPreference)
+admin.site.register(ReferralEarning)
+admin.site.register(Withdrawal)
+admin.site.register(AppSettings)
 
 class MealAdminForm(forms.ModelForm):
     times_of_day = forms.MultipleChoiceField(

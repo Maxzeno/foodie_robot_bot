@@ -9,6 +9,7 @@ from django.conf import settings
 
 from api.services.ai.orchestrator import FoodBotAIHandler
 from api.services.recommendation.meal_recommendation import MealRecommendationService
+from api.utils.text_extract import extract_user_code
 
 
 router = Router(tags=["Webhook"])
@@ -78,6 +79,13 @@ def whatsapp_webhook(request):
         user=user, enable_typing_indicator=True, reply_message_id=reply_message_id)
     
     if created:
+        user_code = extract_user_code(text)
+        if user_code:
+            referrer = User.objects.filter(code=user_code.lower()).first()
+            if referrer and referrer != user:
+                user.referred_by = referrer
+                user.save()
+            
         Message.bot_message("Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please share your fitness goal (weight loss, muscle gain, or maintenance)?", user=user)
     else:        
         response_message = FoodBotAIHandler(user, sender_message_id, reply_message_id).process_message()

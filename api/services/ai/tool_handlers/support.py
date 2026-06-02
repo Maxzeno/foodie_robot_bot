@@ -1,13 +1,14 @@
 from typing import Dict
 
+from api.models.settings import AppSettings
 from api.models.user import User
 from api.models.message import Message
-from django.conf import settings
 
 
 def contact_support(user: User) -> Dict:
     try:
-        support_message = f"Please reach our support team at {settings.CUSTOMER_SUPPORT_NUMBER}"
+        setting = AppSettings.get_settings()
+        support_message = f"Please reach our support team at {setting.whatsapp_support_phone_number}"
         Message.bot_message(support_message, user=user)
         return True
 

@@ -8,3 +8,6 @@ from api.models.currency import *
 from api.models.message import *
 from api.models.meal_preference import *
 from api.models.restaurant import *
+from api.models.withdrawal import *
+from api.models.referral_earning import *
+from api.models.settings import *
