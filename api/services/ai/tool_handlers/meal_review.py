@@ -10,7 +10,7 @@ def review_last_ordered_meal(
     user: User,
     sentiment: str,
     review_text: Optional[str] = None,
-) -> Dict:
+) -> bool:
     try:
         # Validate sentiment
         valid_sentiments = ['like', 'neutral', 'hate']

@@ -10,7 +10,7 @@ from api.utils.whatsapp_payload_helper.recommend_product import recommend_produc
 
 def meal_recommendations(
     user: User,
-) -> Dict:
+) -> bool:
     time_of_day = user.get_time_period()
     try:
         found_recommendations = Recommendation.objects.filter(user=user, time_of_day=time_of_day, day=user.get_local_time())[:2]
@@ -80,7 +80,7 @@ def meal_recommendations(
         return False
 
 
-def get_nutritional_info(user: User, meal_id: int) -> Dict:
+def get_nutritional_info(user: User, meal_id: int) -> bool:
     try:
         meal = Meal.objects.get(id=meal_id)
         Message.bot_message(

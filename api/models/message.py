@@ -167,6 +167,9 @@ class Message(BaseModel):
 
     @staticmethod
     def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
+        if screen_name not in {'ORDER_FLOW'}:
+            return None
+        
         msg_type = 'interactive'
         
         payload = {
@@ -178,7 +181,7 @@ class Message(BaseModel):
                 "name": "flow",
                 "parameters": {
                     "flow_message_version": "3",
-                    "flow_token": uuid.uuid4().hex,
+                    "flow_token": f"{uuid.uuid4().hex}--{screen_name}",
                     "flow_id": flow_id,
                     "flow_cta": flow_cta,
                     "flow_action": "navigate",

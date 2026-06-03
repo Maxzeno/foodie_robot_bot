@@ -5,7 +5,7 @@ from api.models.user import User
 from api.models.meal import AllergyChoices, CuisineChoices, FitnessGoal, HealthCondition, Allergy, HealthConditionChoices, PreferredCuisine
 
 
-def save_fitness_goal(user: User, fitness_goal: str) -> Dict:
+def save_fitness_goal(user: User, fitness_goal: str) -> bool:
     is_new = user.city is None
     try:
         fitness_goal = fitness_goal.replace(" ", "_").lower()
@@ -27,7 +27,7 @@ def save_fitness_goal(user: User, fitness_goal: str) -> Dict:
         return False
 
 
-def save_health_conditions(user: User, health_conditions: List[str]) -> Dict:
+def save_health_conditions(user: User, health_conditions: List[str]) -> bool:
     is_new = user.city is None
     try:
         health_conditions = [item.replace(" ", "_") for item in health_conditions]
@@ -53,7 +53,7 @@ def save_health_conditions(user: User, health_conditions: List[str]) -> Dict:
         return False
 
 
-def save_allergies(user: User, allergies: List[str]) -> Dict:
+def save_allergies(user: User, allergies: List[str]) -> bool:
     is_new = user.city is None
     try:
         allergies = [item.replace(" ", "_") for item in allergies]
@@ -78,7 +78,7 @@ def save_allergies(user: User, allergies: List[str]) -> Dict:
         return False
 
 
-def save_cuisine_preferences(user: User, cuisine_preferences: List[str]) -> Dict:
+def save_cuisine_preferences(user: User, cuisine_preferences: List[str]) -> bool:
     is_new = user.city is None
 
     try:

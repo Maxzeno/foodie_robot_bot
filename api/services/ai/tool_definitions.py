@@ -158,14 +158,12 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "place_order",
-                "description": "Place meal order",
+                "name": "place_order_form",
+                "description": "Place meal order form used when user wants to order a meal",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "meal_id": {"type": "integer"},
-                        "number_of_plates": {"type": "integer"},
-                        "special_instructions": {"type": "string"}
                     },
                     "required": ["meal_id"]
                 }
@@ -230,8 +228,8 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "get_user_profile",
-                "description": "Get user profile (allergies, cuisines, budget, health, fitness)",
+                "name": "get_update_user_profile_form",
+                "description": "Get / update user profile (allergies, cuisines, budget, health, fitness, location etc.)",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -280,36 +278,36 @@ def get_tool_definitions():
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "review_last_ordered_meal",
-                "description": "Review last ordered meal",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "sentiment": {
-                            "type": "string",
-                            "enum": ["like", "neutral", "hate"]
-                        },
-                        "review_text": {"type": "string"}
-                    },
-                    "required": ["sentiment"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_current_location",
-                "description": "Get current delivery location",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            }
-        },
+        # {
+        #     "type": "function",
+        #     "function": {
+        #         "name": "review_last_ordered_meal",
+        #         "description": "Review last ordered meal",
+        #         "parameters": {
+        #             "type": "object",
+        #             "properties": {
+        #                 "sentiment": {
+        #                     "type": "string",
+        #                     "enum": ["like", "neutral", "hate"]
+        #                 },
+        #                 "review_text": {"type": "string"}
+        #             },
+        #             "required": ["sentiment"]
+        #         }
+        #     }
+        # },
+        # {
+        #     "type": "function",
+        #     "function": {
+        #         "name": "get_current_location",
+        #         "description": "Get current delivery location",
+        #         "parameters": {
+        #             "type": "object",
+        #             "properties": {},
+        #             "required": []
+        #         }
+        #     }
+        # },
         {
             "type": "function",
             "function": {

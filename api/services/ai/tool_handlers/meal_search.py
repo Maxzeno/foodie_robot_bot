@@ -6,7 +6,7 @@ from api.models.meal import Meal
 from api.models.message import Message
 
 
-def search_meals(user: User, query: str) -> Dict:
+def search_meals(user: User, query: str) -> bool:
     limit: int = 5
     try:
         if not query or len(query.strip()) == 0:
@@ -66,7 +66,7 @@ def search_meals(user: User, query: str) -> Dict:
         return False
 
 
-def get_meal_details(user: User, meal_id: int) -> Dict:
+def get_meal_details(user: User, meal_id: int) -> bool:
     """
     Get complete details about a specific meal.
     """

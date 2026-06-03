@@ -53,6 +53,71 @@ def payment_link(order: Order):
     return None
 
 
+def place_order_form(
+        user: User,
+        meal_id: int
+    ) -> bool:
+
+    if not user.city:
+        Message.bot_message_request_location("Please set your delivery location first before placing an order.", user=user)
+        return False
+
+    # Validate meal
+    try:
+        meal = Meal.objects.get(id=meal_id, available=True)
+    except Meal.DoesNotExist:
+        Message.bot_message(
+            "Sorry, this meal is not available at the moment. Please choose another meal.",
+            user=user
+        )
+        return False
+
+    # Check if meal is in user's city
+    if meal.city != user.city:
+        Message.bot_message(
+            f"Sorry, this meal is only available in {meal.city.name}. Your current location is in {user.city.name if user.city else 'an unknown city'}.",
+            user=user
+        )
+        return False
+
+    delivery_address = DeliveryAddress.objects.filter(user=user).first()
+
+    if not delivery_address:
+        Message.bot_message(
+            "Please set a delivery address first before placing an order.",
+            user=user
+        )
+        return False
+    
+    address_city = City.get_city_by_coordinates(delivery_address.point.x, delivery_address.point.y)
+    if address_city != user.city:
+        Message.bot_message(
+            "Your selected delivery address is outside your current city. Please update your delivery address or change your delivery location.",
+            user=user
+        )
+        return False
+
+    try:
+        message = Message.bot_message_flow("Please complete the order", 
+            user=user, 
+            flow_cta="Fill form", 
+            flow_id="1531243271627499", 
+            screen_name="ORDER_FLOW",
+            data={
+                "current_address": delivery_address.street_address or 'Last set address',
+                "maps_url": f"https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x}",
+                "meal_id": meal_id
+            }
+        )
+    except Exception as e:
+        Message.bot_message(
+            "Sorry, something went wrong while initiating your order. Please try again.",
+            user=user
+        )
+        return False
+    return True
+
+
 def place_order(
     user: User,
     meal_id: int,
@@ -60,7 +125,7 @@ def place_order(
     # delivery_address_id: Optional[int] = None,
     special_instructions: Optional[str] = None,
     recreated_with_new_address: bool = False
-) -> Dict:
+) -> bool:
     try:
         if not number_of_plates:
             Message.bot_message(
@@ -74,10 +139,7 @@ def place_order(
             return False
 
         if not user.city:
-            Message.bot_message(
-                "Please set your delivery location first before placing an order.",
-                user=user
-            )
+            Message.bot_message_request_location("Please set your delivery location first before placing an order.", user=user)
             return False
         
         if number_of_plates < 1:
@@ -195,7 +257,7 @@ def place_order(
         return False
 
 
-def get_order_status(user: User, order_id: Optional[int] = None) -> Dict:
+def get_order_status(user: User, order_id: Optional[int] = None) -> bool:
     try:
         if order_id:
             try:
@@ -242,7 +304,7 @@ Order #{order.code}
         return False
 
 
-def get_order_history(user: User, page: int = 1) -> Dict:
+def get_order_history(user: User, page: int = 1) -> bool:
     try:
         # Calculate offset
         limit: int = 3

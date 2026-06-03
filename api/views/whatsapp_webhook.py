@@ -9,6 +9,7 @@ from django.conf import settings
 
 from api.services.ai.orchestrator import FoodBotAIHandler
 from api.services.recommendation.meal_recommendation import MealRecommendationService
+from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
 
 
@@ -22,6 +23,7 @@ VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
 def whatsapp_webhook(request):
     # TODO: add check that message is from WhatsApp by verifying the signature
     json_data = json.loads(request.body)
+    print('json_data flow', json_data)
 
     try:
         entry = json_data["entry"][0]
@@ -53,7 +55,12 @@ def whatsapp_webhook(request):
                 text = interactive["button_reply"]["title"]
             elif interactive_type == "list_reply":
                 text = interactive["list_reply"]["title"]
-            elif interactive_type == "flow": 
+
+            elif interactive_type == "nfm_reply":
+                user, created = User.objects.get_or_create(phone=phone)
+
+                fields = interactive['nfm_reply']['response_json']
+                nfm_reply_hander(user, fields)
                 return {"detail": "Done"}
 
             json_resp = interactive

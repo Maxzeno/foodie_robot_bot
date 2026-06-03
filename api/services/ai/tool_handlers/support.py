@@ -5,7 +5,7 @@ from api.models.user import User
 from api.models.message import Message
 
 
-def contact_support(user: User) -> Dict:
+def contact_support(user: User) -> bool:
     try:
         setting = AppSettings.get_settings()
         support_message = f"Please reach our support team at {setting.whatsapp_support_phone_number}"

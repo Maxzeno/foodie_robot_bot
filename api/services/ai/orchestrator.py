@@ -29,7 +29,7 @@ class FoodBotAIHandler:
         # These are critical tools that provide core functionality or act as fallbacks
         self.essential_tools = [
             "meal_recommendations",  # Core feature
-            "place_order",  # Core conversion action
+            "place_order_form",  # Core conversion action
             "contact_support"  # Fallback for any issues
         ]
 
@@ -44,12 +44,12 @@ class FoodBotAIHandler:
             # TODO: To be removed to reduce token usage
             "get_current_location": tool_handlers.get_current_location,
             
-            "place_order": tool_handlers.place_order,
+            "place_order_form": tool_handlers.place_order_form,
             "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
             
-            "get_user_profile": tool_handlers.get_user_profile,
+            "get_update_user_profile_form": tool_handlers.get_update_user_profile_form,
             "like_or_hate_meal": tool_handlers.like_or_hate_meal,
             # TODO: To be removed to reduce token usage
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,

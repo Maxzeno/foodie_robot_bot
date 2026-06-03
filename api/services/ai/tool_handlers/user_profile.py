@@ -6,7 +6,7 @@ from api.models.meal_preference import MealPreference
 from api.models.message import Message
 
 
-def get_user_profile(user: User) -> Dict:
+def get_update_user_profile_form(user: User) -> bool:
     try:
         # Get fitness goal
         fitness_goal = user.fitness_goals.get_name_display() if user.fitness_goals else "Not set"
@@ -28,6 +28,7 @@ def get_user_profile(user: User) -> Dict:
         currency_symbol = user.city.currency.symbol if user.city else ""
         budget_str = f"{currency_symbol}{user.average_meal_budget:,.2f}" if user.average_meal_budget else "Not set"
 
+# TODO: Send it as flow message incase they want to update it
         message = f"""
 👤 Your Profile
 
@@ -39,14 +40,10 @@ def get_user_profile(user: User) -> Dict:
 
 🍽️ Preferred Cuisines: {cuisines_str}
 
-💰 Average Meal Budget: {budget_str}
+💰 Average Meal Budget: {currency_symbol}{budget_str}
 
 📍 Location: {city_name}
 
-You can update any of these by saying things like:
-• "Update my budget to <amount>"
-• "Change my fitness goal"
-• "Update my allergies"
 """.strip()
 
         Message.bot_message(message, user=user)
@@ -62,7 +59,7 @@ You can update any of these by saying things like:
         return False
 
 
-def update_average_budget(user: User, budget_amount: float) -> Dict:
+def update_average_budget(user: User, budget_amount: float) -> bool:
     try:
         if budget_amount <= 0:
             Message.bot_message(
@@ -109,7 +106,7 @@ Note: Your currency is set to {currency_code} based on your delivery location.
         return False
 
 
-def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> Dict:
+def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> bool:
     try:
         limit: int = 3
         offset = (page - 1) * limit
