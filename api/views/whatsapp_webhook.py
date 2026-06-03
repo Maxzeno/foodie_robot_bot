@@ -20,6 +20,7 @@ VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
 @transaction.atomic
 @router.post('/whatsapp', auth=None)
 def whatsapp_webhook(request):
+    # TODO: add check that message is from WhatsApp by verifying the signature
     json_data = json.loads(request.body)
 
     try:
@@ -53,6 +54,9 @@ def whatsapp_webhook(request):
             elif interactive_type == "list_reply":
                 text = interactive["list_reply"]["title"]
             json_resp = interactive
+        else:
+            Message.bot_message("Unsupported message type", user=user)
+            return {"detail": "Done"}
  
         if message.get("context"):
             context = message["context"]

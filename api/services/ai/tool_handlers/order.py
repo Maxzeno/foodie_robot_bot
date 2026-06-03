@@ -224,9 +224,9 @@ Order #{order.code}
 🍽️ {order.meal.name}
 🔢 Quantity: {order.quantity} plate(s)
 💰 Total: {currency_symbol}{order.total_price:,.2f}
+{ORDER_STATUS_EMOJI.get(order.status, '📋')} Status: {"Your order will be processed after payment" if not order.paid else ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
 💳 Payment: {payment_status}
 
-Status: {ORDER_STATUS_EMOJI.get(order.status, '📋')} {ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
 """.strip()
 
         Message.bot_message(message, user=user)
@@ -277,18 +277,11 @@ def get_order_history(user: User, page: int = 1) -> Dict:
    🍽️ {order.meal.name}
    🔢 Quantity: {order.quantity} plate(s)
    💰 Total: {currency_symbol}{order.total_price:,.2f}
-   {ORDER_STATUS_EMOJI.get(order.status, '📋')} Status: {ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
-   
+   {ORDER_STATUS_EMOJI.get(order.status, '📋')} Status: {"Your order will be processed after payment" if not order.paid else ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
    💳 Payment: {payment_status}
    📅 Ordered on: {order.created_at.strftime('%b %d, %Y')}
 
 """.strip() + "\n\n"
-
-        # Add pagination info
-        total_pages = (total_orders + limit - 1) // limit
-        if page < total_pages:
-            message += f"\n📄 Showing {offset + 1}-{offset + len(orders)} of {total_orders} orders\n"
-            message += f"Say 'show more orders' or 'page {page + 1}' to see more."
 
         Message.bot_message_action_reply_simple(message.strip(), user=user, action_replies=[f'Page {page + 1}'])
         return True

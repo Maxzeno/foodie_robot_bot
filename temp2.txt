@@ -1,0 +1,112 @@
+⏺ Code Review: WhatsApp Webhook Handler
+
+  Here are the critical issues and improvements needed in api/views/whatsapp_webhook.py:
+
+  🚨 Critical Security Issues
+
+  1. No Webhook Signature Verification (Lines 22-95)
+    - WhatsApp sends a signature in the X-Hub-Signature-256 header to verify authenticity
+    - Currently, anyone can send POST requests to your webhook endpoint
+    - Risk: Attackers can impersonate WhatsApp and inject malicious messages
+  2. Unsafe JSON Parsing (Line 23)
+    - No try-catch around json.loads(request.body) - will crash on malformed JSON
+    - The broad exception handler below (lines 67-69) masks this but returns success anyway
+  3. Missing Input Validation
+    - No validation that required fields exist before accessing nested dictionaries
+    - Lines 26-28 will crash if the structure is unexpected (KeyError, IndexError)
+
+  🐛 Critical Bugs
+
+  4. Race Condition in Duplicate Detection (Lines 71-73)
+  found_msg = Message.objects.filter(message_id=sender_message_id).first()
+  if found_msg:
+      return {"detail": "Done"}
+    - Between the check and Message creation (line 77), another request could process the same message
+    - Fix: Use select_for_update() or handle the unique constraint exception
+  5. Broad Exception Handling Hides Real Errors (Lines 67-69)
+  except Exception as e:
+      print("Error parsing webhook:", e)
+      return {"detail": "Done"}  # ⚠️ Returns success even on error!
+    - WhatsApp won't retry failed webhooks because you return 200 OK
+    - Should return 500 or appropriate error status for real failures
+  6. Transaction Rollback Issues (Line 20)
+    - @transaction.atomic wraps everything including external API calls to WhatsApp
+    - If the transaction rolls back after sending WhatsApp messages, you'll have inconsistent state
+    - Messages sent via Message.bot_message() can't be "rolled back"
+
+  ⚠️ Potential Issues
+
+  7. Unhandled Message Types (Lines 37-56)
+    - Only handles text, location, interactive
+    - What about image, audio, video, document, sticker, reaction, etc.?
+    - text variable remains None for these types
+  8. Print Statements for Logging (Lines 61-65)
+  print("msg type:", msg_type)
+  print("Phone Number:", phone)
+    - Use proper logging (Django's logger) for production
+    - No log levels, timestamps, or structured logging
+    - Sensitive data (phone numbers) logged without redaction
+  9. User Code Extraction Only for New Users (Lines 81-88)
+    - Referral codes only processed on first message
+    - If a user messages "Hi" first, then sends referral code later, it won't work
+  10. No Response When response_message is None (Lines 91-93)
+  if response_message:
+      Message.bot_message(response_message, user=user)
+    - If AI handler returns None, user gets no response (silent failure)
+
+  🔧 Code Quality Issues
+
+  11. Test Endpoint in Production Code (Lines 111-126)
+  # TODO: to be removed in production
+  @csrf_exempt
+  @router.get("/test-temp")
+    - Hardcoded phone number "2349077745730"
+    - Security risk if deployed
+    - Use feature flags or separate test configuration
+  12. No Timeout on AI Processing
+    - FoodBotAIHandler(...).process_message() (line 91) could hang indefinitely
+    - WhatsApp expects webhook responses within 5 seconds
+    - Consider using async tasks (Celery) for long-running AI operations
+  13. Inconsistent Error Handling
+    - Message.enable_typing_indicator() raises RuntimeError (line 209)
+    - Will crash the webhook if it fails
+    - Should handle or catch this exception
+  14. Missing Context in Reply Handling
+    - You store reply_message_id but don't validate it exists
+    - Could be a message from another conversation or deleted message
+
+  📋 Recommended Improvements
+
+  Priority 1 (Security & Critical):
+  # 1. Add signature verification
+  def verify_webhook_signature(request):
+      signature = request.headers.get('X-Hub-Signature-256', '')
+      # Implement HMAC verification with app secret
+
+  # 2. Fix JSON parsing
+  try:
+      json_data = json.loads(request.body)
+  except json.JSONDecodeError:
+      logger.error("Invalid JSON in webhook")
+      return HttpResponse("Invalid JSON", status=400)
+
+  # 3. Fix race condition
+  try:
+      message = Message.objects.create(...)
+  except IntegrityError:
+      # Duplicate message already processed
+      return {"detail": "Done"}
+
+  Priority 2 (Reliability):
+  - Remove @transaction.atomic or limit its scope
+  - Move AI processing to async task queue
+  - Return proper HTTP status codes (400 for bad requests, 500 for server errors)
+  - Add logging framework with proper log levels
+
+  Priority 3 (Maintainability):
+  - Extract message parsing into separate functions
+  - Add type hints
+  - Remove test endpoint or protect with environment check
+  - Add comprehensive unit tests for webhook edge cases
+
+  Would you like me to help implement any of these fixes?

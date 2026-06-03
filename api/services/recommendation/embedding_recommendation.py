@@ -79,6 +79,18 @@ class EmbeddingRecommendationService:
             user.orders.values_list('meal__id', flat=True).distinct()
         )
 
+        # Pre-compute user's preferred cuisines to avoid N+1 queries
+        user_preferred_cuisine_ids = set(
+            user.preferred_cuisine.values_list('id', flat=True)
+        )
+
+        # Pre-compute meal-to-cuisines and meal-to-fitness-goals maps to avoid N+1 queries
+        meal_cuisines_map = {}
+        meal_fitness_goals_map = {}
+        for meal in available_meals:
+            meal_cuisines_map[meal.id] = set(c.id for c in meal.cuisine.all())
+            meal_fitness_goals_map[meal.id] = set(g.id for g in meal.fitness_goals.all())
+
         # Score all available meals
         scored_meals = []
         for meal in available_meals:
@@ -90,7 +102,10 @@ class EmbeddingRecommendationService:
                     ordered_meal_ids=ordered_meal_ids,
                     recent_meal_history=recent_meal_history,
                     meal_frequency=meal_frequency,
-                    user_embedding=user_embedding
+                    user_embedding=user_embedding,
+                    user_preferred_cuisine_ids=user_preferred_cuisine_ids,
+                    meal_cuisines_map=meal_cuisines_map,
+                    meal_fitness_goals_map=meal_fitness_goals_map
                 )
                 scored_meals.append((meal, score))
 
@@ -358,7 +373,10 @@ class EmbeddingRecommendationService:
         ordered_meal_ids: set,
         recent_meal_history: Dict[int, int],
         meal_frequency: Dict[int, int],
-        user_embedding: Optional[List[float]] = None
+        user_embedding: Optional[List[float]] = None,
+        user_preferred_cuisine_ids: Optional[set] = None,
+        meal_cuisines_map: Optional[Dict[int, set]] = None,
+        meal_fitness_goals_map: Optional[Dict[int, set]] = None
     ) -> float:
         """
         Calculate comprehensive score for a meal.
@@ -395,15 +413,14 @@ class EmbeddingRecommendationService:
 
         # 4. Fitness goal match
         if user.fitness_goals:
-            meal_fitness_goals = set(meal.fitness_goals.values_list('id', flat=True))
+            meal_fitness_goals = meal_fitness_goals_map.get(meal.id, set()) if meal_fitness_goals_map else set()
             if user.fitness_goals.id in meal_fitness_goals:
                 score += 20.0
 
         # 5. Cuisine preference match
-        user_preferred_cuisines = set(user.preferred_cuisine.values_list('id', flat=True))
-        if user_preferred_cuisines:
-            meal_cuisines = set(meal.cuisine.values_list('id', flat=True))
-            if meal_cuisines & user_preferred_cuisines:  # Intersection
+        if user_preferred_cuisine_ids:
+            meal_cuisines = meal_cuisines_map.get(meal.id, set()) if meal_cuisines_map else set()
+            if meal_cuisines & user_preferred_cuisine_ids:  # Intersection
                 score += 15.0
 
         # 6. Budget optimization - prefer meals near budget

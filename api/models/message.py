@@ -206,7 +206,7 @@ class Message(BaseModel):
             response.raise_for_status()  # raises HTTPError for 4xx/5xx
             return response
         except RequestException as e:
-            raise RuntimeError(f"Failed to enable typing indicator: {e}")
+            pass
         
     @staticmethod
     def send_message(user, msg_type, payload):
