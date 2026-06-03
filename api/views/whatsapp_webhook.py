@@ -37,7 +37,7 @@ def whatsapp_webhook(request):
 
         if msg_type == 'text':
             text = message["text"]["body"]
-            
+         
         elif msg_type == "location":
             json_resp = message[msg_type]
             address = json_resp.get('address')
@@ -53,15 +53,15 @@ def whatsapp_webhook(request):
                 text = interactive["button_reply"]["title"]
             elif interactive_type == "list_reply":
                 text = interactive["list_reply"]["title"]
+            elif interactive_type == "flow": 
+                return {"detail": "Done"}
+
             json_resp = interactive
-        else:
-            Message.bot_message("Unsupported message type", user=user)
-            return {"detail": "Done"}
- 
+
         if message.get("context"):
             context = message["context"]
             reply_message_id = context["id"]
-            
+
         print("msg type:", msg_type)
         print("Phone Number:", phone)
         print("Message:", text)
@@ -71,7 +71,7 @@ def whatsapp_webhook(request):
     except Exception as e:
         print("Error parsing webhook:", e)
         return {"detail": "Done"}
-        
+
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
     if found_msg:
         return {"detail": "Done"}
@@ -91,7 +91,11 @@ def whatsapp_webhook(request):
                 user.save()
             
         Message.bot_message("Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please share your fitness goal (weight loss, muscle gain, or maintenance)?", user=user)
-    else:        
+    else:
+        if text == None:
+            Message.bot_message("Unsupported message type", user=user)
+            return {"detail": "Done"}     
+          
         response_message = FoodBotAIHandler(user, sender_message_id, reply_message_id).process_message()
         if response_message:
             Message.bot_message(response_message, user=user)
@@ -126,4 +130,25 @@ def text_temp_verify(request):
         num_recommendations_per_period=2,
     )
     print("Recommended Meal IDs:", recommended_meal_ids)
+    return HttpResponse("Done", status=200)
+
+
+# TODO: to be removed in production
+@csrf_exempt
+@router.get("/test-message-temp")
+def text_temp_message(request):
+    user = User.objects.filter(phone="2349077745730").first()
+    print("User:", user)
+    message = Message.bot_message_flow("Please complete the order", 
+        user=user, 
+        flow_cta="Fill form", 
+        flow_id="1531243271627499", 
+        screen_name="ORDER_FLOW",
+        data={
+            "current_address": "Enugu House",
+            "maps_url": "https://fb.com"
+        }
+    )
+
+    print("message id:", message.id)
     return HttpResponse("Done", status=200)

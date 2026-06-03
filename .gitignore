@@ -174,3 +174,8 @@ cython_debug/
 # End of https://www.toptal.com/developers/gitignore/api/django
 # WhatsApp Flow private key
 private.key
+
+# meta keys
+private_key.pem
+public_key.pem
+public_key.sig

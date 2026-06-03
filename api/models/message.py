@@ -7,6 +7,7 @@ from django.conf import settings
 from requests.exceptions import RequestException
 import random
 from typing import List
+import uuid
 
 class RoleChoices(models.TextChoices):
     USER = 'user', 'User'
@@ -165,12 +166,30 @@ class Message(BaseModel):
     
 
     @staticmethod
-    def bot_message_flow(content: str, user, current_intent: str, payload):
-        # TODO: Implement
-        # msg_type = 'interactive'
-        # message_id = Message.send_message(user, msg_type, payload)
-
-        message_id = str(random.randint(1000000, 9999999)) # TODO: to be removed
+    def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
+        msg_type = 'interactive'
+        
+        payload = {
+            "type": "flow",
+            "body": {
+                "text": content
+            },
+            "action": {
+                "name": "flow",
+                "parameters": {
+                    "flow_message_version": "3",
+                    "flow_token": uuid.uuid4().hex,
+                    "flow_id": flow_id,
+                    "flow_cta": flow_cta,
+                    "flow_action": "navigate",
+                    "flow_action_payload": {
+                        "screen":  screen_name,
+                        "data": data
+                    }
+                }
+            }
+        }
+        message_id = Message.send_message(user, msg_type, payload)
         message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
         return message
     
@@ -227,6 +246,7 @@ class Message(BaseModel):
             
         try:
             response = requests.post(url, headers=headers, json=data)
+            print("WhatsApp API response:", response.text)
             response.raise_for_status()  # raises HTTPError for 4xx/5xx
             return response.json().get("messages", [{}])[0].get("id")
         except RequestException as e:

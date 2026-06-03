@@ -1,166 +1,131 @@
-from ninja import Router
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse, JsonResponse
-from django.db import transaction
 import json
-from api.utils.whatsapp_flow_crypto import WhatsAppFlowCrypto
+import os
+from base64 import b64decode, b64encode
+
+from ninja import Router
+from django.http import HttpResponse, JsonResponse
+
+from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+import requests
+from django.conf import settings
+
 
 router = Router(tags=["Webhook"])
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "private_key.pem")
+PUBLIC_KEY_PATH = os.path.join(BASE_DIR, "public_key.pem")
 
-@csrf_exempt
-@router.get("/whatsapp-flow/public-key", auth=None)
-def get_public_key(request):
-    """
-    Endpoint to get the public key for WhatsApp Flow configuration.
 
-    Use this public key in your WhatsApp Flow settings.
-    """
-    try:
-        public_key = WhatsAppFlowCrypto.get_public_key_pem()
-        return HttpResponse(public_key, content_type="text/plain")
-    except Exception as e:
-        return HttpResponse(f"Error generating public key: {str(e)}", status=500)
+def decrypt_request(encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64):
+    PRIVATE_KEY = ""
+    with open(PRIVATE_KEY_PATH, "r") as f:
+        PRIVATE_KEY = f.read()
+
+    flow_data = b64decode(encrypted_flow_data_b64)
+    iv = b64decode(initial_vector_b64)
+
+    # Decrypt the AES encryption key
+    encrypted_aes_key = b64decode(encrypted_aes_key_b64)
+    private_key = load_pem_private_key(
+        PRIVATE_KEY.encode('utf-8'), password=None)
+    aes_key = private_key.decrypt(encrypted_aes_key, OAEP(
+        mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+
+    # Decrypt the Flow data
+    encrypted_flow_data_body = flow_data[:-16]
+    encrypted_flow_data_tag = flow_data[-16:]
+    decryptor = Cipher(algorithms.AES(aes_key),
+                       modes.GCM(iv, encrypted_flow_data_tag)).decryptor()
+    decrypted_data_bytes = decryptor.update(
+        encrypted_flow_data_body) + decryptor.finalize()
+    decrypted_data = json.loads(decrypted_data_bytes.decode("utf-8"))
+    return decrypted_data, aes_key, iv
+
+
+def encrypt_response(response, aes_key, iv):
+    # Flip the initialization vector
+    flipped_iv = bytearray()
+    for byte in iv:
+        flipped_iv.append(byte ^ 0xFF)
+
+    # Encrypt the response data
+    encryptor = Cipher(algorithms.AES(aes_key),
+                       modes.GCM(flipped_iv)).encryptor()
+    return b64encode(
+        encryptor.update(json.dumps(response).encode("utf-8")) +
+        encryptor.finalize() +
+        encryptor.tag
+    ).decode("utf-8")
 
 
 @csrf_exempt
 @transaction.atomic
 @router.post("/whatsapp-flow", auth=None)
-def whatsapp_flow_webhook(request):
-    """
-    Handle encrypted WhatsApp Flow webhook requests.
+def flow_handler(request):
+    print("Flow Webhook", request.body)
 
-    This endpoint:
-    1. Decrypts incoming flow data
-    2. Processes the flow request
-    3. Encrypts and signs the response
-    """
+    # Parse the webhook payload
     try:
-        # Parse incoming request
-        request_data = json.loads(request.body)
-        print("WhatsApp Flow Webhook - Raw request:", request_data)
+        payload = json.loads(request.body.decode("utf-8"))
 
-        # Check if request is encrypted
-        if 'encrypted_flow_data' not in request_data:
-            # Handle unencrypted health check or verification
-            print("Unencrypted request received")
-            return HttpResponse("OK", status=200)
+        encrypted_flow_data = payload["encrypted_flow_data"]
+        encrypted_aes_key = payload["encrypted_aes_key"]
+        initial_vector = payload["initial_vector"]
 
-        # Extract encryption parameters
-        encrypted_flow_data = request_data.get('encrypted_flow_data')
-        encrypted_aes_key = request_data.get('encrypted_aes_key')
-        initial_vector = request_data.get('initial_vector')
-
-        # Decrypt the request
-        decrypted_data = WhatsAppFlowCrypto.decrypt_request(
+        # 🔓 Decrypt incoming data
+        decrypted_data, aes_key, iv = decrypt_request(
             encrypted_flow_data,
             encrypted_aes_key,
             initial_vector
         )
 
-        print("Decrypted Flow Data:", json.dumps(decrypted_data, indent=2))
+        print("DECRYPTED FLOW DATA:", decrypted_data)
 
-        # Process the flow data based on action
-        # TODO: Implement your business logic here
-        response_data = process_flow_data(decrypted_data)
+        # Prepare next screen response
+        # response = {
+        #     "screen": "SCREEN_NAME",   # 👈 Change this to your real screen
+        #     "data": {
+        #         "some_key": "some_value"
+        #     }
+        # }
 
-        # Encrypt the response
-        encrypted_response = WhatsAppFlowCrypto.encrypt_response(
-            response_data,
-            encrypted_aes_key,
-            initial_vector
+        response = {"data": {"status": "active"}}
+
+        encrypted_output = encrypt_response(response, aes_key, iv)
+
+        return HttpResponse(
+            encrypted_output,
+            content_type="text/plain"
         )
 
-        # Sign the response
-        signature = WhatsAppFlowCrypto.sign_response(encrypted_response)
-
-        # Return encrypted and signed response
-        return JsonResponse({
-            'encrypted_flow_data': encrypted_response,
-            'signature': signature
-        })
-
     except Exception as e:
-        print(f"Error processing WhatsApp Flow webhook: {str(e)}")
-        import traceback
-        traceback.print_exc()
-
-        # Return error response
-        return JsonResponse({
-            'error': str(e)
-        }, status=500)
+        print("FLOW ERROR:", e)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
-def process_flow_data(decrypted_data: dict) -> dict:
-    """
-    Process the decrypted flow data and return response.
+@router.post("/upload-public-key")
+def upload_public_key(request):
+    # Read public key file
+    with open(PUBLIC_KEY_PATH, "r") as f:
+        public_key_str = f.read()
 
-    Args:
-        decrypted_data: The decrypted flow data containing screen, data, action, etc.
+    url = f"https://graph.facebook.com/v24.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/whatsapp_business_encryption"
 
-    Returns:
-        Response data to be encrypted and sent back
-    """
-    # Extract flow information
-    version = decrypted_data.get('version')
-    screen = decrypted_data.get('screen')
-    data = decrypted_data.get('data', {})
-    action = decrypted_data.get('action')
-    flow_token = decrypted_data.get('flow_token')
-
-    print(f"Processing flow - Screen: {screen}, Action: {action}")
-    print(f"Data: {json.dumps(data, indent=2)}")
-
-    # Example response structure
-    # Customize this based on your flow screens and logic
-
-    if action == 'ping':
-        # Health check
-        return {
-            'version': version,
-            'data': {
-                'status': 'active'
-            }
-        }
-
-    if action == 'INIT':
-        # Initialize the flow
-        return {
-            'version': version,
-            'screen': 'MENU',  # Change to your first screen
-            'data': {
-                'message': 'Welcome to Foodie Robot!',
-                # Add your initial data here
-            }
-        }
-
-    if action == 'data_exchange':
-        # Handle data exchange based on screen
-        if screen == 'MENU':
-            # Process menu screen
-            selected_option = data.get('selected_option')
-
-            return {
-                'version': version,
-                'screen': 'NEXT_SCREEN',  # Navigate to next screen
-                'data': {
-                    # Your response data
-                }
-            }
-
-        # Default response
-        return {
-            'version': version,
-            'screen': screen,
-            'data': {
-                'error': 'Unknown screen or action'
-            }
-        }
-
-    # Default response for unknown actions
-    return {
-        'version': version,
-        'data': {
-            'status': 'received'
-        }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_API_KEY}",
+        "Content-Type": "application/x-www-form-urlencoded",
     }
+
+    data = {
+        "business_public_key": public_key_str
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    return response.json()
