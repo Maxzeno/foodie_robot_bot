@@ -57,11 +57,11 @@ class Message(BaseModel):
         return self.content or ""
     
     @staticmethod
-    def bot_message(content: str, user, current_intent: str=CurrentIntentChoices.NO_INTENT):
+    def bot_message(content: str, user, current_intent: str=CurrentIntentChoices.NO_INTENT, metadata: dict=None):
         payload = {"body": content}
         msg_type = 'text'
         message_id = Message.send_message(user, msg_type, payload)
-        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
         return message
     
     @staticmethod

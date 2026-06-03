@@ -552,12 +552,18 @@ class EmbeddingRecommendationService:
         selected_keywords = set()
         selected_restaurants = {}  # restaurant_id -> count
 
+        # Pre-compute cuisine names for all candidates to avoid N+1 queries
+        meal_cuisines_map = {}
+        for meal, score in candidates:
+            cuisine_names = [c.name for c in meal.cuisine.all()]
+            meal_cuisines_map[meal.id] = set(cuisine_names)
+
         for meal, score in candidates:
             if len(selected) >= num_recommendations:
                 break
 
             # Check diversity
-            meal_cuisines = set(meal.cuisine.values_list('name', flat=True))
+            meal_cuisines = meal_cuisines_map[meal.id]
             meal_keywords = set(meal.name.lower().split()[:2])  # First 2 words
             restaurant_id = meal.restaurant.id if meal.restaurant else None
 

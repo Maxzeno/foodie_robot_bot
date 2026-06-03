@@ -70,7 +70,7 @@ def save_delivery_location(
         for period, recommended_meals_list in recommended_meal_map.items():
             recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
             for index, meal in enumerate(recommended_meals):
-                text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}"
+                text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
                 image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
                 
