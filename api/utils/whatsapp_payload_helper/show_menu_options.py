@@ -11,7 +11,7 @@ def show_menu_options_payload(text):
             "button": "Quick Options",
             "sections": [
                 {
-                    "title": "Meals & Recommendations",
+                    "title": "Meal recommendation",
                     "rows": [
                         {
                             "id": "meal-recommendations",
@@ -36,43 +36,47 @@ def show_menu_options_payload(text):
                     ]
                 },
                 {
-                    "title": "Profile",
+                    "title": "Your Profile",
                     "rows": [
                         {
-                            "id": "view-profile",
-                            "title": "View Profile",
-                            "description": "View your profile info"
+                            "id": "view-update-profile",
+                            "title": "View/Update Profile",
+                            "description": "View/Update your profile info"
                         },
                     ]
                 },
                 {
-                    "title": "Update Preferences",
+                    "title": "Referral and Balance",
                     "rows": [
                         {
-                            "id": "update-allergies",
-                            "title": "Update Allergies",
-                            "description": "Update food allergies"
+                            "id": "referral-link",
+                            "title": "Referral link",
+                            "description": "Get referral link"
                         },
                         {
-                            "id": "update-health",
-                            "title": "Update Health Conditions",
-                            "description": "Update health conditions"
+                            "id": "show-balance",
+                            "title": "Show balance",
+                            "description": "Show my balance"
                         },
                         {
-                            "id": "update-fitness",
-                            "title": "Update Fitness Goals",
-                            "description": "Update fitness goals"
+                            "id": "withdraw",
+                            "title": "Withdraw balance",
+                            "description": "Withdraw my balance"
+                        },
+                    ]
+                },
+                {
+                    "title": "Delivery Location",
+                    "rows": [
+                        {
+                            "id": "update-location",
+                            "title": "Update delivery location",
+                            "description": "Update my delivery location"
                         },
                         {
-                            "id": "update-cuisine",
-                            "title": "Update Preferred Cuisine",
-                            
-                            "description": "Update cuisine preferences"
-                        },
-                        {
-                            "id": "update-budget",
-                            "title": "Update Average Budget",
-                            "description": "Set meal budget"
+                            "id": "get-location",
+                            "title": "Get delivery location",
+                            "description": "Get my delivery location"
                         }
                     ]
                 },

@@ -9,9 +9,9 @@
       "id": "USER_PROFILE",
       "title": "Your Profile",
       "data": {
-        "currency": {
+        "currency_helper": {
           "type": "string",
-          "__example__": "USD"
+          "__example__": "Enter amount per meal (USD)"
         },
         "fitness_goals": {
           "type": "array",
@@ -28,16 +28,12 @@
           },
           "__example__": [
             {
-              "id": "weight_loss",
+              "id": "1",
               "title": "Weight Loss"
             },
             {
-              "id": "muscle_gain",
+              "id": "2",
               "title": "Muscle Gain"
-            },
-            {
-              "id": "maintenance",
-              "title": "Maintenance"
             }
           ]
         },
@@ -56,28 +52,12 @@
           },
           "__example__": [
             {
-              "id": "0_diabetes",
+              "id": "1",
               "title": "Diabetes"
             },
             {
-              "id": "1_high_blood_pressure",
+              "id": "2",
               "title": "High Blood Pressure"
-            },
-            {
-              "id": "2_heart_condition",
-              "title": "Heart Condition"
-            },
-            {
-              "id": "3_arthritis",
-              "title": "Arthritis"
-            },
-            {
-              "id": "4_thyroid_disorder",
-              "title": "Thyroid Disorder"
-            },
-            {
-              "id": "5_none",
-              "title": "None of the above"
             }
           ]
         },
@@ -96,36 +76,12 @@
           },
           "__example__": [
             {
-              "id": "dairy",
+              "id": "1",
               "title": "Dairy"
             },
             {
-              "id": "gluten",
+              "id": "2",
               "title": "Gluten"
-            },
-            {
-              "id": "seafood",
-              "title": "Seafood"
-            },
-            {
-              "id": "eggs",
-              "title": "Eggs"
-            },
-            {
-              "id": "soy",
-              "title": "Soy"
-            },
-            {
-              "id": "peanuts",
-              "title": "Peanuts"
-            },
-            {
-              "id": "treenuts",
-              "title": "Tree Nuts"
-            },
-            {
-              "id": "none",
-              "title": "None of the above"
             }
           ]
         },
@@ -144,38 +100,43 @@
           },
           "__example__": [
             {
-              "id": "0_mediterranean",
+              "id": "1",
               "title": "Mediterranean"
             },
             {
-              "id": "1_asian",
+              "id": "2",
               "title": "Asian"
-            },
-            {
-              "id": "2_american",
-              "title": "American"
-            },
-            {
-              "id": "3_italian",
-              "title": "Italian"
-            },
-            {
-              "id": "4_mexican",
-              "title": "Mexican"
-            },
-            {
-              "id": "5_indian",
-              "title": "Indian"
-            },
-            {
-              "id": "6_middle_eastern",
-              "title": "Middle Eastern"
-            },
-            {
-              "id": "7_vegan_vegetarian",
-              "title": "Vegan/Vegetarian"
             }
           ]
+        },
+        "selected_fitness_goal": {
+          "type": "string",
+          "__example__": "1"
+        },
+        "current_meal_budget": {
+          "type": "number",
+          "__example__": 0
+        },
+        "selected_health_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "__example__": ["1", "2"]
+        },
+        "selected_allergies_diet": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "__example__": ["1"]
+        },
+        "selected_preferred_cuisines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "__example__": ["2"]
         }
       },
       "layout": {
@@ -184,6 +145,13 @@
           {
             "type": "Form",
             "name": "health_form",
+            "init-values": {
+              "meal_budget": "${data.current_meal_budget}",
+              "fitness_goal": "${data.selected_fitness_goal}",
+              "health_conditions": "${data.selected_health_conditions}",
+              "allergies_diet": "${data.selected_allergies_diet}",
+              "preferred_cuisines": "${data.selected_preferred_cuisines}"
+            },
             "children": [
               {
                 "type": "TextSubheading",
@@ -198,32 +166,29 @@
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Do you have any of these health conditions? (Select if any)",
+                "label": "Do you have any of these health conditions?",
                 "name": "health_conditions",
-                "data-source": "${data.health_conditions}",
-                "required": true
+                "data-source": "${data.health_conditions}"
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Any food allergies or dietary restrictions? (Select if any)",
+                "label": "Any food allergies or dietary restrictions?",
                 "name": "allergies_diet",
-                "data-source": "${data.allergies_diet}",
-                "required": true
+                "data-source": "${data.allergies_diet}"
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Which cuisines do you enjoy? (Select if any)",
+                "label": "Which cuisines do you enjoy?",
                 "name": "preferred_cuisines",
-                "data-source": "${data.preferred_cuisines}",
-                "required": true
+                "data-source": "${data.preferred_cuisines}"
               },
               {
                 "type": "TextInput",
                 "label": "Average meal budget?",
                 "name": "meal_budget",
                 "input-type": "number",
-                "helper-text": "Enter amount per meal (${data.currency})",
-                "required": true
+                "helper-text": "${data.currency_helper}",
+                "min-chars": 1
               },
               {
                 "type": "Footer",

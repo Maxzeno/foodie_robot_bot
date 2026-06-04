@@ -1,88 +1,10 @@
-from api.models.meal import AllergyChoices, CuisineChoices, FitnessGoalChoices, HealthConditionChoices
 from api.models.user_balance import BalanceType
 
 
 def get_tool_definitions():
     """Optimized tool definitions with reduced token usage."""
     return [
-        {
-            "type": "function",
-            "function": {
-                "name": "save_fitness_goal",
-                "description": "Save fitness goal",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "fitness_goal": {
-                            "type": "string",
-                            "enum": FitnessGoalChoices.list_values()
-                        }
-                    },
-                    "required": ["fitness_goal"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "save_health_conditions",
-                "description": "Save health conditions (empty array if none)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "health_conditions": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": HealthConditionChoices.list_values()
-                            }
-                        }
-                    },
-                    "required": ["health_conditions"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "save_allergies",
-                "description": "Save food allergies (empty array if none)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "allergies": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": AllergyChoices.list_values()
-                            }
-                        }
-                    },
-                    "required": ["allergies"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "save_cuisine_preferences",
-                "description": "Save cuisine preferences (empty array if none)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "cuisine_preferences": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": CuisineChoices.list_values()
-                            }
-                        }
-                    },
-                    "required": ["cuisine_preferences"]
-                }
-            }
-        },
-        {
+{
             "type": "function",
             "function": {
                 "name": "save_delivery_location",
@@ -111,20 +33,6 @@ def get_tool_definitions():
                 }
             }
         },
-        # {
-        #     "type": "function",
-        #     "function": {
-        #         "name": "get_nutritional_info",
-        #         "description": "Get meal nutrition details",
-        #         "parameters": {
-        #             "type": "object",
-        #             "properties": {
-        #                 "meal_id": {"type": "integer"}
-        #             },
-        #             "required": ["meal_id"]
-        #         }
-        #     }
-        # },
         {
             "type": "function",
             "function": {
@@ -197,35 +105,7 @@ def get_tool_definitions():
                 }
             }
         },
-        # {
-        #     "type": "function",
-        #     "function": {
-        #         "name": "search_meals",
-        #         "description": "Search meals by name",
-        #         "parameters": {
-        #             "type": "object",
-        #             "properties": {
-        #                 "query": {"type": "string"}
-        #             },
-        #             "required": ["query"]
-        #         }
-        #     }
-        # },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_meal_details",
-                "description": "Get meal details",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "meal_id": {"type": "integer"}
-                    },
-                    "required": ["meal_id"]
-                }
-            }
-        },
-        {
+    {
             "type": "function",
             "function": {
                 "name": "get_update_user_profile_form",
@@ -264,41 +144,23 @@ def get_tool_definitions():
                 }
             }
         },
-        # {
-        #     "type": "function",
-        #     "function": {
-        #         "name": "review_last_ordered_meal",
-        #         "description": "Review last ordered meal",
-        #         "parameters": {
-        #             "type": "object",
-        #             "properties": {
-        #                 "sentiment": {
-        #                     "type": "string",
-        #                     "enum": ["like", "neutral", "hate"]
-        #                 },
-        #                 "review_text": {"type": "string"}
-        #             },
-        #             "required": ["sentiment"]
-        #         }
-        #     }
-        # },
-        # {
-        #     "type": "function",
-        #     "function": {
-        #         "name": "get_current_location",
-        #         "description": "Get current delivery location",
-        #         "parameters": {
-        #             "type": "object",
-        #             "properties": {},
-        #             "required": []
-        #         }
-        #     }
-        # },
         {
             "type": "function",
             "function": {
                 "name": "show_menu_options",
                 "description": "Show when user wants menu options, quick actions, settings etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_current_location",
+                "description": "Get current delivery location",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -331,6 +193,18 @@ def get_tool_definitions():
                             "enum": BalanceType.list_values()
                         }
                     },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "make_withdrawal_form",
+                "description": "Use when user wants to withdraw",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
                     "required": []
                 }
             }

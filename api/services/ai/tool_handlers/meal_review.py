@@ -1,13 +1,14 @@
-from typing import Optional, Dict
+from typing import Optional
 
 from api.models.user import User
 from api.models.order import Order, OrderStatus
-from api.models.review import Review, SentimentChoices
+from api.models.review import Review
 from api.models.message import Message
 
 
-def review_last_ordered_meal(
+def review_order(
     user: User,
+    order_id: int,
     sentiment: str,
     review_text: Optional[str] = None,
 ) -> bool:
@@ -21,15 +22,13 @@ def review_last_ordered_meal(
             )
             return False
 
-        # Get latest completed/delivered order
         order = Order.objects.filter(
-            user=user,
-            paid=True
-        ).order_by('-created_at').first()
+            pk=order_id,
+        ).first()
 
         if not order:
             Message.bot_message(
-                "You haven't received any orders yet. Once you receive an order, you can review it!",
+                "We conldn't find your order. Please make sure you've placed an order before submitting a review.",
                 user=user
             )
             return False
@@ -53,7 +52,7 @@ def review_last_ordered_meal(
         # Check if user already reviewed this meal from this order
         existing_review = Review.objects.filter(
             user=user,
-            meal=order.meal
+            order=order
         ).first()
 
         if existing_review:
@@ -67,7 +66,7 @@ def review_last_ordered_meal(
             # Create new review
             Review.objects.create(
                 user=user,
-                meal=order.meal,
+                order=order,
                 sentiment=sentiment,
                 comment=review_text or ""
             )

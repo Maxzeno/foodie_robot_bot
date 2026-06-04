@@ -1,13 +1,51 @@
-from typing import Dict
-from decimal import Decimal
 
 from api.models.user import User
 from api.models.meal_preference import MealPreference
 from api.models.message import Message
+from api.models.meal import FitnessGoal, PreferredCuisine, HealthCondition, Allergy
+from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 
 
-def update_user_profile(user: User, profile_data: Dict) -> bool:
-    pass
+def update_user_profile(
+    user: User, fitness_goal: str, health_conditions: list=[], allergies_diet: list=[],
+    preferred_cuisines: list=[], meal_budget: float=None) -> bool:
+    try:
+        if fitness_goal:
+            fitness_goal_obj = FitnessGoal.objects.filter(name=fitness_goal).first()
+            if fitness_goal_obj:
+                user.fitness_goals = fitness_goal_obj
+
+        if health_conditions:
+            health_condition_objs = HealthCondition.objects.filter(name__in=health_conditions)
+            user.health_conditions.set(health_condition_objs)
+
+        if allergies_diet:
+            allergy_objs = Allergy.objects.filter(name__in=allergies_diet)
+            user.allergies.set(allergy_objs)
+
+        if preferred_cuisines:
+            cuisine_objs = PreferredCuisine.objects.filter(name__in=preferred_cuisines)
+            user.preferred_cuisine.set(cuisine_objs)
+
+        if meal_budget is not None:
+            user.average_meal_budget = meal_budget
+
+        user.save()
+
+        Message.bot_message(
+            "Your profile has been updated successfully!",
+            user=user
+        )
+
+        return True
+
+    except Exception as e:
+        print(f"Error updating user profile: {e}")
+        Message.bot_message(
+            "Sorry, something went wrong while updating your profile. Please try again.",
+            user=user
+        )
+        return False
 
 
 def get_update_user_profile_form(user: User) -> bool:
@@ -50,7 +88,14 @@ def get_update_user_profile_form(user: User) -> bool:
 
 """.strip()
 
-        Message.bot_message(message, user=user)
+        Message.bot_message_flow(
+            message, 
+            user=user,
+            flow_cta="Update profile", 
+            flow_id="1822264872503617", 
+            screen_name="USER_PROFILE",
+            data=user_data_profile_flow(user),
+            )
 
         return True
 

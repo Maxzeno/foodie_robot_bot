@@ -1,0 +1,81 @@
+{
+  "version": "7.2",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "ORDER_REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "ORDER_REVIEW",
+      "title": "Order Review",
+      "data": {
+        "order_id": {
+          "type": "number",
+          "__example__": 0
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "review_form",
+            "children": [
+              {
+                "type": "TextHeading",
+                "text": "We'd Love Your Feedback!"
+              },
+              {
+                "type": "TextBody",
+                "text": "Help us improve by sharing your experience"
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "sentiment",
+                "label": "How would you rate your overall experience?",
+                "required": true,
+                "data-source": [
+                  {
+                    "id": "like",
+                    "title": "👍 Like",
+                    "description": "I had a positive experience"
+                  },
+                  {
+                    "id": "neutral",
+                    "title": "😐 Neutral",
+                    "description": "It was okay"
+                  },
+                  {
+                    "id": "hate",
+                    "title": "👎 Dislike",
+                    "description": "I had a negative experience"
+                  }
+                ]
+              },
+              {
+                "type": "TextArea",
+                "name": "review_text",
+                "label": "Write your review",
+                "helper-text": "Tell us what you think about the food and overall experience",
+                "max-length": 1000
+              },
+              {
+                "type": "Footer",
+                "label": "Submit Review",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "sentiment": "${form.sentiment}",
+                    "review_text": "${form.review_text}",
+                    "order_id": "${data.order_id}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "terminal": true
+    }
+  ]
+}

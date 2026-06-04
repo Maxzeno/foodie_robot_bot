@@ -2,12 +2,9 @@ from api.models.message import Message
 from api.models.user import User
 
 
-def make_withdraw(
+def make_withdrawal_form(
     user: User,
-    currency: str,
-    withdrawal_method: str,
-    withdrawal_details: str,
 ) -> bool:
-    # TODO: Maybe use whatsapp flow for this.
+    # TODO: send Whatsapp flow message for withdrawal
     Message.bot_message(f"Not Implemented yet", user=user)
     return True

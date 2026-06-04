@@ -1,3 +1,4 @@
+from api.services.ai.tool_handlers.meal_review import review_order
 from api.services.ai.tool_handlers.order import place_order
 from api.services.ai.tool_handlers.user_profile import update_user_profile
 import json
@@ -17,3 +18,6 @@ def nfm_reply_hander(user, fields):
 
     elif screen_name == 'USER_PROFILE':
         update_user_profile(user, **fields)
+
+    elif screen_name == 'REVIEW_ORDER':
+        review_order(user, **fields)

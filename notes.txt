@@ -7,6 +7,7 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 * Only recommend for people who are active (Meaning they have replied our message in the last 24 hours)
 
 * When it's been 22 hours and almost 24 hours since they replied our message last send then send a message telling them that if they don't confirm we will stop sending them recommend till they message or reply us. (auto using CRON JOB)
+  -- Hi it's important you respond so we know you still want recommendation if you don't we might stop till you message us.
 
 - Maybe adding the current intent to the message model is better
 
@@ -44,4 +45,6 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 
 - Implement the order flow with whatsapp flow and allow for update of delivery address before order creation.
 - Implement meal reorder with the order code or a recommendation, also maybe by find and order eg. order rice and beans
- 
+- When order is complete send them a order review whatsapp form flow
+- Improve recommendation and use cronjon to send them remember to check free service window. 
+- Add Whatsapp flow for withdrawal

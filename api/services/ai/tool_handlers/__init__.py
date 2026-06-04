@@ -6,8 +6,8 @@ from .order import place_order, get_order_status, get_order_history, place_order
 from .meal_search import search_meals, get_meal_details
 from .user_profile import get_update_user_profile_form, get_user_meal_preferences, update_user_profile
 from .support import contact_support
-from .meal_review import review_last_ordered_meal
+from .meal_review import review_order
 from .menu_options import show_menu_options
 from .referral import referral_link
-from .withdraw import make_withdraw
+from .withdraw import make_withdrawal_form
 from .balance import show_balance

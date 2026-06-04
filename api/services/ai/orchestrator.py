@@ -41,42 +41,23 @@ class FoodBotAIHandler:
             "meal_recommendations": tool_handlers.meal_recommendations,
             "save_delivery_location": tool_handlers.save_delivery_location,
             "request_delivery_location": tool_handlers.request_delivery_location,
-            # TODO: To be removed to reduce token usage
             "get_current_location": tool_handlers.get_current_location,
             
             "place_order_form": tool_handlers.place_order_form,
-            "review_last_ordered_meal": tool_handlers.review_last_ordered_meal,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
             
             "get_update_user_profile_form": tool_handlers.get_update_user_profile_form,
             "like_or_hate_meal": tool_handlers.like_or_hate_meal,
-            # TODO: To be removed to reduce token usage
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
             
             "contact_support": tool_handlers.contact_support,
             "show_menu_options": tool_handlers.show_menu_options,
             
-            # TODO: To be implemented
-            # "request_update_info": tool_handlers.request_update_info,
-            # "update_info": tool_handlers.update_info,
-
-            # TODO: Potentially to be replaced with a more modular registration system
-            "save_fitness_goal": tool_handlers.save_fitness_goal,
-            "save_health_conditions": tool_handlers.save_health_conditions,
-            "save_allergies": tool_handlers.save_allergies,
-            "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
-            
             # referral and balance tools
+            "make_withdrawal_form": tool_handlers.make_withdrawal_form,
             "referral_link": tool_handlers.referral_link,
             "show_balance": tool_handlers.show_balance,
-            # "make_withdraw": tool_handlers.make_withdraw,
-            
-            
-            # TODO: potentially to be removed 
-            # "search_meals": tool_handlers.search_meals,
-            # "get_nutritional_info": tool_handlers.get_nutritional_info,
-            "get_meal_details": tool_handlers.get_meal_details,
         }
 
     def get_conversation_history(self) -> List[Dict]:
