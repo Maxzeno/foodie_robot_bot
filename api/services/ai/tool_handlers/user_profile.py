@@ -6,6 +6,10 @@ from api.models.meal_preference import MealPreference
 from api.models.message import Message
 
 
+def update_user_profile(user: User, profile_data: Dict) -> bool:
+    pass
+
+
 def get_update_user_profile_form(user: User) -> bool:
     try:
         # Get fitness goal
@@ -54,53 +58,6 @@ def get_update_user_profile_form(user: User) -> bool:
         print(f"Error getting user profile: {e}")
         Message.bot_message(
             "Sorry, something went wrong while retrieving your profile. Please try again.",
-            user=user
-        )
-        return False
-
-
-def update_average_budget(user: User, budget_amount: float) -> bool:
-    try:
-        if budget_amount <= 0:
-            Message.bot_message(
-                "Please provide a valid budget amount greater than 0.",
-                user=user
-            )
-            return False
-
-        # Check if user has a city set
-        if not user.city:
-            Message.bot_message_request_location(
-                "Please set your delivery location first before setting a budget.",
-                user=user
-            )
-            return False
-
-        # Update budget
-        user.average_meal_budget = Decimal(str(budget_amount))
-        user.save()
-
-        currency_symbol = user.city.currency.symbol
-        currency_code = user.city.currency.code
-
-        message = f"""
-✅ Budget updated successfully!
-
-Your average meal budget is now set to:
-💰 {currency_symbol}{budget_amount:,.2f} {currency_code}
-
-We'll use this to recommend meals within your budget.
-Note: Your currency is set to {currency_code} based on your delivery location.
-""".strip()
-
-        Message.bot_message(message, user=user)
-
-        return True
-
-    except Exception as e:
-        print(f"Error updating budget: {e}")
-        Message.bot_message(
-            "Sorry, something went wrong while updating your budget. Please try again.",
             user=user
         )
         return False

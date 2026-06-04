@@ -2,12 +2,12 @@
   "version": "7.2",
   "data_api_version": "3.0",
   "routing_model": {
-    "DELIVERY_DETAILS": []
+    "ORDER_FLOW": []
   },
   "screens": [
     {
-      "id": "DELIVERY_DETAILS",
-      "title": "Order Details",
+      "id": "ORDER_FLOW",
+      "title": "Place order",
       "data": {
         "current_address": {
           "type": "string",
@@ -17,29 +17,9 @@
           "type": "string",
           "__example__": "https://maps.google.com/?q=4.8156,7.0498"
         },
-        "address_options": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              }
-            }
-          },
-          "__example__": [
-            {
-              "id": "keep_current",
-              "title": "Yes, use current address"
-            },
-            {
-              "id": "change_address",
-              "title": "No, I want to change it"
-            }
-          ]
+        "meal_id": {
+          "type": "number",
+          "__example__": 0
         }
       },
       "layout": {
@@ -49,14 +29,9 @@
             "type": "Form",
             "name": "delivery_form",
             "init-values": {
-              "number_of_plates": 1,
-              "address_choice": "keep_current"
+              "number_of_plates": 1
             },
             "children": [
-              {
-                "type": "TextHeading",
-                "text": "Complete Your Order"
-              },
               {
                 "type": "TextInput",
                 "label": "Number of plates",
@@ -83,30 +58,26 @@
                 }
               },
               {
-                "type": "RadioButtonsGroup",
-                "label": "Use this delivery address?",
-                "name": "address_choice",
-                "data-source": "${data.address_options}",
-                "required": true
+                "type": "TextCaption",
+                "text": "💡 If this isn't your delivery location, you can go back and update your address before continuing."
               },
               {
                 "type": "TextArea",
                 "label": "Special instructions",
-                "name": "notes",
+                "name": "special_instructions",
                 "helper-text": "Add any delivery notes or food preferences",
                 "required": false,
                 "max-length": 300
               },
               {
                 "type": "Footer",
-                "label": "Continue",
+                "label": "Place order",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {
                     "number_of_plates": "${form.number_of_plates}",
-                    "address_choice": "${form.address_choice}",
-                    "delivery_address": "${data.current_address}",
-                    "notes": "${form.notes}"
+                    "special_instructions": "${form.special_instructions}",
+                    "meal_id": "${data.meal_id}"
                   }
                 }
               }

@@ -66,7 +66,6 @@ class FoodBotAIHandler:
             "save_health_conditions": tool_handlers.save_health_conditions,
             "save_allergies": tool_handlers.save_allergies,
             "save_cuisine_preferences": tool_handlers.save_cuisine_preferences,
-            "update_average_budget": tool_handlers.update_average_budget,
             
             # referral and balance tools
             "referral_link": tool_handlers.referral_link,

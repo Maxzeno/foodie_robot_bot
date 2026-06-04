@@ -2,12 +2,12 @@
   "version": "7.2",
   "data_api_version": "3.0",
   "routing_model": {
-    "HEALTH_QUESTIONNAIRE": []
+    "USER_PROFILE": []
   },
   "screens": [
     {
-      "id": "HEALTH_QUESTIONNAIRE",
-      "title": "Health & Fitness Profile",
+      "id": "USER_PROFILE",
+      "title": "Your Profile",
       "data": {
         "currency": {
           "type": "string",
@@ -28,28 +28,16 @@
           },
           "__example__": [
             {
-              "id": "0_weight_loss",
+              "id": "weight_loss",
               "title": "Weight Loss"
             },
             {
-              "id": "1_muscle_gain",
+              "id": "muscle_gain",
               "title": "Muscle Gain"
             },
             {
-              "id": "2_general_fitness",
-              "title": "General Fitness"
-            },
-            {
-              "id": "3_strength_training",
-              "title": "Strength Training"
-            },
-            {
-              "id": "4_endurance",
-              "title": "Endurance Training"
-            },
-            {
-              "id": "5_flexibility",
-              "title": "Flexibility & Mobility"
+              "id": "maintenance",
+              "title": "Maintenance"
             }
           ]
         },
@@ -108,35 +96,35 @@
           },
           "__example__": [
             {
-              "id": "0_dairy",
+              "id": "dairy",
               "title": "Dairy"
             },
             {
-              "id": "1_gluten",
+              "id": "gluten",
               "title": "Gluten"
             },
             {
-              "id": "2_nuts",
-              "title": "Nuts"
+              "id": "seafood",
+              "title": "Seafood"
             },
             {
-              "id": "3_shellfish",
-              "title": "Shellfish"
-            },
-            {
-              "id": "4_eggs",
+              "id": "eggs",
               "title": "Eggs"
             },
             {
-              "id": "5_soy",
+              "id": "soy",
               "title": "Soy"
             },
             {
-              "id": "6_red_meat",
-              "title": "Red Meat"
+              "id": "peanuts",
+              "title": "Peanuts"
             },
             {
-              "id": "7_none",
+              "id": "treenuts",
+              "title": "Tree Nuts"
+            },
+            {
+              "id": "none",
               "title": "None of the above"
             }
           ]
@@ -210,21 +198,21 @@
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Do you have any of these health conditions? (Select all that apply)",
+                "label": "Do you have any of these health conditions? (Select if any)",
                 "name": "health_conditions",
                 "data-source": "${data.health_conditions}",
                 "required": true
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Any food allergies or dietary restrictions? (Select all that apply)",
+                "label": "Any food allergies or dietary restrictions? (Select if any)",
                 "name": "allergies_diet",
                 "data-source": "${data.allergies_diet}",
                 "required": true
               },
               {
                 "type": "CheckboxGroup",
-                "label": "Which cuisines do you enjoy? (Select all that apply)",
+                "label": "Which cuisines do you enjoy? (Select if any)",
                 "name": "preferred_cuisines",
                 "data-source": "${data.preferred_cuisines}",
                 "required": true

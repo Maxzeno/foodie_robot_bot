@@ -126,6 +126,7 @@ def place_order(
     special_instructions: Optional[str] = None,
     recreated_with_new_address: bool = False
 ) -> bool:
+    print("Placing order...", meal_id, number_of_plates, special_instructions)
     try:
         if not number_of_plates:
             Message.bot_message(
@@ -137,6 +138,12 @@ def place_order(
                 }
             ) 
             return False
+        
+        if type(number_of_plates) != int:
+            number_of_plates = int(number_of_plates)
+        
+        if type(meal_id) != int:
+            meal_id = int(meal_id)
 
         if not user.city:
             Message.bot_message_request_location("Please set your delivery location first before placing an order.", user=user)

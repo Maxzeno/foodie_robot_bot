@@ -229,25 +229,11 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_update_user_profile_form",
-                "description": "Get / update user profile (allergies, cuisines, budget, health, fitness, location etc.)",
+                "description": "Get or update user profile (allergies, cuisines, budget, health, fitness, view current delivery address etc.)",
                 "parameters": {
                     "type": "object",
                     "properties": {},
                     "required": []
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "update_average_budget",
-                "description": "Update average meal budget",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "budget_amount": {"type": "number"}
-                    },
-                    "required": ["budget_amount"]
                 }
             }
         },
