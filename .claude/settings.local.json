@@ -17,7 +17,10 @@
       "Bash(DJANGO_SETTINGS_MODULE=foodie_robot.settings python3:*)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "WebSearch",
+      "Bash(C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe -c:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

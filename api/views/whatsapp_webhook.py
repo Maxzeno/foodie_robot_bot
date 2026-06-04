@@ -11,6 +11,8 @@ from api.services.ai.orchestrator import FoodBotAIHandler
 from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
+from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
+from api.utils.whatsapp_verification import verify_whatsapp_signature
 
 
 router = Router(tags=["Webhook"])
@@ -21,7 +23,11 @@ VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
 @transaction.atomic
 @router.post('/whatsapp', auth=None)
 def whatsapp_webhook(request):
-    # TODO: add check that message is from WhatsApp by verifying the signature
+    # Verify that the request is from WhatsApp by checking the signature
+    signature = request.headers.get('X-Hub-Signature-256', '')
+    if not verify_whatsapp_signature(request.body, signature):
+        return HttpResponse("Forbidden: Invalid signature", status=403)
+
     json_data = json.loads(request.body)
     print('json_data flow', json_data)
 
@@ -96,8 +102,16 @@ def whatsapp_webhook(request):
             if referrer and referrer != user:
                 user.referred_by = referrer
                 user.save()
-            
-        Message.bot_message("Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please share your fitness goal (weight loss, muscle gain, or maintenance)?", user=user)
+
+        message = "Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please fill out your user profile?"
+        Message.bot_message_flow(
+            message, 
+            user=user,
+            flow_cta="Create profile", 
+            flow_id="1822264872503617", 
+            screen_name="USER_PROFILE",
+            data=user_data_profile_flow(user),
+        )
     else:
         if text == None:
             Message.bot_message("Unsupported message type", user=user)

@@ -9,6 +9,8 @@ from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_p
 def update_user_profile(
     user: User, fitness_goal: str, health_conditions: list=[], allergies_diet: list=[],
     preferred_cuisines: list=[], meal_budget: float=None) -> bool:
+    is_new = user.city is None
+
     try:
         if fitness_goal:
             fitness_goal_obj = FitnessGoal.objects.filter(name=fitness_goal).first()
@@ -32,10 +34,14 @@ def update_user_profile(
 
         user.save()
 
-        Message.bot_message(
-            "Your profile has been updated successfully!",
-            user=user
-        )
+        
+        if is_new:
+            Message.bot_message_request_location("Your profile has been created successfully! Please click the button below to send us your delivery location so we can start sending you meal recommendations.", user=user)
+        else:
+            Message.bot_message(
+                "Your profile has been updated successfully!",
+                user=user
+            )
 
         return True
 

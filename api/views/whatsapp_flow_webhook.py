@@ -1,5 +1,4 @@
 import json
-import os
 from base64 import b64decode, b64encode
 
 from ninja import Router
@@ -17,14 +16,13 @@ from django.conf import settings
 
 router = Router(tags=["Webhook"])
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "private_key.pem")
-PUBLIC_KEY_PATH = os.path.join(BASE_DIR, "public_key.pem")
-
 
 def decrypt_request(encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64):
-    PRIVATE_KEY = ""
-    with open(PRIVATE_KEY_PATH, "r") as f:
+    # Load private key path from environment variable, fallback to default path
+    private_key_path = settings.WHATSAPP_FLOW_PRIVATE_KEY_PATH
+
+    # Read the private key from the file
+    with open(private_key_path, "r") as f:
         PRIVATE_KEY = f.read()
 
     flow_data = b64decode(encrypted_flow_data_b64)
@@ -111,8 +109,11 @@ def flow_handler(request):
 
 @router.post("/upload-public-key")
 def upload_public_key(request):
-    # Read public key file
-    with open(PUBLIC_KEY_PATH, "r") as f:
+    # Load public key path from environment variable, fallback to default path
+    public_key_path = settings.WHATSAPP_FLOW_PUBLIC_KEY_PATH
+
+    # Read the public key from the file
+    with open(public_key_path, "r") as f:
         public_key_str = f.read()
 
     url = f"https://graph.facebook.com/v24.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/whatsapp_business_encryption"
