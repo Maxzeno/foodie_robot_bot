@@ -9,9 +9,10 @@ def show_balance(
 ) -> bool:
     try:
         if not balance_type:
-            Message.bot_message(
+            Message.bot_message_action_reply_simple(
                 "What balance do you want to check? (referral, wallet, bonus)",
                 user=user,
+                action_replies=['Referral', 'Wallet', 'Bonus']
             ) 
             return False
             

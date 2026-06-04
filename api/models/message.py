@@ -5,7 +5,6 @@ from django.db.models import Q, CheckConstraint
 import requests
 from django.conf import settings
 from requests.exceptions import RequestException
-import random
 from typing import List
 import uuid
 
@@ -167,7 +166,7 @@ class Message(BaseModel):
 
     @staticmethod
     def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
-        if screen_name not in {'ORDER_FLOW'}:
+        if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'REVIEW_ORDER', 'WITHDRAW'}:
             return None
         
         msg_type = 'interactive'
@@ -253,6 +252,7 @@ class Message(BaseModel):
             response.raise_for_status()  # raises HTTPError for 4xx/5xx
             return response.json().get("messages", [{}])[0].get("id")
         except RequestException as e:
+            print(str(e), 'Failed to send WhatsApp message')
             raise RuntimeError(f"Failed to send WhatsApp message: {e}")
 
     def __str__(self):

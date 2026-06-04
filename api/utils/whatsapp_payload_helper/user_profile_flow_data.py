@@ -56,7 +56,6 @@ def user_data_profile_flow(user: User):
         "health_conditions": health_conditions,
         "allergies_diet": allergies_diet,
         "preferred_cuisines": preferred_cuisines,
-        "meal_budget": current_meal_budget,
         "selected_fitness_goal": selected_fitness_goal,
         "current_meal_budget": current_meal_budget,
         "selected_health_conditions": selected_health_conditions,

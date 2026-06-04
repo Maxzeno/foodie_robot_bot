@@ -94,6 +94,8 @@ def get_update_user_profile_form(user: User) -> bool:
 
 """.strip()
 
+        print(user_data_profile_flow(user))
+
         Message.bot_message_flow(
             message, 
             user=user,
