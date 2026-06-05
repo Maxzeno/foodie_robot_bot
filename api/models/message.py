@@ -166,7 +166,7 @@ class Message(BaseModel):
 
     @staticmethod
     def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
-        if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'REVIEW_ORDER', 'WITHDRAW'}:
+        if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'REVIEW_ORDER', 'WITHDRAWAL'}:
             return None
         
         msg_type = 'interactive'

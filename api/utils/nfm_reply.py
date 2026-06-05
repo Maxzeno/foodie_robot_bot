@@ -22,5 +22,5 @@ def nfm_reply_hander(user, fields):
     elif screen_name == 'REVIEW_ORDER':
         review_order(user, **fields)
 
-    elif screen_name == 'WITHDRAW':
+    elif screen_name == 'WITHDRAWAL':
         pass

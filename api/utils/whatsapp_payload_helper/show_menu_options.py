@@ -43,6 +43,11 @@ def show_menu_options_payload(text):
                             "title": "View/Update Profile",
                             "description": "View/Update your profile info"
                         },
+                        {
+                            "id": "meal-liked-disliked",
+                            "title": "Liked/disliked meals",
+                            "description": "Fetch liked/disliked meals"
+                        }
                     ]
                 },
                 {

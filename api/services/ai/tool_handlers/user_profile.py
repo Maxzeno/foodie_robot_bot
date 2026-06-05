@@ -13,20 +13,20 @@ def update_user_profile(
 
     try:
         if fitness_goal:
-            fitness_goal_obj = FitnessGoal.objects.filter(name=fitness_goal).first()
+            fitness_goal_obj = FitnessGoal.objects.filter(id=fitness_goal).first()
             if fitness_goal_obj:
                 user.fitness_goals = fitness_goal_obj
 
         if health_conditions:
-            health_condition_objs = HealthCondition.objects.filter(name__in=health_conditions)
+            health_condition_objs = HealthCondition.objects.filter(id__in=health_conditions)
             user.health_conditions.set(health_condition_objs)
 
         if allergies_diet:
-            allergy_objs = Allergy.objects.filter(name__in=allergies_diet)
+            allergy_objs = Allergy.objects.filter(id__in=allergies_diet)
             user.allergies.set(allergy_objs)
 
         if preferred_cuisines:
-            cuisine_objs = PreferredCuisine.objects.filter(name__in=preferred_cuisines)
+            cuisine_objs = PreferredCuisine.objects.filter(id__in=preferred_cuisines)
             user.preferred_cuisine.set(cuisine_objs)
 
         if meal_budget is not None:
@@ -88,13 +88,11 @@ def get_update_user_profile_form(user: User) -> bool:
 
 🍽️ Preferred Cuisines: {cuisines_str}
 
-💰 Average Meal Budget: {currency_symbol}{budget_str}
+💰 Average Meal Budget: {budget_str}
 
 📍 Location: {city_name}
 
 """.strip()
-
-        print(user_data_profile_flow(user))
 
         Message.bot_message_flow(
             message, 
@@ -116,10 +114,19 @@ def get_update_user_profile_form(user: User) -> bool:
         return False
 
 
-def get_user_meal_preferences(user: User, is_liked: bool, page: int=1) -> bool:
+def get_user_meal_preferences(user: User, is_liked: bool=None, page: int=1) -> bool:
     try:
         limit: int = 3
         offset = (page - 1) * limit
+        
+        if is_liked is None:
+            Message.bot_message_action_reply_simple(
+                "Would you like to view your liked or disliked meal preferences?",
+                user=user,
+                action_replies=['Liked', 'Dialiked']
+            ) 
+            return False
+        
         meal_preferences = MealPreference.objects.filter(
             user=user,
             preference='like' if is_liked else 'hate'

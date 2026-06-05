@@ -128,7 +128,7 @@ def get_tool_definitions():
                         "is_liked": {"type": "boolean"},
                         "page": {"type": "integer"}
                     },
-                    "required": ["is_liked"]
+                    "required": []
                 }
             }
         },

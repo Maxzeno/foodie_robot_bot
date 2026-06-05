@@ -51,6 +51,12 @@ def save_delivery_location(
         else:
             Message.bot_message("Your delivery location has been updated successfully. It's adviced to review your average meal budget anytime you change your delivery location.", user=user)
 
+    except Exception as e:
+        print("Error in save_delivery_location:", e)
+        Message.bot_message_request_location("Something went wrong when trying to set delivery location. Please click the button below to send us your delivery location.", user=user)
+        return False
+    
+    try:
         # Recommend meals after setting location if they change city
         if not is_new and old_city == city:
             order = Order.objects.filter(user=user).first()
@@ -98,7 +104,6 @@ def save_delivery_location(
         return True
     except Exception as e:
         print("Error in save_delivery_location:", e)
-        Message.bot_message_request_location("Something went wrong when trying to set delivery location. Please click the button below to send us your delivery location.", user=user)
         return False
 
 

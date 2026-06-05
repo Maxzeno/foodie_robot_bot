@@ -45,7 +45,6 @@
     { "id": "2", "title": "Nigerian" },
     { "id": "1", "title": "Vegan Vegetarian" }
   ],
-  "meal_budget": 0,
   "selected_fitness_goal": "",
   "current_meal_budget": 0,
   "selected_health_conditions": [],
