@@ -26,12 +26,7 @@ def show_menu_options_payload(text):
                         {
                             "id": "view-orders",
                             "title": "View Order History",
-                            "description": "View your past orders"
-                        },
-                        {
-                            "id": "order-status",
-                            "title": "Current Order Status",
-                            "description": "Track your current order"
+                            "description": "View your orders"
                         }
                     ]
                 },
@@ -42,11 +37,6 @@ def show_menu_options_payload(text):
                             "id": "view-update-profile",
                             "title": "View/Update Profile",
                             "description": "View/Update your profile info"
-                        },
-                        {
-                            "id": "meal-liked-disliked",
-                            "title": "Liked/disliked meals",
-                            "description": "Fetch liked/disliked meals"
                         }
                     ]
                 },
@@ -86,8 +76,13 @@ def show_menu_options_payload(text):
                     ]
                 },
                 {
-                    "title": "Support",
+                    "title": "Others",
                     "rows": [
+                        {
+                            "id": "meal-liked-disliked",
+                            "title": "Liked/disliked meals",
+                            "description": "Fetch liked/disliked meals"
+                        },
                         {
                             "id": "contact-support",
                             "title": "Contact Support",

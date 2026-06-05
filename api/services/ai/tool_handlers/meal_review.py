@@ -71,8 +71,7 @@ def review_order(
             existing_review.sentiment = sentiment
             existing_review.meal_rating = meal_rating
             
-            if review_text:
-                existing_review.comment = review_text
+            existing_review.comment = review_text or ""
             existing_review.save()
             action = "updated"
         else:
@@ -84,31 +83,8 @@ def review_order(
                 comment=review_text or "",
                 meal_rating=meal_rating
             )
-            action = "submitted"
 
-        # Format response message
-        sentiment_emoji = {
-            'like': '❤️',
-            'neutral': '😐',
-            'hate': '💔'
-        }
-
-        sentiment_text = {
-            'like': 'loved',
-            'neutral': 'were neutral about',
-            'hate': 'disliked'
-        }
-
-        message = f"""
-✅ Review {action} successfully!
-
-You {sentiment_text[sentiment]} {order.meal.name} {sentiment_emoji[sentiment]}
-""".strip()
-
-        if review_text:
-            message += f'\n\nYour comment: "{review_text}"'
-
-        message += "\n\nThank you for your feedback! We'll use this to improve your recommendations."
+        message = "Thank you for your feedback! We'll use this to improve your recommendations."
 
         Message.bot_message(message, user=user)
 

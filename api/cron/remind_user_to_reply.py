@@ -1,14 +1,3 @@
-"""
-Cron job to remind users to reply within the 24-hour free messaging window.
-
-This job should run every hour to check for users who:
-- Haven't replied in 23-24 hours
-- Haven't already received a reminder
-
-WhatsApp's free messaging window is 24 hours after the last user message.
-We want to prompt users to reply before that window closes.
-"""
-
 from django.utils import timezone
 from datetime import timedelta
 from api.models.user import User

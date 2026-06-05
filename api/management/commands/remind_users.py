@@ -35,7 +35,7 @@ class Command(BaseCommand):
             help='Force send reminder even if already sent recently (for testing)',
         )
 
-    def handle(self, *args, **options):
+    def handle(self, **options):
         dry_run = options['dry_run']
         test_user_phone = options.get('test_user')
         force = options['force']
@@ -138,7 +138,7 @@ class Command(BaseCommand):
         existing_reminder = Message.objects.filter(
             user=user,
             role=RoleChoices.BOT,
-            current_intent=CurrentIntentChoices.NEEDS_REPLY,
+            current_intent=CurrentIntentChoices.REMINDER_MESSAGE,
             created_at__gte=twenty_four_hours_ago
         ).order_by('-created_at').first()
 
@@ -163,8 +163,8 @@ class Command(BaseCommand):
             Message.bot_message_action_reply_simple(
                 content=message_content,
                 user=user,
-                action_replies=["Yes, keep them coming!", "Maybe later"],
-                current_intent=CurrentIntentChoices.NEEDS_REPLY
+                action_replies=["Yes, keep them coming!"],
+                current_intent=CurrentIntentChoices.REMINDER_MESSAGE
             )
 
             self.stdout.write(self.style.SUCCESS(f"✓ Reminder sent successfully to {user.phone}"))

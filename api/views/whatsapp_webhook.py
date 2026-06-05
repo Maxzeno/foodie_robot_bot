@@ -178,6 +178,5 @@ def text_temp_message(request):
         }
     )
 
-
     print("message:", message)
     return HttpResponse("Done", status=200)
