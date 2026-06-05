@@ -19,7 +19,7 @@ def nfm_reply_hander(user, fields):
     elif screen_name == 'USER_PROFILE':
         update_user_profile(user, **fields)
 
-    elif screen_name == 'REVIEW_ORDER':
+    elif screen_name == 'ORDER_REVIEW':
         review_order(user, **fields)
 
     elif screen_name == 'WITHDRAWAL':

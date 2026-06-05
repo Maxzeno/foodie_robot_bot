@@ -1,6 +1,7 @@
 from api.models.message import Message
 import json
 from ninja import Router
+from api.models.order import Order
 from api.models.user import User
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
@@ -160,16 +161,23 @@ def text_temp_verify(request):
 def text_temp_message(request):
     user = User.objects.filter(phone="2349077745730").first()
     print("User:", user)
-    message = Message.bot_message_flow("Please complete the order", 
+
+    order = Order.objects.filter(user=user).first()
+    print("Order:", order)
+
+    if not order:
+        return HttpResponse("No order found", status=404)
+
+    message = Message.bot_message_flow("Please complete the form below:", 
         user=user, 
         flow_cta="Fill form", 
-        flow_id="1531243271627499", 
-        screen_name="ORDER_FLOW",
+        flow_id="2324812558034573", 
+        screen_name="ORDER_REVIEW",
         data={
-            "current_address": "Enugu House",
-            "maps_url": "https://fb.com"
+            "order_id": order.id
         }
     )
 
-    print("message id:", message.id)
+
+    print("message:", message)
     return HttpResponse("Done", status=200)

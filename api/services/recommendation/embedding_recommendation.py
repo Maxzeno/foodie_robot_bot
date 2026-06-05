@@ -1,12 +1,16 @@
 # services/embedding_recommendation.py
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Set
 from openai import OpenAI
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Count, Q
 from datetime import timedelta
 from api.models.meal import Meal
-from api.models.recommendation import Recommendation
+from api.models.meal_preference import MealPreference
+from api.models.review import Review
 import logging
+import math
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +22,45 @@ class EmbeddingRecommendationService:
     Key features:
     - Uses cached embeddings (95%+ cost reduction vs LLM)
     - Multi-factor scoring: preferences, nutrition, budget, time-of-day
+    - Collaborative filtering for social proof
+    - Review sentiment analysis
     - Avoids recent meals for variety
     - Ensures diversity in recommendations
     - Optimized for conversion
     """
+
+    # Scoring weight constants - tune these to adjust recommendation behavior
+    WEIGHT_ORDERED_BEFORE = 35.0
+    WEIGHT_SEMANTIC_SIMILARITY = 20.0
+    WEIGHT_LIKED = 30.0
+    WEIGHT_REVIEWED_POSITIVELY = 25.0
+    WEIGHT_REVIEWED_NEGATIVELY = -40.0
+    WEIGHT_FITNESS_GOAL = 20.0
+    WEIGHT_CUISINE_MATCH = 15.0
+    WEIGHT_BUDGET_OPTIMAL = 10.0
+    WEIGHT_BUDGET_GOOD = 5.0
+    WEIGHT_TIME_OF_DAY = 8.0
+    WEIGHT_COLLABORATIVE_FILTERING = 18.0
+    WEIGHT_EXPLORATION_MAX = 8.0
+
+    # Nutritional scoring weights
+    WEIGHT_NUTRITION_MAX = 10.0
+
+    # Popularity scoring
+    WEIGHT_POPULARITY_MAX = 10.0
+
+    # Recency penalty weights
+    PENALTY_RECENT_MAX = 30.0
+    PENALTY_FREQUENCY_MAX = 15.0
+
+    # Query limits
+    MAX_CANDIDATE_MEALS = 150
+    COLLABORATIVE_SIMILAR_USERS = 10
+
+    # Fitness goal slugs (should match database values)
+    FITNESS_GOAL_MUSCLE_GAIN = 'muscle_gain'
+    FITNESS_GOAL_WEIGHT_LOSS = 'weight_loss'
+    FITNESS_GOAL_MAINTENANCE = 'maintenance'
 
     def __init__(self):
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -40,7 +79,7 @@ class EmbeddingRecommendationService:
         Returns:
             Dict with keys: morning, afternoon, evening (each containing meal IDs)
         """
-        # Get eligible meals
+        # Get eligible meals with optimized annotations
         available_meals = self._get_eligible_meals(user, exclude_meal_ids)
 
         if not available_meals:
@@ -60,7 +99,6 @@ class EmbeddingRecommendationService:
             Meal.objects.filter(id__in=meal_ids).update(embedding_generated_at=timezone.now())
 
         # Get meals that were recommended recently (for decay-based penalty)
-        # Returns dict: {meal_id: days_ago} for penalty calculation
         recent_meal_history = self._get_recent_meal_history(user, lookback_days=14)
 
         # Get long-term frequency for diversity (last 30 days)
@@ -74,10 +112,14 @@ class EmbeddingRecommendationService:
         # Generate user preference embedding for semantic similarity
         user_embedding = self._generate_user_preference_embedding(user, available_meals, liked_meal_ids)
 
-        # Get order history for stronger signal
-        ordered_meal_ids = set(
-            user.orders.values_list('meal__id', flat=True).distinct()
-        )
+        # Get order history for stronger signal - OPTIMIZED to single query
+        ordered_meal_ids = self._get_user_ordered_meals(user)
+
+        # Get user's reviewed meals with sentiment
+        user_reviews_by_meal = self._get_user_reviews_by_meal(user)
+
+        # Get collaborative filtering recommendations
+        collaborative_meal_ids = self._get_collaborative_filtering_meals(user, liked_meal_ids)
 
         # Pre-compute user's preferred cuisines to avoid N+1 queries
         user_preferred_cuisine_ids = set(
@@ -94,26 +136,30 @@ class EmbeddingRecommendationService:
         # Score all available meals
         scored_meals = []
         for meal in available_meals:
-            if meal.embedding:  # Only score meals with embeddings
-                score = self._score_meal(
-                    meal=meal,
-                    user=user,
-                    liked_meal_ids=liked_meal_ids,
-                    ordered_meal_ids=ordered_meal_ids,
-                    recent_meal_history=recent_meal_history,
-                    meal_frequency=meal_frequency,
-                    user_embedding=user_embedding,
-                    user_preferred_cuisine_ids=user_preferred_cuisine_ids,
-                    meal_cuisines_map=meal_cuisines_map,
-                    meal_fitness_goals_map=meal_fitness_goals_map
-                )
-                scored_meals.append((meal, score))
+            if not meal.embedding:
+                logger.warning(f"Meal {meal.id} ({meal.name}) has no embedding, skipping")
+                continue
+
+            score = self._score_meal(
+                meal=meal,
+                user=user,
+                liked_meal_ids=liked_meal_ids,
+                ordered_meal_ids=ordered_meal_ids,
+                user_reviews_by_meal=user_reviews_by_meal,
+                collaborative_meal_ids=collaborative_meal_ids,
+                recent_meal_history=recent_meal_history,
+                meal_frequency=meal_frequency,
+                user_embedding=user_embedding,
+                user_preferred_cuisine_ids=user_preferred_cuisine_ids,
+                meal_cuisines_map=meal_cuisines_map,
+                meal_fitness_goals_map=meal_fitness_goals_map
+            )
+            scored_meals.append((meal, score))
 
         # Sort by score
         scored_meals.sort(key=lambda x: x[1], reverse=True)
 
         # Select diverse meals for each time period
-        # Track selected meals to prevent duplicates across periods
         already_selected_ids = set()
 
         morning_meals = self._select_for_time_period(
@@ -139,14 +185,15 @@ class EmbeddingRecommendationService:
         return recommendations
 
     def _get_eligible_meals(self, user, exclude_meal_ids=None):
-        """Get meals that match user's constraints."""
+        """Get meals that match user's constraints with optimized queries."""
         queryset = Meal.objects.filter(
             available=True,
             city=user.city
         )
 
         # Budget filter - show meals within 20% over budget (more likely to convert)
-        if user.average_meal_budget:
+        # FIXED: Add validation for budget
+        if user.average_meal_budget and user.average_meal_budget > 0:
             max_price = float(user.average_meal_budget) * 1.2
             queryset = queryset.filter(price__lte=max_price)
 
@@ -173,16 +220,95 @@ class EmbeddingRecommendationService:
         if exclude_meal_ids:
             queryset = queryset.exclude(id__in=exclude_meal_ids)
 
+        # FIXED: Add annotations for popularity to avoid N+1 queries
+        queryset = queryset.annotate(
+            total_order_count=Count('orders', distinct=True),
+            total_like_count=Count(
+                'meal_preferences',
+                filter=Q(meal_preferences__preference='like'),
+                distinct=True
+            )
+        )
+
         # Prefetch related data for efficiency
+        # REMOVED: orders__reviews - we only need user's reviews, not all reviews
         queryset = queryset.prefetch_related(
             'fitness_goals',
             'cuisine',
             'meal_preferences',
-            'orders',
-            'reviews'
+            'orders'
         ).select_related('restaurant', 'city', 'city__currency')
 
-        return list(queryset[:150])  # Limit to avoid performance issues
+        return list(queryset[:self.MAX_CANDIDATE_MEALS])
+
+    def _get_user_ordered_meals(self, user) -> Set[int]:
+        """Get set of meal IDs the user has ordered. Single optimized query."""
+        return set(
+            user.orders.values_list('meal__id', flat=True).distinct()
+        )
+
+    def _get_user_reviews_by_meal(self, user) -> Dict[int, str]:
+        """
+        Get user's reviews organized by meal ID with sentiment.
+        Returns: {meal_id: sentiment} for meals user has reviewed.
+        """
+        # Get all user's reviews with meal info through order
+        reviews = Review.objects.filter(
+            user=user
+        ).select_related('order__meal').values('order__meal__id', 'sentiment')
+
+        # Build map: meal_id -> sentiment (most recent if multiple)
+        reviews_by_meal = {}
+        for review in reviews:
+            meal_id = review['order__meal__id']
+            sentiment = review['sentiment']
+            # Keep the first (most recent) sentiment for each meal
+            if meal_id not in reviews_by_meal:
+                reviews_by_meal[meal_id] = sentiment
+
+        return reviews_by_meal
+
+    def _get_collaborative_filtering_meals(
+        self,
+        user,
+        user_liked_meal_ids: Set[int]
+    ) -> Set[int]:
+        """
+        Collaborative filtering: Find meals liked by users with similar taste.
+        Returns set of meal IDs recommended by similar users.
+        """
+        if not user_liked_meal_ids:
+            return set()
+
+        try:
+            # Find users who liked the same meals as this user
+            similar_users = MealPreference.objects.filter(
+                meal_id__in=user_liked_meal_ids,
+                preference='like'
+            ).exclude(
+                user=user
+            ).values('user').annotate(
+                overlap_count=Count('id')
+            ).order_by('-overlap_count')[:self.COLLABORATIVE_SIMILAR_USERS]
+
+            similar_user_ids = [item['user'] for item in similar_users]
+
+            if not similar_user_ids:
+                return set()
+
+            # Get meals these similar users liked that current user hasn't tried
+            collaborative_meals = MealPreference.objects.filter(
+                user_id__in=similar_user_ids,
+                preference='like'
+            ).exclude(
+                meal_id__in=user_liked_meal_ids
+            ).values_list('meal_id', flat=True).distinct()
+
+            return set(collaborative_meals)
+
+        except Exception as e:
+            logger.error(f"Error in collaborative filtering: {e}")
+            return set()
 
     def _get_recent_meal_history(self, user, lookback_days=14) -> Dict[int, int]:
         """
@@ -217,8 +343,6 @@ class EmbeddingRecommendationService:
         today = user.get_local_time().date()
         cutoff_date = today - timedelta(days=lookback_days)
 
-        # Count recommendations per meal
-        from django.db.models import Count
         frequency_data = user.recommendations.filter(
             day__gte=cutoff_date
         ).values('meal__id').annotate(
@@ -369,165 +493,290 @@ class EmbeddingRecommendationService:
         self,
         meal: Meal,
         user,
-        liked_meal_ids: set,
-        ordered_meal_ids: set,
+        liked_meal_ids: Set[int],
+        ordered_meal_ids: Set[int],
+        user_reviews_by_meal: Dict[int, str],
+        collaborative_meal_ids: Set[int],
         recent_meal_history: Dict[int, int],
         meal_frequency: Dict[int, int],
         user_embedding: Optional[List[float]] = None,
-        user_preferred_cuisine_ids: Optional[set] = None,
-        meal_cuisines_map: Optional[Dict[int, set]] = None,
-        meal_fitness_goals_map: Optional[Dict[int, set]] = None
+        user_preferred_cuisine_ids: Optional[Set[int]] = None,
+        meal_cuisines_map: Optional[Dict[int, Set[int]]] = None,
+        meal_fitness_goals_map: Optional[Dict[int, Set[int]]] = None
     ) -> float:
         """
         Calculate comprehensive score for a meal.
-
-        Factors:
-        - Order history (strongest signal)
-        - Semantic similarity using embeddings
-        - User preference alignment (liked meals)
-        - Fitness goal match
-        - Cuisine preference match
-        - Budget fit
-        - Nutritional value
-        - Social proof (popularity)
-        - Decay-based recency penalty (prevents immediate repetition)
-        - Frequency penalty (encourages long-term diversity)
-        - Time-of-day appropriateness
-        - Exploration factor (randomness for discovery)
+        Refactored into smaller component functions for maintainability.
         """
         score = 0.0
 
-        # 1. Previously ordered meal bonus (strongest signal)
-        if meal.id in ordered_meal_ids:
-            score += 35.0
+        # User history signals
+        score += self._score_user_history(
+            meal, liked_meal_ids, ordered_meal_ids, user_reviews_by_meal
+        )
 
-        # 2. Semantic similarity bonus using embeddings
-        if user_embedding and meal.embedding:
-            similarity = self._calculate_cosine_similarity(user_embedding, meal.embedding)
-            # Similarity ranges from -1 to 1, we scale to 0-20 points
-            score += max(0, similarity * 20)
+        # Semantic similarity
+        score += self._score_semantic_similarity(meal, user_embedding)
 
-        # 3. Liked meal bonus (strong signal)
-        if meal.id in liked_meal_ids:
-            score += 30.0
+        # Collaborative filtering
+        score += self._score_collaborative_filtering(meal, collaborative_meal_ids)
 
-        # 4. Fitness goal match
-        if user.fitness_goals:
-            meal_fitness_goals = meal_fitness_goals_map.get(meal.id, set()) if meal_fitness_goals_map else set()
-            if user.fitness_goals.id in meal_fitness_goals:
-                score += 20.0
+        # User preferences alignment
+        score += self._score_preferences(
+            meal, user, user_preferred_cuisine_ids,
+            meal_cuisines_map, meal_fitness_goals_map
+        )
 
-        # 5. Cuisine preference match
-        if user_preferred_cuisine_ids:
-            meal_cuisines = meal_cuisines_map.get(meal.id, set()) if meal_cuisines_map else set()
-            if meal_cuisines & user_preferred_cuisine_ids:  # Intersection
-                score += 15.0
+        # Budget fit
+        score += self._score_budget(meal, user)
 
-        # 6. Budget optimization - prefer meals near budget
-        if user.average_meal_budget:
-            budget = float(user.average_meal_budget)
-            price = float(meal.price)
-            price_ratio = price / budget
+        # Nutritional value
+        score += self._score_nutrition(meal, user)
 
-            # Optimal: 80-100% of budget
-            if 0.8 <= price_ratio <= 1.0:
-                score += 10.0
-            # Good: 60-80% or 100-120% of budget
-            elif 0.6 <= price_ratio <= 1.2:
-                score += 5.0
-            # Penalty for much cheaper or more expensive
-            else:
-                score -= abs(price_ratio - 0.9) * 5
+        # Time of day appropriateness
+        score += self._score_time_of_day(meal, user)
 
-        # 7. Nutritional value based on fitness goals
-        if meal.calories and user.fitness_goals:
-            if user.fitness_goals.name == 'muscle_gain' and meal.protein:
-                protein_ratio = float(meal.protein) / (float(meal.calories) / 100)
-                score += protein_ratio * 2  # Higher protein = better for muscle gain
-            elif user.fitness_goals.name == 'weight_loss' and meal.calories:
-                # Prefer lower calorie meals for weight loss
-                if meal.calories < 500:
-                    score += 10.0
-                elif meal.calories < 700:
-                    score += 5.0
-            elif user.fitness_goals.name == 'maintenance' and meal.protein and meal.carbs and meal.fats:
-                # For maintenance, prefer balanced macros (40/30/30 carbs/protein/fats)
-                total_cals = float(meal.calories)
-                protein_cals = float(meal.protein) * 4
-                carb_cals = float(meal.carbs) * 4
-                fat_cals = float(meal.fats) * 9
+        # Popularity (social proof) - FIXED: Use annotated fields
+        score += self._score_popularity(meal)
 
-                protein_pct = protein_cals / total_cals if total_cals > 0 else 0
-                carb_pct = carb_cals / total_cals if total_cals > 0 else 0
-                fat_pct = fat_cals / total_cals if total_cals > 0 else 0
+        # Recency and frequency penalties
+        score -= self._calculate_recency_penalty(meal, recent_meal_history)
+        score -= self._calculate_frequency_penalty(meal, meal_frequency)
 
-                # Ideal: 40% carbs, 30% protein, 30% fats
-                balance_score = 10 - (
-                    abs(carb_pct - 0.40) +
-                    abs(protein_pct - 0.30) +
-                    abs(fat_pct - 0.30)
-                ) * 20
-                score += max(0, balance_score)
-
-        # 8. Time-of-day appropriateness bonus
-        current_period = user.get_time_period()
-        if meal.times_of_day and current_period in meal.times_of_day:
-            score += 8.0
-
-        # 9. Social proof - popularity from other users (use prefetched data)
-        # Count orders and likes from meal_preferences
-        try:
-            order_count = meal.orders.count()
-            like_count = meal.meal_preferences.filter(preference='like').count()
-            popularity = order_count * 2 + like_count  # Orders weighted more
-
-            # Scale to max 10 points (diminishing returns)
-            import math
-            popularity_score = min(10, math.log(popularity + 1) * 2)
-            score += popularity_score
-        except Exception:
-            pass  # Skip if data not available
-
-        # 10. Decay-based recency penalty (graduated based on how recently recommended)
-        if meal.id in recent_meal_history:
-            days_ago = recent_meal_history[meal.id]
-
-            # Aggressive decay curve for immediate diversity
-            if days_ago <= 3:
-                # Days 1-3: Very strong penalty to prevent immediate repetition
-                penalty = 30.0 - (days_ago * 3)  # Day 1: -27, Day 2: -24, Day 3: -21
-            elif days_ago <= 7:
-                # Days 4-7: Strong penalty
-                penalty = 21.0 - ((days_ago - 3) * 3)  # Day 4: -18, ..., Day 7: -9
-            elif days_ago <= 10:
-                # Days 8-10: Medium penalty
-                penalty = 9.0 - ((days_ago - 7) * 2)  # Day 8: -7, Day 9: -5, Day 10: -3
-            else:
-                # Days 11-14: Light penalty (fading out)
-                penalty = max(0, 3.0 - ((days_ago - 10) * 0.75))  # Gradual fade to 0
-
-            score -= penalty
-
-        # 11. Long-term frequency penalty (discourage over-recommendation)
-        if meal.id in meal_frequency:
-            frequency = meal_frequency[meal.id]
-            # Penalty increases with frequency: 1x: -2, 2x: -4, 3x: -7, 4x: -10, 5+x: -15
-            if frequency >= 5:
-                score -= 15.0
-            elif frequency == 4:
-                score -= 10.0
-            elif frequency == 3:
-                score -= 7.0
-            elif frequency == 2:
-                score -= 4.0
-            elif frequency == 1:
-                score -= 2.0
-
-        # 12. Exploration factor for discovery (increased randomness)
-        import random
-        score += random.uniform(0, 8)  # Increased from 0-3 to 0-8 for more variety
+        # Exploration factor
+        score += self._score_exploration()
 
         return score
+
+    def _score_user_history(
+        self,
+        meal: Meal,
+        liked_meal_ids: Set[int],
+        ordered_meal_ids: Set[int],
+        user_reviews_by_meal: Dict[int, str]
+    ) -> float:
+        """Score based on user's historical interactions with this meal."""
+        score = 0.0
+
+        # Previously ordered meal bonus (strongest signal)
+        if meal.id in ordered_meal_ids:
+            score += self.WEIGHT_ORDERED_BEFORE
+
+        # Liked meal bonus (strong signal)
+        if meal.id in liked_meal_ids:
+            score += self.WEIGHT_LIKED
+
+        # Review sentiment (very strong signal)
+        if meal.id in user_reviews_by_meal:
+            sentiment = user_reviews_by_meal[meal.id]
+            if sentiment == 'like':
+                score += self.WEIGHT_REVIEWED_POSITIVELY
+            elif sentiment == 'hate':
+                score += self.WEIGHT_REVIEWED_NEGATIVELY  # This is negative
+
+        return score
+
+    def _score_semantic_similarity(
+        self,
+        meal: Meal,
+        user_embedding: Optional[List[float]]
+    ) -> float:
+        """Score based on semantic similarity between user preferences and meal."""
+        if not user_embedding or not meal.embedding:
+            return 0.0
+
+        similarity = self._calculate_cosine_similarity(user_embedding, meal.embedding)
+        # Similarity ranges from -1 to 1, we scale to 0-WEIGHT_SEMANTIC_SIMILARITY points
+        return max(0, similarity * self.WEIGHT_SEMANTIC_SIMILARITY)
+
+    def _score_collaborative_filtering(
+        self,
+        meal: Meal,
+        collaborative_meal_ids: Set[int]
+    ) -> float:
+        """Score based on collaborative filtering (users like you also liked)."""
+        if meal.id in collaborative_meal_ids:
+            return self.WEIGHT_COLLABORATIVE_FILTERING
+        return 0.0
+
+    def _score_preferences(
+        self,
+        meal: Meal,
+        user,
+        user_preferred_cuisine_ids: Optional[Set[int]],
+        meal_cuisines_map: Optional[Dict[int, Set[int]]],
+        meal_fitness_goals_map: Optional[Dict[int, Set[int]]]
+    ) -> float:
+        """Score based on user's stated preferences (fitness goals, cuisines)."""
+        score = 0.0
+
+        # Fitness goal match
+        if user.fitness_goals and meal_fitness_goals_map:
+            meal_fitness_goals = meal_fitness_goals_map.get(meal.id, set())
+            if user.fitness_goals.id in meal_fitness_goals:
+                score += self.WEIGHT_FITNESS_GOAL
+
+        # Cuisine preference match
+        if user_preferred_cuisine_ids and meal_cuisines_map:
+            meal_cuisines = meal_cuisines_map.get(meal.id, set())
+            if meal_cuisines & user_preferred_cuisine_ids:  # Intersection
+                score += self.WEIGHT_CUISINE_MATCH
+
+        return score
+
+    def _score_budget(self, meal: Meal, user) -> float:
+        """Score based on how well meal price fits user's budget."""
+        if not user.average_meal_budget or user.average_meal_budget <= 0:
+            return 0.0
+
+        budget = float(user.average_meal_budget)
+        price = float(meal.price)
+
+        # Avoid division by zero
+        if budget == 0:
+            return 0.0
+
+        price_ratio = price / budget
+
+        # Optimal: 80-100% of budget
+        if 0.8 <= price_ratio <= 1.0:
+            return self.WEIGHT_BUDGET_OPTIMAL
+        # Good: 60-80% or 100-120% of budget
+        elif 0.6 <= price_ratio <= 1.2:
+            return self.WEIGHT_BUDGET_GOOD
+        # Penalty for much cheaper or more expensive
+        else:
+            return -abs(price_ratio - 0.9) * 5
+
+    def _score_nutrition(self, meal: Meal, user) -> float:
+        """Score based on nutritional value aligned with fitness goals."""
+        if not meal.calories or not user.fitness_goals:
+            return 0.0
+
+        score = 0.0
+        fitness_goal_name = user.fitness_goals.name.lower()
+
+        # FIXED: Use safer string comparisons with lower()
+        if self.FITNESS_GOAL_MUSCLE_GAIN in fitness_goal_name and meal.protein:
+            # Avoid division by zero
+            if meal.calories > 0:
+                protein_ratio = float(meal.protein) / (float(meal.calories) / 100)
+                score += min(self.WEIGHT_NUTRITION_MAX, protein_ratio * 2)
+
+        elif self.FITNESS_GOAL_WEIGHT_LOSS in fitness_goal_name:
+            # Prefer lower calorie meals for weight loss
+            if meal.calories < 500:
+                score += self.WEIGHT_NUTRITION_MAX
+            elif meal.calories < 700:
+                score += self.WEIGHT_NUTRITION_MAX / 2
+
+        elif self.FITNESS_GOAL_MAINTENANCE in fitness_goal_name:
+            # For maintenance, prefer balanced macros
+            if meal.protein and meal.carbs and meal.fats:
+                total_cals = float(meal.calories)
+
+                # Avoid division by zero
+                if total_cals > 0:
+                    protein_cals = float(meal.protein) * 4
+                    carb_cals = float(meal.carbs) * 4
+                    fat_cals = float(meal.fats) * 9
+
+                    protein_pct = protein_cals / total_cals
+                    carb_pct = carb_cals / total_cals
+                    fat_pct = fat_cals / total_cals
+
+                    # Ideal: 40% carbs, 30% protein, 30% fats
+                    balance_score = self.WEIGHT_NUTRITION_MAX - (
+                        abs(carb_pct - 0.40) +
+                        abs(protein_pct - 0.30) +
+                        abs(fat_pct - 0.30)
+                    ) * 20
+                    score += max(0, balance_score)
+
+        return score
+
+    def _score_time_of_day(self, meal: Meal, user) -> float:
+        """Score based on time-of-day appropriateness."""
+        current_period = user.get_time_period()
+        if meal.times_of_day and current_period in meal.times_of_day:
+            return self.WEIGHT_TIME_OF_DAY
+        return 0.0
+
+    def _score_popularity(self, meal: Meal) -> float:
+        """
+        Score based on social proof (popularity from other users).
+        FIXED: Use annotated fields instead of .count() to avoid N+1 queries.
+        """
+        try:
+            # Use the annotated fields from queryset
+            order_count = getattr(meal, 'total_order_count', 0)
+            like_count = getattr(meal, 'total_like_count', 0)
+
+            popularity = order_count * 2 + like_count  # Orders weighted more
+
+            # Scale to max WEIGHT_POPULARITY_MAX points (diminishing returns)
+            popularity_score = min(
+                self.WEIGHT_POPULARITY_MAX,
+                math.log(popularity + 1) * 2
+            )
+            return popularity_score
+        except Exception as e:
+            logger.warning(f"Error calculating popularity for meal {meal.id}: {e}")
+            return 0.0
+
+    def _calculate_recency_penalty(
+        self,
+        meal: Meal,
+        recent_meal_history: Dict[int, int]
+    ) -> float:
+        """Calculate penalty based on how recently the meal was recommended."""
+        if meal.id not in recent_meal_history:
+            return 0.0
+
+        days_ago = recent_meal_history[meal.id]
+
+        # Aggressive decay curve for immediate diversity
+        if days_ago <= 3:
+            # Days 1-3: Very strong penalty to prevent immediate repetition
+            return self.PENALTY_RECENT_MAX - (days_ago * 3)
+        elif days_ago <= 7:
+            # Days 4-7: Strong penalty
+            return 21.0 - ((days_ago - 3) * 3)
+        elif days_ago <= 10:
+            # Days 8-10: Medium penalty
+            return 9.0 - ((days_ago - 7) * 2)
+        else:
+            # Days 11-14: Light penalty (fading out)
+            return max(0, 3.0 - ((days_ago - 10) * 0.75))
+
+    def _calculate_frequency_penalty(
+        self,
+        meal: Meal,
+        meal_frequency: Dict[int, int]
+    ) -> float:
+        """Calculate penalty based on how frequently meal was recommended."""
+        if meal.id not in meal_frequency:
+            return 0.0
+
+        frequency = meal_frequency[meal.id]
+
+        # Penalty increases with frequency
+        if frequency >= 5:
+            return self.PENALTY_FREQUENCY_MAX
+        elif frequency == 4:
+            return 10.0
+        elif frequency == 3:
+            return 7.0
+        elif frequency == 2:
+            return 4.0
+        elif frequency == 1:
+            return 2.0
+
+        return 0.0
+
+    def _score_exploration(self) -> float:
+        """Add random exploration factor for discovery."""
+        return random.uniform(0, self.WEIGHT_EXPLORATION_MAX)
 
     def _select_for_time_period(
         self,

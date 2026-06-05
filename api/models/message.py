@@ -16,6 +16,7 @@ class RoleChoices(models.TextChoices):
 class CurrentIntentChoices(models.TextChoices):
     NO_INTENT = 'no_intent', 'No intent'
     NEEDS_REPLY = 'needs_reply', 'Needs reply'
+    REMINDER_MESSAGE = 'reminder_message', 'Reminder message'
     COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
 
 
@@ -166,7 +167,7 @@ class Message(BaseModel):
 
     @staticmethod
     def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
-        if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'REVIEW_ORDER', 'WITHDRAWAL'}:
+        if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'ORDER_REVIEW', 'WITHDRAWAL'}:
             return None
         
         msg_type = 'interactive'

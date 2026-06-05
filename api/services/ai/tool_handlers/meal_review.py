@@ -9,6 +9,7 @@ from api.models.message import Message
 def review_order(
     user: User,
     order_id: int,
+    meal_rating:int,
     sentiment: str,
     review_text: Optional[str] = None,
 ) -> bool:
@@ -18,6 +19,16 @@ def review_order(
         if sentiment not in valid_sentiments:
             Message.bot_message(
                 "Please specify if you liked, were neutral about, or hated the meal.",
+                user=user
+            )
+            return False
+
+        if type(meal_rating) != int:
+            meal_rating = int(meal_rating)
+
+        if meal_rating < 1 or meal_rating > 5:
+            Message.bot_message(
+                "Please provide a meal rating between 1 and 5 stars.",
                 user=user
             )
             return False
@@ -58,6 +69,8 @@ def review_order(
         if existing_review:
             # Update existing review
             existing_review.sentiment = sentiment
+            existing_review.meal_rating = meal_rating
+            
             if review_text:
                 existing_review.comment = review_text
             existing_review.save()
@@ -68,7 +81,8 @@ def review_order(
                 user=user,
                 order=order,
                 sentiment=sentiment,
-                comment=review_text or ""
+                comment=review_text or "",
+                meal_rating=meal_rating
             )
             action = "submitted"
 
