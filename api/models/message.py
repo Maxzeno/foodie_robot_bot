@@ -257,4 +257,4 @@ class Message(BaseModel):
             raise RuntimeError(f"Failed to send WhatsApp message: {e}")
 
     def __str__(self):
-        return f"Message from {self.role} - {self.current_intent}: {self.content}"
+        return f"Message from {self.role}: {self.user} - {self.current_intent}: {self.content}"

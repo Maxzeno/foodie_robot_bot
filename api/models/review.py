@@ -14,7 +14,7 @@ class SentimentChoices(models.TextChoices):
 
 class Review(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
-    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="reviews")
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="reviews")
     meal_rating = models.PositiveSmallIntegerField(default=3, validators=[MinValueValidator(1), MaxValueValidator(5)], help_text="Meal rating from 1 to 5")
     sentiment = models.CharField(max_length=7, choices=SentimentChoices.choices)
     comment = models.TextField(blank=True)

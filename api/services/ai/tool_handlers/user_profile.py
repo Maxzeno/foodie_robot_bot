@@ -114,19 +114,29 @@ def get_update_user_profile_form(user: User) -> bool:
         return False
 
 
-def get_user_meal_preferences(user: User, is_liked: bool=None, page: int=1) -> bool:
+def get_user_meal_preferences(user: User, filter_by: str=None, page: int=1) -> bool:
     try:
         limit: int = 3
         offset = (page - 1) * limit
+
         
-        if is_liked is None:
+        if filter_by is None:
             Message.bot_message_action_reply_simple(
                 "Would you like to view your liked or disliked meal preferences?",
                 user=user,
-                action_replies=['Liked', 'Dialiked']
+                action_replies=['Liked', 'Disliked']
             ) 
             return False
         
+        if filter_by.lower() not in ['liked', 'disliked']:
+            Message.bot_message_action_reply_simple(
+                "Invalid filter option. Please choose 'liked' or 'disliked'.",
+                user=user,
+                action_replies=['Liked', 'Disliked']
+            )
+            return False
+
+        is_liked = filter_by.lower() == 'liked'
         meal_preferences = MealPreference.objects.filter(
             user=user,
             preference='like' if is_liked else 'hate'

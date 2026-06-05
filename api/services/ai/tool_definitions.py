@@ -2,7 +2,6 @@ from api.models.user_balance import BalanceType
 
 
 def get_tool_definitions():
-    """Optimized tool definitions with reduced token usage."""
     return [
 {
             "type": "function",
@@ -121,11 +120,14 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_user_meal_preferences",
-                "description": "Get liked or disliked meals",
+                "description": "Get users liked/disliked meals",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "is_liked": {"type": "boolean"},
+                        "filter_by": {
+                            "type": "string",
+                            "enum": ["liked", "disliked"]
+                        },
                         "page": {"type": "integer"}
                     },
                     "required": []
