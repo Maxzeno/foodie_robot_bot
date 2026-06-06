@@ -204,7 +204,14 @@ def place_order(
         
         # Calculate pricing
         meal_price = meal.price * number_of_plates
-        delivery_fee = Decimal(str(cal_delivery_fee(meal.restaurant.point.y ,meal.restaurant.point.x , delivery_address.point.y, delivery_address.point.x)))
+
+        delivery_fee = Decimal(str(cal_delivery_fee(meal.city.delivery_fee_per_km, 
+                                                    meal.city.min_delivery_fee, 
+                                                    meal.restaurant.point.y, 
+                                                    meal.restaurant.point.x, 
+                                                    delivery_address.point.y, 
+                                                    delivery_address.point.x)))
+
         total_price = meal_price + delivery_fee
 
         # Create order

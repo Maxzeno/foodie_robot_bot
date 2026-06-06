@@ -1,3 +1,4 @@
+from api.models.meal import Meal
 from api.models.message import Message
 import json
 from ninja import Router
@@ -191,32 +192,9 @@ def text_temp_verify(request):
         user=user,
         num_recommendations_per_period=2,
     )
+    for k, v in recommended_meal_ids.items():
+        meals = Meal.objects.filter(id__in=v).values('id', 'name')
+        print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
+
     print("Recommended Meal IDs:", recommended_meal_ids)
-    return HttpResponse("Done", status=200)
-
-
-# TODO: to be removed in production
-@csrf_exempt
-@router.get("/test-message-temp")
-def text_temp_message(request):
-    user = User.objects.filter(phone="2349077745730").first()
-    print("User:", user)
-
-    order = Order.objects.filter(user=user).first()
-    print("Order:", order)
-
-    if not order:
-        return HttpResponse("No order found", status=404)
-
-    message = Message.bot_message_flow("Please complete the form below:", 
-        user=user, 
-        flow_cta="Fill form", 
-        flow_id="2324812558034573", 
-        screen_name="ORDER_REVIEW",
-        data={
-            "order_id": order.id
-        }
-    )
-
-    print("message:", message)
     return HttpResponse("Done", status=200)

@@ -12,9 +12,9 @@ def haversine(lat1, lon1, lat2, lon2):
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    return R * c # km
+    return math.ceil(R * c) # km
 
 
-def cal_delivery_fee(price_per_km, lat1, lon1, lat2, lon2):
+def cal_delivery_fee(price_per_km, min_delivery_fee, lat1, lon1, lat2, lon2):
     distance = haversine(lat1, lon1, lat2, lon2)
-    return round(price_per_km * distance, 2)
+    return max(round(price_per_km * distance, 2), min_delivery_fee)
