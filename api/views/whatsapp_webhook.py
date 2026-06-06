@@ -14,7 +14,7 @@ from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
 from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 from api.utils.whatsapp_verification import verify_whatsapp_signature
-
+import uuid
 
 router = Router(tags=["Webhook"])
 
@@ -137,6 +137,26 @@ def whatsapp_verify(request):
 
     return HttpResponse("Error: token mismatch", status=403)
 
+
+@csrf_exempt
+@router.post("/whatsapp-test")
+def whatsapp_test(request, text:str):
+    sender_message_id = uuid.uuid4().hex
+    found_msg = Message.objects.filter(message_id=sender_message_id).first()
+    if found_msg:
+        return {"detail": "Done"}
+    
+    user = User.objects.get(phone="2349077745730")
+
+    Message.user_message(message_id=sender_message_id, 
+        resp={}, content=text, 
+        user=user, enable_typing_indicator=True, reply_message_id=None)
+    
+    response_message = FoodBotAIHandler(user, sender_message_id, None).process_message()
+    if response_message:
+        Message.bot_message(response_message, user=user)
+
+    return {"detail": "Done"}
 
 # TODO: to be removed in production
 @csrf_exempt

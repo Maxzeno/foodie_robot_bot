@@ -57,7 +57,7 @@ class FoodBotAIHandler:
             # referral and balance tools
             "referral_link": tool_handlers.referral_link,
             "show_balance_withdraw": tool_handlers.show_balance_withdraw,
-            "show_balance_withdraw": tool_handlers.withdrawal_history,
+            "withdrawal_history": tool_handlers.withdrawal_history,
         }
 
     def get_conversation_history(self) -> List[Dict]:

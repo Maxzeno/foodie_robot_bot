@@ -183,7 +183,7 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "show_balance_withdraw",
-                "description": "Use when user wants to withdraw or see balance (wallet)",
+                "description": "Returns the user's balance (wallet) and shows make withdrawal button",
                 "parameters": {
                     "type": "object",
                     "properties": {

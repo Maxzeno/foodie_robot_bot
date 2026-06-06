@@ -24,7 +24,7 @@ def show_balance_withdraw(
             flow_id="1870920103798521", 
             screen_name="WITHDRAWAL",
             data={
-                "balance_options": [{"id": currency.code, "titile": currency.code} for currency in currencies],
+                "balance_options": [{"id": currency.code, "title": currency.code} for currency in currencies],
             }
         )
         return True

@@ -7,7 +7,7 @@ from django.db import transaction
 
 def withdrawal_history(user: User, page: int=1) -> bool:
     try:
-        limit: int = 5
+        limit: int = 3
         offset = (page - 1) * limit
 
         withdrawals = Withdrawal.objects.filter(
@@ -37,10 +37,11 @@ def withdrawal_history(user: User, page: int=1) -> bool:
             }.get(withdrawal.status, '•')
 
             message += f"{i}. {status_emoji} {withdrawal.amount:,.2f} {withdrawal.currency.code}\n"
-            message += f"   Status: {withdrawal.status.title()}\n"
-            message += f"   Bank: {withdrawal.bank_name}\n"
-            message += f"   Account: {withdrawal.account_name}\n"
-            message += f"   Date: {withdrawal.created_at.strftime('%b %d, %Y')}\n\n"
+            message += f"Status: {withdrawal.status.title()}\n"
+            message += f"Bank: {withdrawal.bank_name}\n"
+            message += f"Account name: {withdrawal.account_name}\n"
+            message += f"Account number: {withdrawal.account_number}\n"
+            message += f"Date: {withdrawal.created_at.strftime('%b %d, %Y')}\n\n"
 
         message = message.strip()
 
@@ -77,6 +78,9 @@ def make_withdrawal(
                 return False
             
             user_balance = UserBalance.get_balance(user=user, currency=currency_obj)
+            if user_balance.amount < 500:
+                Message.bot_message(f"Insufficient balance to make a withdrawal. Minimum withdrawal balance is 500 ({currency}).", user=user)
+                return False
             
             Withdrawal.objects.create(
                 user=user,
