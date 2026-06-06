@@ -1,6 +1,3 @@
-from api.models.user_balance import BalanceType
-
-
 def get_tool_definitions():
     return [
 {
@@ -104,7 +101,7 @@ def get_tool_definitions():
                 }
             }
         },
-    {
+        {
             "type": "function",
             "function": {
                 "name": "get_update_user_profile_form",
@@ -185,15 +182,11 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "show_balance",
-                "description": "Show user balance (referral earnings etc)",
+                "name": "show_balance_withdraw",
+                "description": "Use when user wants to withdraw or see balance (wallet)",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "balance_type": {
-                            "type": "string",
-                            "enum": BalanceType.list_values()
-                        }
                     },
                     "required": []
                 }
@@ -202,13 +195,15 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "make_withdrawal_form",
-                "description": "Use when user wants to withdraw",
+                "name": "withdrawal_history",
+                "description": "Get withdrawal history",
                 "parameters": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "page": {"type": "integer"}
+                    },
                     "required": []
                 }
             }
-        }
+        },
     ]

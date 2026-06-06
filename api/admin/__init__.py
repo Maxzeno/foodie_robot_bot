@@ -17,10 +17,10 @@ from leaflet.admin import LeafletGeoAdmin
 
 from django import forms
 
+from api.models.user_balance import UserBalance
 from api.models.withdrawal import Withdrawal
 
 # Import admin configurations
-from api.admin.user_balance_admin import UserBalanceAdmin
 
 # Register your models here.
 admin.site.register(DeliveryAddress, LeafletGeoAdmin)
@@ -43,6 +43,7 @@ admin.site.register(MealPreference)
 admin.site.register(ReferralEarning)
 admin.site.register(Withdrawal)
 admin.site.register(AppSettings)
+admin.site.register(UserBalance)
 
 class MealAdminForm(forms.ModelForm):
     times_of_day = forms.MultipleChoiceField(

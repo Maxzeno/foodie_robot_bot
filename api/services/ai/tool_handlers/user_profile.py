@@ -12,28 +12,30 @@ def update_user_profile(
     is_new = user.city is None
 
     try:
-        if fitness_goal:
-            fitness_goal_obj = FitnessGoal.objects.filter(id=fitness_goal).first()
-            if fitness_goal_obj:
-                user.fitness_goals = fitness_goal_obj
+        fitness_goal_obj = FitnessGoal.objects.filter(id=fitness_goal).first()
+        user.fitness_goals = fitness_goal_obj
 
-        if health_conditions:
-            health_condition_objs = HealthCondition.objects.filter(id__in=health_conditions)
-            user.health_conditions.set(health_condition_objs)
+        health_condition_objs = HealthCondition.objects.filter(id__in=health_conditions)
+        user.health_conditions.set(health_condition_objs)
 
-        if allergies_diet:
-            allergy_objs = Allergy.objects.filter(id__in=allergies_diet)
-            user.allergies.set(allergy_objs)
+        allergy_objs = Allergy.objects.filter(id__in=allergies_diet)
+        user.allergies.set(allergy_objs)
 
-        if preferred_cuisines:
-            cuisine_objs = PreferredCuisine.objects.filter(id__in=preferred_cuisines)
-            user.preferred_cuisine.set(cuisine_objs)
+        cuisine_objs = PreferredCuisine.objects.filter(id__in=preferred_cuisines)
+        user.preferred_cuisine.set(cuisine_objs)
 
-        if meal_budget is not None:
-            user.average_meal_budget = meal_budget
+        if type(meal_budget) == str:
+            if meal_budget == "":
+                meal_budget = 0
+            else: 
+                meal_budget = float(meal_budget)
+
+        if meal_budget is None:
+            meal_budget = 0
+        
+        user.average_meal_budget = meal_budget
 
         user.save()
-
         
         if is_new:
             Message.bot_message_request_location("Your profile has been created successfully! Please click the button below to send us your delivery location so we can start sending you meal recommendations.", user=user)
@@ -76,7 +78,6 @@ def get_update_user_profile_form(user: User) -> bool:
         currency_symbol = user.city.currency.symbol if user.city else ""
         budget_str = f"{currency_symbol}{user.average_meal_budget:,.2f}" if user.average_meal_budget else "Not set"
 
-# TODO: Send it as flow message incase they want to update it
         message = f"""
 👤 Your Profile
 

@@ -136,7 +136,7 @@ class City(BaseModel):
     preferred_cuisine = models.ManyToManyField("PreferredCuisine", blank=True, related_name="cities")
     average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     referral_bonus = models.DecimalField(max_digits=10, decimal_places=2)
- 
+
     timezone = models.CharField(
             max_length=63,
             default=CommonTimezoneChoices.UTC,

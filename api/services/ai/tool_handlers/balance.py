@@ -1,52 +1,32 @@
+from api.models.currency import Currency
 from api.models.message import Message
 from api.models.user import User
-from api.models.user_balance import UserBalance, BalanceType
+from api.models.user_balance import UserBalance
 
 
-def show_balance(
+def show_balance_withdraw(
     user: User,
-    balance_type: str = None
 ) -> bool:
     try:
-        if not balance_type:
-            Message.bot_message_action_reply_simple(
-                "What balance do you want to check? (referral, wallet, bonus)",
-                user=user,
-                action_replies=['Referral', 'Wallet', 'Bonus']
-            ) 
-            return False
-            
-        # Normalize balance_type to match BalanceType choices
-        balance_type = balance_type.lower()
+        currencies = Currency.objects.all()
+        balances = UserBalance.objects.filter(user=user)
 
-        # Map common user inputs to BalanceType choices
-        balance_type_map = {
-            'referral': BalanceType.REFERRAL,
-            'referrals': BalanceType.REFERRAL,
-            'wallet': BalanceType.WALLET,
-            'bonus': BalanceType.BONUS,
-        }
-
-        # Get the balance type or default to referral
-        selected_balance_type = balance_type_map.get(balance_type, BalanceType.REFERRAL)
-
-        # Get all balances for this type
-        balances = UserBalance.get_balances_by_type(user, selected_balance_type)
-
-        # Filter out zero balances
-        non_zero_balances = [b for b in balances if b.amount > 0]
-
-        # Build the message
-        balance_type_display = selected_balance_type.label
-
-        if not non_zero_balances:
-            message = f"{balance_type_display}:\nNo balance available"
+        if not balances:
+            message = f"Your balance is empty"
         else:
-            message = f"{balance_type_display}:\n"
-            for balance in non_zero_balances:
-                message += f"  {balance.currency.symbol}{balance.amount:,.2f} ({balance.currency.code})\n"
+            message = f"Your wallets:\n"
+            for balance in balances:
+                message += f"{balance.currency.symbol}{balance.amount:,.2f} ({balance.currency.code})\n"
 
-        Message.bot_message(message.strip(), user=user)
+        Message.bot_message_flow(message.strip(), 
+            user=user,
+            flow_cta="Place Withdrawal", 
+            flow_id="1870920103798521", 
+            screen_name="WITHDRAWAL",
+            data={
+                "balance_options": [{"id": currency.code, "titile": currency.code} for currency in currencies],
+            }
+        )
         return True
     except Exception as e:
         print(f"Error placing order: {e}")

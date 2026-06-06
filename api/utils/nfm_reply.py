@@ -3,6 +3,8 @@ from api.services.ai.tool_handlers.order import place_order
 from api.services.ai.tool_handlers.user_profile import update_user_profile
 import json
 
+from api.services.ai.tool_handlers.withdraw import make_withdrawal
+
 def nfm_reply_hander(user, fields):
     print(fields, type(fields))
     fields = json.loads(fields)
@@ -23,4 +25,4 @@ def nfm_reply_hander(user, fields):
         review_order(user, **fields)
 
     elif screen_name == 'WITHDRAWAL':
-        pass
+        make_withdrawal(user, **fields)

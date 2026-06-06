@@ -50,13 +50,13 @@ def show_menu_options_payload(text):
                         },
                         {
                             "id": "show-balance",
-                            "title": "Show balance",
-                            "description": "Show my balance"
+                            "title": "Show/Withdraw balance",
+                            "description": "Show/Withdraw my balance"
                         },
                         {
-                            "id": "withdraw",
-                            "title": "Withdraw balance",
-                            "description": "Withdraw my balance"
+                            "id": "withdraw-history",
+                            "title": "Withdrawal history",
+                            "description": "Your withdrawal history"
                         },
                     ]
                 },

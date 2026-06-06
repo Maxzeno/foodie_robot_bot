@@ -9,5 +9,5 @@ from .support import contact_support
 from .meal_review import review_order
 from .menu_options import show_menu_options
 from .referral import referral_link
-from .withdraw import make_withdrawal_form
-from .balance import show_balance
+from .balance import show_balance_withdraw
+from .withdraw import withdrawal_history

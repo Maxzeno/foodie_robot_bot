@@ -8,7 +8,7 @@ from api.models.message import Message
 from api.models.order import Order
 
 from api.models.settings import AppSettings
-from api.utils.balance import add_referral_earning
+from api.models.user_balance import UserBalance
 
 router = Router(tags=["Webhook"])
 
@@ -110,7 +110,7 @@ def payment_webhook(request):
 
             # Use the utility function to add referral earning
             # This automatically creates ReferralEarning, updates UserBalance, and legacy field
-            add_referral_earning(
+            UserBalance.add_referral_earning(
                 referred_by_user=referrer,
                 referred_user=order.user,
                 city=city

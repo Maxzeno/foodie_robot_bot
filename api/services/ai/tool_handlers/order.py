@@ -10,6 +10,8 @@ from api.models.message import Message
 import requests
 from django.conf import settings
 
+from api.utils.distance import cal_delivery_fee
+
 # Format status message
 ORDER_STATUS_EMOJI = {
     OrderStatus.PENDING: "⏳",
@@ -199,9 +201,10 @@ def place_order(
                 user=user
             )
             return False
+        
         # Calculate pricing
         meal_price = meal.price * number_of_plates
-        delivery_fee = Decimal('10.00')  # TODO: Calculate based on distance
+        delivery_fee = Decimal(str(cal_delivery_fee(meal.restaurant.point.y ,meal.restaurant.point.x , delivery_address.point.y, delivery_address.point.x)))
         total_price = meal_price + delivery_fee
 
         # Create order
@@ -220,6 +223,7 @@ def place_order(
             dropoff_street_address=delivery_address.street_address,
             dropoff_point=delivery_address.point,
             pickup_street_address=meal.restaurant.street_address if hasattr(meal.restaurant, 'street_address') else None,
+            pickup_point=meal.restaurant.point if hasattr(meal.restaurant, 'point') else None,
         )
 
         payment_url = payment_link(order)
