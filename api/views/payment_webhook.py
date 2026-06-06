@@ -1,7 +1,11 @@
 from ninja import Router
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.conf import settings
 import json
+import hmac
+import hashlib
+import base64
 from django.http import HttpResponse
 from decimal import Decimal
 from api.models.message import Message
@@ -17,10 +21,36 @@ router = Router(tags=["Webhook"])
 @transaction.atomic
 @router.post("/payment", auth=None)
 def payment_webhook(request):
-    # TODO: confirm request is from Vendy using the secret hash in the header
-    # if settings.VENDY_SECRET_HASH == None or settings.VENDY_SECRET_HASH != request.headers.get('secretHash'):
-    #     print("Invalid secret hash in webhook request")
-    #     return HttpResponse("Unauthorized", status=401)
+    # Verify webhook signature from Vendy using HMAC SHA256
+    signature_header = request.headers.get('X-Signature')
+
+    if not signature_header:
+        print("Missing X-Signature header in webhook request")
+        return HttpResponse("Unauthorized: Missing signature", status=401)
+
+    # Get the secret hash from settings
+    secret_hash = settings.VENDY_SECRET_HASH
+
+    if not secret_hash:
+        print("VENDY_SECRET_HASH not configured in Django settings")
+        return HttpResponse("Server configuration error", status=500)
+
+    # Compute the expected signature using HMAC SHA256
+    computed_signature = base64.b64encode(
+        hmac.new(
+            secret_hash.encode('utf-8'),
+            request.body,
+            hashlib.sha256
+        ).digest()
+    ).decode('utf-8')
+
+    # Compare signatures using timing-safe comparison
+    if not hmac.compare_digest(computed_signature, signature_header):
+        print(f"Invalid webhook signature. Expected: {computed_signature}, Got: {signature_header}")
+        return HttpResponse("Unauthorized: Invalid signature", status=401)
+
+    print("Webhook signature verified successfully")
+
     try:
         print("Payment Webhook", request.body)
         print("Payment Webhook Headers", request.headers)

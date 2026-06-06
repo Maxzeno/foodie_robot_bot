@@ -186,9 +186,40 @@ class EmbeddingRecommendationService:
 
     def _get_eligible_meals(self, user, exclude_meal_ids=None):
         """Get meals that match user's constraints with optimized queries."""
+        from datetime import datetime
+
         queryset = Meal.objects.filter(
             available=True,
-            city=user.city
+            city=user.city,
+            restaurant__inactive=False  # Exclude meals from inactive restaurants
+        ).select_related('restaurant')  # Optimize restaurant queries
+
+        # Stock filter - exclude meals with zero stock
+        # Only apply if meal has stock tracking enabled (daily_stock_limit is set)
+        queryset = queryset.filter(
+            Q(daily_stock_limit__isnull=True) |  # Unlimited stock
+            Q(remaining_stock__isnull=True) |     # Stock not initialized
+            Q(remaining_stock__gt=0)               # Has stock remaining
+        )
+
+        # Time-based filtering - only include meals available at current time
+        current_time = user.get_local_time().time()
+        current_day = user.get_local_time().strftime('%A').lower()
+
+        # Filter by restaurant operating hours and days
+        queryset = queryset.filter(
+            Q(restaurant__available_days=[]) |  # Restaurant open all days
+            Q(restaurant__available_days__contains=[current_day])  # Restaurant open today
+        ).filter(
+            restaurant__open_time__lte=current_time,
+            restaurant__close_time__gte=current_time
+        )
+
+        # Filter by meal availability times
+        queryset = queryset.filter(
+            Q(available_from_time__isnull=True) | Q(available_from_time__lte=current_time)
+        ).filter(
+            Q(available_to_time__isnull=True) | Q(available_to_time__gte=current_time)
         )
 
         # Budget filter - show meals within 20% over budget (more likely to convert)

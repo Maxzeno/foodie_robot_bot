@@ -48,3 +48,12 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - When order is complete send them a order review whatsapp form flow
 - Improve recommendation and use cronjon to send them remember to check free service window. 
 - Add Whatsapp flow for withdrawal
+
+
+implement restaurant open time, close time available days, inactive
+
+  for meal
+  daily_stock_limit, remaining_stock, available_from_time and available_to_time, not available
+
+  and remember to to update the meal recommendation service with this as well as the meal recommendation   
+  cron job also check that it works fine and the remind users to reply cron job as well

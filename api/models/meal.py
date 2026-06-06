@@ -169,6 +169,30 @@ class Meal(BaseModel):
         help_text="Times of day this meal is go for (e.g., morning, afternoon, evening)"
     )
 
+    # Time-based availability
+    available_from_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Time when this meal becomes available (e.g., 06:00 for breakfast). Leave empty for no time restriction."
+    )
+    available_to_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Time when this meal stops being available (e.g., 11:00 for breakfast). Leave empty for no time restriction."
+    )
+
+    # Stock management
+    daily_stock_limit = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Maximum number of this meal that can be ordered per day. Leave empty for unlimited stock."
+    )
+    remaining_stock = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Current remaining stock for today. Auto-resets daily via cron job."
+    )
+
     # Nutritional info
     calories = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     protein = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -198,9 +222,86 @@ class Meal(BaseModel):
     def __str__(self):
         return f"{self.name} - {self.city.name} - {self.fitness_goals} - {self.cuisine} - {self.restricted_health_conditions} - {self.restricted_allergies}"
 
+    def is_available_at_time(self, check_time=None):
+        """
+        Check if meal is available at a specific time.
+
+        Args:
+            check_time: datetime.time object (defaults to current time)
+
+        Returns:
+            bool: True if available at the given time, False otherwise
+        """
+        from datetime import datetime
+
+        if check_time is None:
+            check_time = datetime.now().time()
+
+        # Check time-based availability
+        if self.available_from_time and check_time < self.available_from_time:
+            return False
+
+        if self.available_to_time and check_time > self.available_to_time:
+            return False
+
+        return True
+
+    def has_stock_available(self):
+        """
+        Check if meal has stock available for ordering.
+
+        Returns:
+            bool: True if stock is available or unlimited, False if out of stock
+        """
+        # If no stock limit set, unlimited stock
+        if self.daily_stock_limit is None:
+            return True
+
+        # If remaining_stock is None, initialize it to daily_stock_limit
+        if self.remaining_stock is None:
+            return True
+
+        # Check if stock remains
+        return self.remaining_stock > 0
+
+    def is_fully_available(self, check_time=None):
+        """
+        Check if meal is fully available (enabled, in stock, restaurant open, time available).
+
+        Args:
+            check_time: datetime.time object (defaults to current time)
+
+        Returns:
+            bool: True if meal is available for ordering, False otherwise
+        """
+        # Check basic availability flag
+        if not self.available:
+            return False
+
+        # Check if restaurant is inactive
+        if self.restaurant.inactive:
+            return False
+
+        # Check if restaurant is open
+        if not self.restaurant.is_open_now(current_time=check_time):
+            return False
+
+        # Check time-based availability
+        if not self.is_available_at_time(check_time):
+            return False
+
+        # Check stock
+        if not self.has_stock_available():
+            return False
+
+        return True
 
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = unique_meal_code()
+
+        # Initialize remaining_stock to daily_stock_limit if set
+        if self.daily_stock_limit is not None and self.remaining_stock is None:
+            self.remaining_stock = self.daily_stock_limit
 
         super().save(*args, **kwargs)

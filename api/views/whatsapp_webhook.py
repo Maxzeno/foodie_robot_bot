@@ -14,6 +14,7 @@ from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
 from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 from api.utils.whatsapp_verification import verify_whatsapp_signature
+from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 import uuid
 
 router = Router(tags=["Webhook"])
@@ -89,7 +90,26 @@ def whatsapp_webhook(request):
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
     if found_msg:
         return {"detail": "Done"}
-    
+
+    # Rate limiting: 30 messages per minute per user
+    try:
+        check_rate_limit(
+            user_identifier=phone,
+            max_requests=30,
+            window_seconds=60
+        )
+    except RateLimitExceeded as e:
+        print(f"Rate limit exceeded for phone {phone}: {e}")
+        # Return success to WhatsApp to avoid retries, but don't process the message
+        # Optionally send a warning message to the user
+        user_obj = User.objects.filter(phone=phone).first()
+        if user_obj:
+            Message.bot_message(
+                "You're sending messages too quickly. Please wait a moment before trying again.",
+                user=user_obj
+            )
+        return {"detail": "Rate limited"}
+
     user, created = User.objects.get_or_create(phone=phone)
 
     Message.user_message(message_id=sender_message_id, 
