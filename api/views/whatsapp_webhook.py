@@ -181,7 +181,7 @@ def whatsapp_test(request, text:str):
 
 # TODO: to be removed in production
 @csrf_exempt
-@router.get("/test-temp")
+@router.get("/test-temp-recommendation")
 def text_temp_verify(request):
     user = User.objects.filter(phone="2349077745730").first()
     print("User:", user)
@@ -192,9 +192,11 @@ def text_temp_verify(request):
         user=user,
         num_recommendations_per_period=2,
     )
+
+    res = {}
     for k, v in recommended_meal_ids.items():
         meals = Meal.objects.filter(id__in=v).values('id', 'name')
         print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
-
+        res[k] = list(meals)
     print("Recommended Meal IDs:", recommended_meal_ids)
-    return HttpResponse("Done", status=200)
+    return res

@@ -50,10 +50,5 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - Add Whatsapp flow for withdrawal
 
 
-implement restaurant open time, close time available days, inactive
+- Implement a feature that when adding a meal it handles uses ai to analyse and group the nutritional stuff as well as fitness, best time of day, health allergies and cuisine it falls under. also add a weight factor to meal that can be adjusted eg if today is sunday we can adjust to make it more likely they get matched with rice OR maybe we have a special event day special where we select a meal that will be highly recommended in a particular day.
 
-  for meal
-  daily_stock_limit, remaining_stock, available_from_time and available_to_time, not available
-
-  and remember to to update the meal recommendation service with this as well as the meal recommendation   
-  cron job also check that it works fine and the remind users to reply cron job as well

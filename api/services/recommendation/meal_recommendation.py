@@ -69,7 +69,13 @@ class MealRecommendationService:
     WEIGHT_TIME_OF_DAY = 8.0            # Time-appropriate meals
 
     # === EXPLORATION ===
-    WEIGHT_EXPLORATION_MAX = 8.0        # Random exploration bonus
+    WEIGHT_EXPLORATION_MAX = 8.0        # Random exploration bonus (scoring phase)
+
+    # === EPSILON-GREEDY EXPLORATION ===
+    # Controls exploration vs exploitation tradeoff
+    EPSILON_NEW_USER = 0.20            # 20% exploration for new users (< 5 orders)
+    EPSILON_REGULAR_USER = 0.15        # 15% exploration for regular users (5-20 orders)
+    EPSILON_ESTABLISHED_USER = 0.10    # 10% exploration for established users (> 20 orders)
 
     # === QUERY LIMITS ===
     MAX_CANDIDATE_MEALS = 150           # Limit initial query size
@@ -89,15 +95,22 @@ class MealRecommendationService:
         self,
         user,
         num_recommendations_per_period: int = 2,
-        exclude_meal_ids: Optional[List[int]] = None
+        exclude_meal_ids: Optional[List[int]] = None,
+        exploration_rate: Optional[float] = None
     ) -> Dict[str, List[int]]:
         """
         Get personalized meal recommendations for morning, afternoon, and evening.
+        Uses epsilon-greedy exploration to balance personalization with discovery.
 
         Args:
             user: User instance
             num_recommendations_per_period: Number of meals per time period (default: 2)
             exclude_meal_ids: Additional meal IDs to exclude (optional)
+            exploration_rate: Override epsilon for exploration (0.0-1.0). If None, auto-determined
+                             based on user's order history. Typical values:
+                             - 0.20 (20%) for new users
+                             - 0.15 (15%) for regular users
+                             - 0.10 (10%) for established users
 
         Returns:
             Dict with keys 'morning', 'afternoon', 'evening', each containing meal IDs
@@ -170,8 +183,16 @@ class MealRecommendationService:
             "evening": evening_meals
         }
 
-        logger.info(f"Final recommendations: {len(morning_meals)} morning, "
+        logger.info(f"Final recommendations (before exploration): {len(morning_meals)} morning, "
                    f"{len(afternoon_meals)} afternoon, {len(evening_meals)} evening")
+
+        # === EPSILON-GREEDY EXPLORATION ===
+        # Apply exploration to introduce serendipity and help discover new meals
+        epsilon = self._get_exploration_rate(user, exploration_rate)
+        if epsilon > 0:
+            recommendations = self._apply_epsilon_greedy_exploration(
+                recommendations, available_meals, epsilon
+            )
 
         return recommendations
 
@@ -832,6 +853,124 @@ class MealRecommendationService:
 
         logger.info(f"Selected {len(selected)} meals for {time_period}")
         return selected[:num_recommendations]
+
+    # ============================================================================
+    # EPSILON-GREEDY EXPLORATION
+    # ============================================================================
+
+    def _get_exploration_rate(self, user, override_rate: Optional[float] = None) -> float:
+        """
+        Determine the exploration rate (epsilon) for epsilon-greedy algorithm.
+
+        If override_rate is provided, use that. Otherwise, determine based on user's
+        order history to balance exploration vs exploitation.
+
+        Args:
+            user: User instance
+            override_rate: Manual override for epsilon (0.0-1.0)
+
+        Returns:
+            float: Exploration rate between 0.0 and 1.0
+        """
+        if override_rate is not None:
+            # Clamp to valid range
+            epsilon = max(0.0, min(1.0, override_rate))
+            logger.debug(f"Using override exploration rate: {epsilon}")
+            return epsilon
+
+        # Determine epsilon based on user's order history
+        order_count = user.orders.count()
+
+        if order_count < 5:
+            # New user: High exploration to learn preferences
+            epsilon = self.EPSILON_NEW_USER
+            user_type = "new"
+        elif order_count < 20:
+            # Regular user: Moderate exploration
+            epsilon = self.EPSILON_REGULAR_USER
+            user_type = "regular"
+        else:
+            # Established user: Low exploration (we know their preferences)
+            epsilon = self.EPSILON_ESTABLISHED_USER
+            user_type = "established"
+
+        logger.debug(f"Auto-determined exploration rate: {epsilon} ({user_type} user, {order_count} orders)")
+        return epsilon
+
+    def _apply_epsilon_greedy_exploration(
+        self,
+        recommendations: Dict[str, List[int]],
+        available_meals: List[Meal],
+        epsilon: float
+    ) -> Dict[str, List[int]]:
+        """
+        Apply epsilon-greedy exploration to recommendations.
+
+        For each recommended meal, with probability epsilon, replace it with a random
+        meal from the available pool (that's not already recommended).
+
+        This helps:
+        - Discover new meals that might become favorites
+        - Avoid over-recommending the same meals
+        - Learn user preferences faster for new users
+
+        Args:
+            recommendations: Dict with morning/afternoon/evening meal IDs
+            available_meals: List of all eligible meals
+            epsilon: Exploration rate (0.0-1.0)
+
+        Returns:
+            Dict: Updated recommendations with some random substitutions
+        """
+        if epsilon <= 0 or not available_meals:
+            return recommendations
+
+        # Track which meals are currently selected
+        all_selected_ids = set()
+        for period in ['morning', 'afternoon', 'evening']:
+            all_selected_ids.update(recommendations[period])
+
+        # Create a pool of exploration candidates (meals not currently selected)
+        exploration_pool = [m for m in available_meals if m.id not in all_selected_ids]
+
+        if not exploration_pool:
+            logger.debug("No exploration pool available")
+            return recommendations
+
+        exploration_count = 0
+        total_slots = 0
+
+        # Apply exploration to each time period
+        for period in ['morning', 'afternoon', 'evening']:
+            meals = recommendations[period].copy()  # Copy to avoid modifying during iteration
+            total_slots += len(meals)
+
+            for i in range(len(meals)):
+                # With probability epsilon, replace with random meal
+                if random.random() < epsilon:
+                    # Pick random meal from exploration pool
+                    if exploration_pool:
+                        random_meal = random.choice(exploration_pool)
+
+                        # Replace the meal
+                        old_meal_id = meals[i]
+                        meals[i] = random_meal.id
+
+                        # Update tracking
+                        all_selected_ids.discard(old_meal_id)
+                        all_selected_ids.add(random_meal.id)
+
+                        # Remove from pool to avoid duplicates within same request
+                        exploration_pool = [m for m in exploration_pool if m.id != random_meal.id]
+
+                        exploration_count += 1
+                        logger.debug(f"Exploration: Replaced meal {old_meal_id} with {random_meal.id} in {period}")
+
+            recommendations[period] = meals
+
+        logger.info(f"Epsilon-greedy exploration: {exploration_count}/{total_slots} meals randomized (ε={epsilon:.2f})")
+
+        return recommendations
 
     # ============================================================================
     # HELPER METHODS - DATA GATHERING

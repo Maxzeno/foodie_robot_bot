@@ -7,35 +7,11 @@ from api.models.meal import Meal, TimeOfDayChoices
 from api.models.recommendation import Recommendation, ChoiceOption
 from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def send_meal_recommendations():
-    """
-    Main function to send meal recommendations to active users.
-
-    Flow:
-    1. Get all active users (replied in last 24 hours)
-    2. Determine current time period (morning/afternoon/evening)
-    3. For each user:
-       - Check if they have a city set
-       - Check if recommendations already exist for today and current period
-       - If not, generate recommendations for all periods
-       - Send messages only for current period
-       - Mark sent recommendations appropriately
-
-    Returns:
-        Dict with statistics about the job execution
-    """
     now = timezone.now()
     twenty_four_hours_ago = now - timedelta(hours=24)
-
-    logger.info("="*60)
-    logger.info("Starting send_meal_recommendations cron job")
-    logger.info(f"Current time: {now}")
-    logger.info("="*60)
 
     # Get all users who replied in the last 24 hours (active users)
     active_users = User.objects.annotate(
@@ -48,10 +24,8 @@ def send_meal_recommendations():
     )
 
     total_users = active_users.count()
-    logger.info(f"Found {total_users} active users (replied in last 24 hours)")
 
     if total_users == 0:
-        logger.info("No active users to send recommendations to")
         return {
             "total_users": 0,
             "users_sent": 0,
@@ -75,11 +49,8 @@ def send_meal_recommendations():
             time_period = user.get_time_period()
             today = user.get_local_time().date()
 
-            logger.debug(f"Processing user {user.phone} - Time period: {time_period}, Date: {today}")
-
             # Check if user has city set
             if not user.city:
-                logger.info(f"User {user.phone} has no city set, skipping")
                 users_skipped_no_city += 1
                 continue
 
@@ -92,7 +63,6 @@ def send_meal_recommendations():
             )
 
             if existing_recommendations.exists():
-                logger.debug(f"User {user.phone} already received {time_period} recommendations today, skipping")
                 users_skipped_already_sent += 1
                 continue
 
@@ -102,14 +72,11 @@ def send_meal_recommendations():
             if messages_sent > 0:
                 users_sent += 1
                 total_messages_sent += messages_sent
-                logger.info(f" Sent {messages_sent} {time_period} recommendations to {user.phone}")
             else:
                 users_failed += 1
-                logger.warning(f"Failed to send recommendations to {user.phone}")
 
         except Exception as e:
             users_failed += 1
-            logger.error(f"Error processing user {user.phone}: {str(e)}", exc_info=True)
 
     # Summary
     result = {
@@ -121,31 +88,10 @@ def send_meal_recommendations():
         "total_messages_sent": total_messages_sent
     }
 
-    logger.info("="*60)
-    logger.info("Send Meal Recommendations - Summary")
-    logger.info(f"Total active users: {total_users}")
-    logger.info(f" Users sent recommendations: {users_sent}")
-    logger.info(f"Skipped (no city): {users_skipped_no_city}")
-    logger.info(f"Skipped (already sent): {users_skipped_already_sent}")
-    logger.info(f" Failed: {users_failed}")
-    logger.info(f"Total messages sent: {total_messages_sent}")
-    logger.info("="*60)
-
     return result
 
 
 def _generate_and_send_recommendations(user, current_time_period, today):
-    """
-    Generate recommendations for all time periods and send messages for current period.
-
-    Args:
-        user: User object
-        current_time_period: Current time period (morning/afternoon/evening)
-        today: User's local date
-
-    Returns:
-        int: Number of messages sent
-    """
     try:
         # Initialize recommendation service
         service = MealRecommendationService()
@@ -164,7 +110,6 @@ def _generate_and_send_recommendations(user, current_time_period, today):
             meal_ids = recommended_meal_dict.get(time_period, [])
 
             if not meal_ids:
-                logger.warning(f"No meals recommended for {time_period} for user {user.phone}")
                 continue
 
             # Get meal objects
@@ -211,21 +156,10 @@ def _generate_and_send_recommendations(user, current_time_period, today):
         return messages_sent
 
     except Exception as e:
-        logger.error(f"Error generating recommendations for user {user.phone}: {str(e)}", exc_info=True)
         return 0
 
 
 def _send_recommendation_message(user, meal, recommendation_obj, time_period, index):
-    """
-    Send a recommendation message to the user via WhatsApp.
-
-    Args:
-        user: User object
-        meal: Meal object
-        recommendation_obj: Recommendation object
-        time_period: Time period string (morning/afternoon/evening)
-        index: Index of recommendation (0 for first, 1 for second)
-    """
     try:
         # Format message text
         position_text = 'first' if index == 0 else 'second'
@@ -249,50 +183,5 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
             }
         )
 
-        logger.debug(f"Sent {position_text} {time_period} recommendation to {user.phone}: {meal.name}")
-
     except Exception as e:
-        logger.error(f"Error sending message to {user.phone}: {str(e)}", exc_info=True)
         raise
-
-
-def get_users_to_send_recommendations():
-    """
-    Helper function to get list of users who should receive recommendations.
-    Useful for testing and monitoring.
-
-    Returns:
-        QuerySet of User objects
-    """
-    now = timezone.now()
-    twenty_four_hours_ago = now - timedelta(hours=24)
-
-    # Get all users who replied in the last 24 hours
-    active_users = User.objects.annotate(
-        last_user_message_time=Max(
-            'messages__created_at',
-            filter=Q(messages__role=RoleChoices.USER)
-        )
-    ).filter(
-        last_user_message_time__gte=twenty_four_hours_ago,
-        city__isnull=False  # Must have city set
-    )
-
-    # Filter out users who already received recommendations for current time period today
-    users_needing_recommendations = []
-
-    for user in active_users:
-        time_period = user.get_time_period()
-        today = user.get_local_time().date()
-
-        existing_recommendations = Recommendation.objects.filter(
-            user=user,
-            time_of_day=TimeOfDayChoices.get_period(time_period),
-            day=today,
-            sent_to_user=True
-        )
-
-        if not existing_recommendations.exists():
-            users_needing_recommendations.append(user)
-
-    return users_needing_recommendations
