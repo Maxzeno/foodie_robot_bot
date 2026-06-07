@@ -54,7 +54,7 @@ def remind_users_to_reply():
             Message.bot_message_action_reply_simple(
                 content=message_content,
                 user=user,
-                action_replies=["Yes, continue"],
+                action_replies=["OK"],
                 current_intent=CurrentIntentChoices.REMINDER_MESSAGE
             )
 

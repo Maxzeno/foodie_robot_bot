@@ -40,7 +40,13 @@ class Order(BaseModel):
     status = models.CharField(max_length=20, default=OrderStatus.PENDING, choices=OrderStatus.choices)
     ordered_via = models.CharField(max_length=20, default=OrderChannelChoices.WHATSAPP, choices=OrderChannelChoices.choices)
     
-    note = models.CharField(max_length=250, null=True, blank=True)
+    note = models.CharField(max_length=500, null=True, blank=True)
+    
+    rider_note = models.CharField(max_length=500, null=True, blank=True)
+    rider_name = models.CharField(max_length=250, null=True, blank=True)
+    rider_company = models.CharField(max_length=250, null=True, blank=True)
+    rider_phone = models.CharField(max_length=250, null=True, blank=True)
+    
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='orders')
 
     total_price = models.DecimalField(max_digits=8, decimal_places=2)

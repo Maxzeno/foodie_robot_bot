@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional
 from decimal import Decimal
 
 from api.models.location import City
@@ -100,9 +100,9 @@ def place_order_form(
         return False
 
     try:
-        message = Message.bot_message_flow("Please complete the order", 
+        message = Message.bot_message_flow(f"Please complete your order for {meal.name} so we can process it immediately", 
             user=user, 
-            flow_cta="Fill form", 
+            flow_cta="Complete Order", 
             flow_id="1531243271627499", 
             screen_name="ORDER_FLOW",
             data={
@@ -126,6 +126,7 @@ def place_order(
     number_of_plates: int=None,
     # delivery_address_id: Optional[int] = None,
     special_instructions: Optional[str] = None,
+    rider_instructions: Optional[str] = None,
     recreated_with_new_address: bool = False
 ) -> bool:
     print("Placing order...", meal_id, number_of_plates, special_instructions)
@@ -221,6 +222,7 @@ def place_order(
             quantity=number_of_plates,
             status=OrderStatus.PENDING,
             note=special_instructions or "",
+            rider_note=rider_instructions or "",
             currency=user.city.currency,
             meal_price=meal_price,
             delivery_fee=delivery_fee,

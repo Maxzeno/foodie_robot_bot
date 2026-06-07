@@ -76,13 +76,13 @@ def show_menu_options_payload(text):
                     ]
                 },
                 {
-                    "title": "Others",
+                    "title": "Support",
                     "rows": [
-                        {
-                            "id": "meal-liked-disliked",
-                            "title": "Liked/disliked meals",
-                            "description": "Fetch liked/disliked meals"
-                        },
+                        # {
+                        #     "id": "meal-liked-disliked",
+                        #     "title": "Liked/disliked meals",
+                        #     "description": "Fetch liked/disliked meals"
+                        # },
                         {
                             "id": "contact-support",
                             "title": "Contact Support",

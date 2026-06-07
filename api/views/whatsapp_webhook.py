@@ -17,6 +17,7 @@ from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_p
 from api.utils.whatsapp_verification import verify_whatsapp_signature
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 import uuid
+from django.utils import timezone
 
 router = Router(tags=["Webhook"])
 
@@ -190,7 +191,7 @@ def whatsapp_test(request, text:str):
 # TODO: to be removed in production
 @csrf_exempt
 @router.get("/test-temp-recommendation")
-def text_temp_verify(request):
+def text_temp_recommendation(request):
     user = User.objects.filter(phone="2349077745730").first()
     print("User:", user)
     service = MealRecommendationService()
@@ -208,3 +209,15 @@ def text_temp_verify(request):
         res[k] = list(meals)
     print("Recommended Meal IDs:", recommended_meal_ids)
     return res
+
+# TODO: to be removed in production
+
+@csrf_exempt
+@router.get("/test-temp-time")
+def text_temp_time(request):
+    user = User.objects.filter(phone="2349077745730").first()
+    print("User:", user)
+    print("User:", user.get_local_time(), user.get_local_time().hour)
+    print('now', timezone.now(), timezone.now().hour)
+ 
+    return {"status": 'ok'}

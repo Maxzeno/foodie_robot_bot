@@ -118,7 +118,7 @@ def send_meal_recommendations():
     return result
 
 
-def _process_user_safe(user):
+def _process_user_safe(user: User):
     """
     Thread-safe wrapper for processing a single user.
     Returns a dict with status and messages_sent.
