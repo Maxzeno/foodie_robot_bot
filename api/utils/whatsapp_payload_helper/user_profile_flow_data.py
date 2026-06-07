@@ -48,7 +48,7 @@ def user_data_profile_flow(user: User):
     ]
 
     # Get currency helper text from user's city
-    currency_code = user.city.currency.code if user.city and user.city.currency else "USD"
+    currency_code = user.city.currency.code if user.city and user.city.currency else "NGN"
     currency_helper = f"Enter amount per meal ({currency_code})"
 
     return {

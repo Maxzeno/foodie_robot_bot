@@ -5,12 +5,8 @@ import json
 
 from api.services.ai.tool_handlers.withdraw import make_withdrawal
 
-def nfm_reply_hander(user, fields):
+def nfm_reply_hander(user, fields, flow_token):
     print(fields, type(fields))
-    fields = json.loads(fields)
-    print(fields, type(fields), 'loaded')
-
-    flow_token = fields.pop('flow_token', None)
     
     screen_name = flow_token.split('--')[1]  # screen_name
     print(screen_name, 'screen_name')

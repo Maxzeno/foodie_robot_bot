@@ -17,6 +17,7 @@ class CurrentIntentChoices(models.TextChoices):
     NO_INTENT = 'no_intent', 'No intent'
     NEEDS_REPLY = 'needs_reply', 'Needs reply'
     REMINDER_MESSAGE = 'reminder_message', 'Reminder message'
+    FLOW_MESSAGE = 'flow_message', 'Flow message'
     COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
 
 
@@ -197,14 +198,14 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def user_message(message_id: str, resp, content: str, user, enable_typing_indicator: bool = False, reply_message_id: str=None):
+    def user_message(message_id: str, resp, content: str, user, enable_typing_indicator: bool = False, reply_message_id: str=None, current_intent: str=CurrentIntentChoices.NO_INTENT):
         if enable_typing_indicator:
             Message.enable_typing_indicator(message_id)
         
         found_msg = None
         if reply_message_id:
             found_msg = Message.objects.filter(message_id=reply_message_id).first()
-        message = Message.objects.create(role=RoleChoices.USER, message_id=message_id, resp=resp, content=content, user=user, reply_to=found_msg)
+        message = Message.objects.create(role=RoleChoices.USER, message_id=message_id, resp=resp, content=content, user=user, reply_to=found_msg, current_intent=current_intent)
         return message
     
     @staticmethod

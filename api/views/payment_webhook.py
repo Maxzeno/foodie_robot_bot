@@ -21,6 +21,9 @@ router = Router(tags=["Webhook"])
 @transaction.atomic
 @router.post("/payment", auth=None)
 def payment_webhook(request):
+    print("Payment Webhook", request.body)
+    print("Payment Webhook Headers", request.headers)
+
     # Verify webhook signature from Vendy using HMAC SHA256
     signature_header = request.headers.get('X-Signature')
 
@@ -52,9 +55,6 @@ def payment_webhook(request):
     print("Webhook signature verified successfully")
 
     try:
-        print("Payment Webhook", request.body)
-        print("Payment Webhook Headers", request.headers)
-        
         # Parse the webhook payload
         payload = json.loads(request.body)
         

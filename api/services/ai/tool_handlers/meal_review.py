@@ -84,7 +84,7 @@ def review_order(
                 meal_rating=meal_rating
             )
 
-        message = "Thank you for your feedback! We'll use this to improve your recommendations."
+        message = "Thank you for your feedback! We'll use this to improve."
 
         Message.bot_message(message, user=user)
 

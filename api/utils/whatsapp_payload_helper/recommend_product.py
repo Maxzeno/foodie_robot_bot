@@ -1,18 +1,12 @@
-def recommend_product_payload(recomendation_id, body, image_url):
-    return {
+def recommend_product_payload(recomendation_id, body, image_url=None):
+    resp = {
             "type": "button",
-            # "header": {
-            #     "type": "image",
-            #     "image": {
-            #         "link": image_url
-            #     }
-            # },
             "body": {
                 "text": body
             },
-            # "footer": {
-            #     "text": "Hola"
-            # },
+            "footer": {
+                "text": "Order now or share your feedback below"
+            },
             "action": {
                 "buttons": [
                     {
@@ -39,3 +33,13 @@ def recommend_product_payload(recomendation_id, body, image_url):
                 ]
             }
         }
+    
+    if image_url:
+        resp["header"] = {
+            "type": "image",
+            "image": {
+                "link": image_url
+            }
+        }
+
+    return resp

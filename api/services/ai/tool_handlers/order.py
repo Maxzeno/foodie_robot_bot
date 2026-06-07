@@ -44,7 +44,7 @@ def payment_link(order: Order):
         "meta": {
             "orderId": order.id
         },
-        "charge_customer": True,
+        "charge_customer": False,
         "product": "transactions"
     }
 

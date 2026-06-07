@@ -1,5 +1,5 @@
 from api.models.meal import Meal
-from api.models.message import Message
+from api.models.message import CurrentIntentChoices, Message
 import json
 from ninja import Router
 from api.models.order import Order
@@ -69,7 +69,15 @@ def whatsapp_webhook(request):
                 user, created = User.objects.get_or_create(phone=phone)
 
                 fields = interactive['nfm_reply']['response_json']
-                nfm_reply_hander(user, fields)
+                fields = json.loads(fields)
+                flow_token = fields.pop('flow_token', None)
+
+                text = ", ".join(f"{key}: {value}" for key, value in fields.items())
+                Message.user_message(message_id=sender_message_id, 
+                    resp=fields, content=text, 
+                    user=user, enable_typing_indicator=True, current_intent=CurrentIntentChoices.FLOW_MESSAGE)
+    
+                nfm_reply_hander(user, fields, flow_token)
                 return {"detail": "Done"}
 
             json_resp = interactive
