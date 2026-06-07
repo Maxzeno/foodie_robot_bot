@@ -11,11 +11,18 @@ Layer 1: Hard Constraint Filtering (Safety First)
 Layer 2: Smart Scoring System (Personalization)
     - Scores eligible meals based on multiple weighted factors
     - Considers user history, preferences, and social signals
+    - Applies special occasion boosts for date-based cultural/seasonal recommendations
 
 Layer 3: Diversity Enforcement (Preventing Duplicates)
     - Prevents same-day meal duplicates
     - Ensures variety across time periods and days
     - Enforces cuisine and restaurant diversity
+
+Special Occasions Feature:
+    - Configurable date-based meal boosting (e.g., Rice & Chicken on Dec 25 in Nigeria)
+    - Supports recurring annual dates and specific one-time dates
+    - City-specific or global occasions
+    - Admin-configurable via Django admin interface
 """
 
 import logging
@@ -67,6 +74,9 @@ class MealRecommendationService:
     WEIGHT_POPULARITY_MAX = 10.0        # Social proof (orders + likes)
     WEIGHT_COLLABORATIVE_FILTERING = 18.0  # Similar users' preferences
     WEIGHT_TIME_OF_DAY = 8.0            # Time-appropriate meals
+
+    # === SPECIAL OCCASIONS ===
+    WEIGHT_SPECIAL_OCCASION_DEFAULT = 50.0  # Default boost for special occasions (configurable per occasion)
 
     # === EXPLORATION ===
     WEIGHT_EXPLORATION_MAX = 8.0        # Random exploration bonus (scoring phase)
@@ -360,6 +370,9 @@ class MealRecommendationService:
             user.preferred_cuisine.values_list('id', flat=True)
         )
 
+        # Special occasions data
+        special_occasion_boosts = self._get_special_occasion_boosts(user)
+
         return {
             'liked_meal_ids': liked_meal_ids,
             'ordered_meal_ids': ordered_meal_ids,
@@ -369,6 +382,7 @@ class MealRecommendationService:
             'collaborative_meal_ids': collaborative_meal_ids,
             'user_preferred_cuisine_ids': user_preferred_cuisine_ids,
             'recent_meal_keywords': recent_data['recent_meal_keywords'],
+            'special_occasion_boosts': special_occasion_boosts,
         }
 
     def _score_meal(self, meal: Meal, user, user_data: Dict) -> float:
@@ -400,6 +414,9 @@ class MealRecommendationService:
 
         # === SOCIAL SIGNALS ===
         score += self._score_social_signals(meal, user, user_data)
+
+        # === SPECIAL OCCASIONS ===
+        score += self._score_special_occasion(meal, user_data)
 
         # === DIVERSITY PENALTIES ===
         score -= self._calculate_recency_penalty(meal, user_data['recent_meal_history'])
@@ -1244,3 +1261,75 @@ class MealRecommendationService:
         }
 
         return keywords
+
+    # ============================================================================
+    # SPECIAL OCCASIONS - DATE-BASED MEAL BOOSTING
+    # ============================================================================
+
+    def _get_special_occasion_boosts(self, user) -> Dict[int, float]:
+        """
+        Get meal ID to boost weight mapping for today's special occasions.
+
+        This method fetches all active special occasions for the user's current date
+        and city, then builds a dictionary mapping meal IDs to their boost weights.
+
+        Args:
+            user: User instance
+
+        Returns:
+            Dict mapping meal_id -> total_boost_weight
+            Example: {123: 50.0, 456: 50.0} for Christmas rice and chicken
+        """
+        try:
+            from api.models.special_occasion import SpecialOccasion
+
+            # Get user's current date in their timezone
+            today = user.get_local_time().date()
+
+            # Fetch active occasions for today and user's city
+            occasions = SpecialOccasion.get_active_occasions_for_date(
+                date=today,
+                city=user.city
+            ).prefetch_related('meals')
+
+            # Build meal_id -> boost mapping
+            meal_boosts = {}
+            for occasion in occasions:
+                for meal in occasion.meals.all():
+                    # If a meal appears in multiple occasions, sum the boosts
+                    meal_boosts[meal.id] = meal_boosts.get(meal.id, 0.0) + occasion.boost_weight
+
+                if occasion.meals.exists():
+                    logger.info(
+                        f"Special occasion '{occasion.name}' active: "
+                        f"{occasion.meals.count()} meals boosted by {occasion.boost_weight} points"
+                    )
+
+            return meal_boosts
+
+        except Exception as e:
+            logger.error(f"Error fetching special occasion boosts: {e}")
+            return {}
+
+    def _score_special_occasion(self, meal: Meal, user_data: Dict) -> float:
+        """
+        Score based on special occasions.
+
+        If this meal is associated with a special occasion happening today,
+        apply a significant boost to increase its recommendation probability.
+
+        Args:
+            meal: Meal instance to score
+            user_data: Pre-gathered user data from _gather_user_data()
+
+        Returns:
+            float: Boost score (0.0 if no special occasion, or the configured boost weight)
+        """
+        special_occasion_boosts = user_data.get('special_occasion_boosts', {})
+
+        if meal.id in special_occasion_boosts:
+            boost = special_occasion_boosts[meal.id]
+            logger.debug(f"Meal '{meal.name}' gets special occasion boost: +{boost:.1f} points")
+            return boost
+
+        return 0.0

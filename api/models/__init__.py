@@ -12,3 +12,4 @@ from api.models.withdrawal import *
 from api.models.referral_earning import *
 from api.models.settings import *
 from api.models.user_balance import *
+from api.models.special_occasion import *

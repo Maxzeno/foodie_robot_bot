@@ -2,6 +2,7 @@ from django.db import models
 from api.models.base import BaseModel
 from api.models.location import City
 from django.contrib.postgres.fields import ArrayField
+from cloudinary.models import CloudinaryField
 
 from api.models.restaurant import Restaurant
 from api.utils.generate import generate_unique_code
@@ -155,7 +156,7 @@ class Meal(BaseModel):
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='meals')
 
-    image_url = models.ImageField(blank=True, null=True)
+    image_url = CloudinaryField('image', blank=True, null=True)
 
     available = models.BooleanField(default=True)
 

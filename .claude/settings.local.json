@@ -23,7 +23,9 @@
       "Bash(python:*)",
       "Bash(dir:*)",
       "WebFetch(domain:vendy.readme.io)",
-      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe manage.py createcachetable)"
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe manage.py createcachetable)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 install:*)"
     ],
     "deny": [],
     "ask": []

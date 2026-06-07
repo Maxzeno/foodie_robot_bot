@@ -9,7 +9,7 @@ def remind_users_to_reply():
     now = timezone.now()
 
     # Time windows
-    twenty_three_hours_ago = now - timedelta(hours=1)
+    twenty_three_hours_ago = now - timedelta(hours=23)
     twenty_four_hours_ago = now - timedelta(hours=24)
 
     # Get all users with their last user message timestamp

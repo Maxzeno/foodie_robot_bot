@@ -41,5 +41,5 @@ def recommend_product_payload(recomendation_id, body, image_url=None):
                 "link": image_url
             }
         }
-
+    print(resp)
     return resp

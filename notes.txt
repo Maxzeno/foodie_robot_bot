@@ -52,3 +52,6 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 
 - Implement a feature that when adding a meal it handles uses ai to analyse and group the nutritional stuff as well as fitness, best time of day, health allergies and cuisine it falls under. also add a weight factor to meal that can be adjusted eg if today is sunday we can adjust to make it more likely they get matched with rice OR maybe we have a special event day special where we select a meal that will be highly recommended in a particular day.
 
+- generate meal recommendation run in async
+
+- Let them use a 4 digit code to confirm the order - send it to user, vendor and rider - rider on pickup from the vendor gives him his code and then when it gets to the user he asks for the code same code.

@@ -13,6 +13,7 @@ from api.models.review import Review
 from api.models.settings import AppSettings
 from api.models.user import User
 from api.models.message import Message
+from api.models.special_occasion import SpecialOccasion
 from leaflet.admin import LeafletGeoAdmin
 
 from django import forms
@@ -65,3 +66,48 @@ class MealAdminForm(forms.ModelForm):
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
     form = MealAdminForm
+
+
+@admin.register(SpecialOccasion)
+class SpecialOccasionAdmin(admin.ModelAdmin):
+    """
+    Custom admin interface for managing special occasions with meal boost recommendations.
+    """
+    list_display = ['name', 'date_display', 'boost_weight', 'is_recurring', 'active', 'meal_count', 'city_count']
+    list_filter = ['active', 'is_recurring', 'month', 'cities']
+    search_fields = ['name', 'description']
+    filter_horizontal = ['meals', 'cities']
+
+    fieldsets = (
+        ('Occasion Details', {
+            'fields': ('name', 'description', 'active')
+        }),
+        ('Date Configuration', {
+            'fields': ('month', 'day', 'year', 'is_recurring'),
+            'description': 'Set month (1-12) and day (1-31). Leave year blank for recurring annual occasions.'
+        }),
+        ('Boost Configuration', {
+            'fields': ('boost_weight',),
+            'description': 'Higher values = stronger recommendation. Typical: 50.0 for main dishes, 30.0 for sides.'
+        }),
+        ('Target Configuration', {
+            'fields': ('meals', 'cities'),
+            'description': 'Select meals to boost. Leave cities empty to apply globally.'
+        }),
+    )
+
+    def meal_count(self, obj):
+        """Display number of associated meals"""
+        return obj.meals.count()
+    meal_count.short_description = 'Meals'
+
+    def city_count(self, obj):
+        """Display number of cities or 'Global' if none"""
+        count = obj.cities.count()
+        return 'Global' if count == 0 else count
+    city_count.short_description = 'Cities'
+
+    def get_queryset(self, request):
+        """Optimize queries by prefetching related objects"""
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('meals', 'cities')
