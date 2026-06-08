@@ -1,0 +1,101 @@
+{
+  "version": "7.2",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "WITHDRAWAL": []
+  },
+  "screens": [
+    {
+      "id": "WITHDRAWAL",
+      "title": "Withdraw Funds",
+      "data": {
+        "balance_options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "ngn",
+              "title": "NGN"
+            },
+            {
+              "id": "usd",
+              "title": "USD"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "withdrawal_form",
+            "init-values": {},
+            "children": [
+              {
+                "type": "TextSubheading",
+                "text": "Withdrawal Details"
+              },
+              {
+                "type": "Dropdown",
+                "name": "currency",
+                "label": "Select wallet",
+                "required": true,
+                "data-source": "${data.balance_options}"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "Bank Details"
+              },
+              {
+                "type": "TextInput",
+                "name": "account_name",
+                "label": "Account Holder Name",
+                "required": true,
+                "min-chars": 2
+              },
+              {
+                "type": "TextInput",
+                "name": "account_number",
+                "label": "Account Number",
+                "required": true,
+                "min-chars": 4
+              },
+              {
+                "type": "TextInput",
+                "name": "bank_name",
+                "label": "Bank Name",
+                "required": true,
+                "min-chars": 2
+              },
+              {
+                "type": "Footer",
+                "label": "Submit Withdrawal",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "currency": "${form.currency}",
+                    "account_name": "${form.account_name}",
+                    "account_number": "${form.account_number}",
+                    "bank_name": "${form.bank_name}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "terminal": true
+    }
+  ]
+}

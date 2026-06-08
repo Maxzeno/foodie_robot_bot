@@ -25,7 +25,9 @@
       "WebFetch(domain:vendy.readme.io)",
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe manage.py createcachetable)",
       "Bash(pip3 list:*)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.services.ai.tool_handlers.stats import get_calorie_stats; print(''Import successful'')\")",
+      "Bash(set:*)"
     ],
     "deny": [],
     "ask": []

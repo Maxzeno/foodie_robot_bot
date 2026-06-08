@@ -11,3 +11,4 @@ from .menu_options import show_menu_options
 from .referral import referral_link
 from .balance import show_balance_withdraw
 from .withdraw import withdrawal_history
+from .stats import get_calorie_stats

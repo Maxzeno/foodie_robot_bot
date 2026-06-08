@@ -65,9 +65,17 @@
                 "type": "TextArea",
                 "label": "Special instructions",
                 "name": "special_instructions",
-                "helper-text": "Add any delivery notes or food preferences",
+                "helper-text": "e.g., Extra spicy, no onions, allergy notes",
                 "required": false,
-                "max-length": 300
+                "max-length": 500
+              },
+              {
+                "type": "TextArea",
+                "label": "Rider instructions",
+                "name": "rider_instructions",
+                "helper-text": "How should we deliver? (house number, landmarks, etc.)",
+                "required": false,
+                "max-length": 500
               },
               {
                 "type": "Footer",
@@ -77,6 +85,7 @@
                   "payload": {
                     "number_of_plates": "${form.number_of_plates}",
                     "special_instructions": "${form.special_instructions}",
+                    "rider_instructions": "${form.rider_instructions}",
                     "meal_id": "${data.meal_id}"
                   }
                 }

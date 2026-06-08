@@ -42,22 +42,25 @@ class FoodBotAIHandler:
             "save_delivery_location": tool_handlers.save_delivery_location,
             "request_delivery_location": tool_handlers.request_delivery_location,
             "get_current_location": tool_handlers.get_current_location,
-            
+
             "place_order_form": tool_handlers.place_order_form,
             "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
-            
+
             "get_update_user_profile_form": tool_handlers.get_update_user_profile_form,
             "like_or_hate_meal": tool_handlers.like_or_hate_meal,
             "get_user_meal_preferences": tool_handlers.get_user_meal_preferences,
-            
+
             "contact_support": tool_handlers.contact_support,
             "show_menu_options": tool_handlers.show_menu_options,
-            
+
             # referral and balance tools
             "referral_link": tool_handlers.referral_link,
             "show_balance_withdraw": tool_handlers.show_balance_withdraw,
             "withdrawal_history": tool_handlers.withdrawal_history,
+
+            # nutrition tracking
+            "get_calorie_stats": tool_handlers.get_calorie_stats,
         }
 
     def get_conversation_history(self) -> List[Dict]:
