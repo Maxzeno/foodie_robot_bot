@@ -8,7 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from api.models.order import Order, OrderStatus
 from api.models.review import Review
-from api.models.message import Message, RoleChoices
+from api.models.message import Message
 from api.models.meal import Meal, FitnessGoal, HealthCondition, Allergy, PreferredCuisine
 from django.utils import timezone
 from api.services.ai.meal_analyzer import MealAnalyzer
@@ -61,18 +61,10 @@ def update_delivered_at_timestamp(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Meal)
-def analyze_meal_with_ai(sender, instance, created, **kwargs):
-    """
-    Automatically analyze meal with AI when a new meal is created with name and image.
-
-    This signal runs after the meal is saved, so Cloudinary upload is complete
-    and the image_url field contains the actual URL.
-    """
-    # Only run for newly created meals
+def analyze_meal_with_ai(sender, instance: Meal, created, **kwargs):
     if not created:
         return
 
-    # Only run if meal has name and image
     if not instance.name or not instance.image_url:
         logger.info(f"Skipping AI analysis for meal {instance.id}: missing name or image")
         return
@@ -80,18 +72,37 @@ def analyze_meal_with_ai(sender, instance, created, **kwargs):
     try:
         logger.info(f"Starting AI analysis for meal: {instance.name} (ID: {instance.id})")
 
+        # Fetch available options from database
+        fitness_goals = list(FitnessGoal.objects.values_list('name', flat=True))
+        health_conditions = list(HealthCondition.objects.values_list('name', flat=True))
+        allergies = list(Allergy.objects.values_list('name', flat=True))
+        cuisines = list(PreferredCuisine.objects.values_list('name', flat=True))
+
+        logger.info(
+            f"Fetched database options - "
+            f"Fitness Goals: {len(fitness_goals)}, "
+            f"Health Conditions: {len(health_conditions)}, "
+            f"Allergies: {len(allergies)}, "
+            f"Cuisines: {len(cuisines)}"
+        )
+
         # Initialize meal analyzer with model that supports structured outputs
-        analyzer = MealAnalyzer(model="gpt-4o-2024-08-06")
+        analyzer = MealAnalyzer(model="gpt-4o")
 
         # Get Cloudinary URL - at this point the image is already uploaded
         image_url = str(instance.image_url.url) if hasattr(instance.image_url, 'url') else str(instance.image_url)
 
-        # Analyze the meal
+        # Analyze the meal with database values
         analysis = analyzer.analyze_from_cloudinary_url(
             meal_name=instance.name,
-            cloudinary_url=image_url
+            cloudinary_url=image_url,
+            fitness_goals=fitness_goals,
+            health_conditions=health_conditions,
+            allergies=allergies,
+            cuisines=cuisines
         )
-
+        
+        print(f"analysis {analysis}")
         if not analysis:
             logger.warning(f"AI analysis returned None for meal: {instance.name} (ID: {instance.id})")
             return
@@ -131,28 +142,40 @@ def analyze_meal_with_ai(sender, instance, created, **kwargs):
 
         # Apply ManyToMany fields
         if analysis.fitness_goals:
+            logger.info(f"AI returned fitness goals: {analysis.fitness_goals}")
             fitness_goal_objects = FitnessGoal.objects.filter(name__in=analysis.fitness_goals)
             if fitness_goal_objects.exists():
                 instance.fitness_goals.set(fitness_goal_objects)
                 logger.info(f"Set fitness goals for meal {instance.id}: {list(fitness_goal_objects.values_list('name', flat=True))}")
+            else:
+                logger.warning(f"No matching FitnessGoal objects found for: {analysis.fitness_goals}. Run 'python manage.py populate_meal_lookups' to create them.")
 
         if analysis.restricted_health_conditions:
+            logger.info(f"AI returned health conditions: {analysis.restricted_health_conditions}")
             health_condition_objects = HealthCondition.objects.filter(name__in=analysis.restricted_health_conditions)
             if health_condition_objects.exists():
                 instance.restricted_health_conditions.set(health_condition_objects)
                 logger.info(f"Set health conditions for meal {instance.id}: {list(health_condition_objects.values_list('name', flat=True))}")
+            else:
+                logger.warning(f"No matching HealthCondition objects found for: {analysis.restricted_health_conditions}. Run 'python manage.py populate_meal_lookups' to create them.")
 
         if analysis.restricted_allergies:
+            logger.info(f"AI returned allergies: {analysis.restricted_allergies}")
             allergy_objects = Allergy.objects.filter(name__in=analysis.restricted_allergies)
             if allergy_objects.exists():
                 instance.restricted_allergies.set(allergy_objects)
                 logger.info(f"Set allergies for meal {instance.id}: {list(allergy_objects.values_list('name', flat=True))}")
+            else:
+                logger.warning(f"No matching Allergy objects found for: {analysis.restricted_allergies}. Run 'python manage.py populate_meal_lookups' to create them.")
 
         if analysis.cuisine:
+            logger.info(f"AI returned cuisines: {analysis.cuisine}")
             cuisine_objects = PreferredCuisine.objects.filter(name__in=analysis.cuisine)
             if cuisine_objects.exists():
                 instance.cuisine.set(cuisine_objects)
                 logger.info(f"Set cuisines for meal {instance.id}: {list(cuisine_objects.values_list('name', flat=True))}")
+            else:
+                logger.warning(f"No matching PreferredCuisine objects found for: {analysis.cuisine}. Run 'python manage.py populate_meal_lookups' to create them.")
 
         # Log success with confidence level
         confidence = getattr(analysis, 'confidence', 'unknown')

@@ -1,4 +1,3 @@
-import base64
 import logging
 from typing import Optional
 from openai import OpenAI
@@ -9,20 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class MealAnalyzer:
-    """
-    AI-powered meal analyzer using GPT-4 Vision to extract nutritional
-    and dietary information from meal name and photo.
-    """
 
-    def __init__(self, model: str = "gpt-4o-2024-08-06"):
-        """
-        Initialize the meal analyzer.
-
-        Args:
-            model: OpenAI model to use (must support vision and structured outputs). Options:
-                   - gpt-4o-2024-08-06 (recommended - supports structured outputs)
-                   - gpt-4o-mini-2024-07-18 (faster, cheaper alternative)
-        """
+    def __init__(self, model: str = "gpt-4o"):
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = model
 
@@ -30,29 +17,21 @@ class MealAnalyzer:
         self,
         meal_name: str,
         image_url: Optional[str] = None,
-        image_file: Optional[bytes] = None
+        fitness_goals: Optional[list[str]] = None,
+        health_conditions: Optional[list[str]] = None,
+        allergies: Optional[list[str]] = None,
+        cuisines: Optional[list[str]] = None,
     ) -> Optional[MealAnalysisResponse]:
-        """
-        Analyze a meal from its name and photo to extract nutritional info.
-
-        Args:
-            meal_name: Name/description of the meal
-            image_url: URL to the meal image (e.g., Cloudinary URL)
-            image_file: Raw image bytes (if not using URL)
-
-        Returns:
-            MealAnalysisResponse with extracted info, or None if analysis fails
-        """
         if not meal_name:
             logger.error("Meal name is required for analysis")
             return None
 
-        if not image_url and not image_file:
+        if not image_url:
             logger.warning("No image provided. Analysis will be based on name only.")
 
         try:
             # Build the message content
-            content = self._build_message_content(meal_name, image_url, image_file)
+            content = self._build_message_content(meal_name, image_url)
 
             # Call OpenAI API with structured output
             response = self.client.beta.chat.completions.parse(
@@ -60,7 +39,12 @@ class MealAnalyzer:
                 messages=[
                     {
                         "role": "system",
-                        "content": self._get_system_prompt()
+                        "content": self._get_system_prompt(
+                            fitness_goals=fitness_goals,
+                            health_conditions=health_conditions,
+                            allergies=allergies,
+                            cuisines=cuisines
+                        )
                     },
                     {
                         "role": "user",
@@ -87,12 +71,7 @@ class MealAnalyzer:
         self,
         meal_name: str,
         image_url: Optional[str],
-        image_file: Optional[bytes]
     ) -> list:
-        """
-        Build the message content array for the API call.
-        Supports both URL-based and base64-encoded images.
-        """
         content = [
             {
                 "type": "text",
@@ -109,74 +88,72 @@ class MealAnalyzer:
                     "detail": "high"  # Use high detail for better analysis
                 }
             })
-        elif image_file:
-            # Encode image to base64
-            base64_image = base64.b64encode(image_file).decode('utf-8')
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}",
-                    "detail": "high"
-                }
-            })
 
         return content
 
-    def _get_system_prompt(self) -> str:
-        """
-        Return the system prompt that instructs the AI how to analyze meals.
-        """
-        return """You are a professional nutritionist and food analysis expert. Your task is to analyze meals and provide accurate nutritional and dietary information.
+    def _get_system_prompt(
+        self,
+        fitness_goals: Optional[list[str]] = None,
+        health_conditions: Optional[list[str]] = None,
+        allergies: Optional[list[str]] = None,
+        cuisines: Optional[list[str]] = None,
+    ) -> str:
+        # Build dynamic lists from database
+        fitness_goals_str = ", ".join(fitness_goals) if fitness_goals else "weight_loss, muscle_gain, maintenance"
+        health_conditions_str = ", ".join(health_conditions) if health_conditions else "diabetes, hypertension, high_cholesterol"
+        allergies_str = ", ".join(allergies) if allergies else "peanuts, seafood, dairy, gluten"
+        cuisines_str = ", ".join(cuisines) if cuisines else "italian, chinese, mexican, american"
 
-When analyzing a meal:
+        return f"""You are a nutritionist analyzing meals. Provide accurate nutritional and dietary information.
 
-1. **Nutritional Information**: Estimate calories, macronutrients (protein, carbs, fats), and micronutrients (fiber, sugar, sodium, cholesterol) per serving. Be realistic and consider portion sizes visible in the image.
+**Analyze the meal and return a JSON object with this exact structure:**
 
-2. **Fitness Goals**: Determine which fitness goals this meal supports:
-   - weight_loss: Low calorie, high protein/fiber, moderate portions
-   - muscle_gain: High protein, moderate to high calories, good carbs
-   - maintenance: Balanced macros, moderate calories
+{{
+  "calories": <number>,
+  "protein": <number in grams>,
+  "carbs": <number in grams>,
+  "fats": <number in grams>,
+  "fiber": <number in grams>,
+  "sugar": <number in grams>,
+  "sodium": <number in mg>,
+  "cholesterol": <number in mg>,
+  "serving_amount_g": <total weight in grams>,
+  "fitness_goals": [<list of goal names from available options>],
+  "restricted_health_conditions": [<list of condition names that should AVOID this meal>],
+  "restricted_allergies": [<list of allergen names PRESENT in meal>],
+  "cuisine": [<list of cuisine names>],
+  "times_of_day": [<list from: morning, afternoon, evening>],
+  "confidence": "<high/medium/low>",
+  "reasoning": "<brief explanation>"
+}}
 
-3. **Health Conditions**: Identify health conditions that should RESTRICT or AVOID this meal:
-   - diabetes: High sugar, refined carbs, high glycemic index
-   - hypertension: High sodium, processed meats
-   - high_cholesterol: High saturated fats, trans fats, cholesterol
-   - anemia: No iron-rich foods present (for tracking)
-   - celiac: Contains gluten (wheat, barley, rye)
-   - lactose_intolerance: Contains dairy/lactose
+**Available Options:**
+- Fitness Goals: {fitness_goals_str}
+- Health Conditions: {health_conditions_str}
+- Allergies: {allergies_str}
+- Cuisines: {cuisines_str}
 
-4. **Allergens**: Identify allergens PRESENT in the meal:
-   - peanuts, seafood, dairy, gluten, eggs, soy, tree_nuts
+**Guidelines:**
+- Be conservative with nutritional estimates
+- Only include health conditions/allergens that are clearly problematic
+- Consider visible ingredients AND typical preparation methods
+- Multiple times_of_day and cuisines are allowed
+- Provide confidence level and brief reasoning"""
 
-5. **Cuisine**: Identify the cuisine type(s) based on ingredients, cooking style, and presentation. Use underscores for multi-word cuisines (e.g., vegan_vegetarian).
-
-Available cuisines: vegan_vegetarian, nigerian, ghanaian, ethiopian, moroccan, italian, french, spanish, greek, british, chinese, japanese, korean, thai, indian, vietnamese, filipino, american, mexican, brazilian, argentinian, caribbean
-
-6. **Times of Day**: Determine which times of day this meal is best suited for:
-   - morning: Breakfast foods (eggs, pancakes, oatmeal, light meals, energy-boosting foods)
-   - afternoon: Lunch foods (moderate portions, balanced meals, sandwiches, salads)
-   - evening: Dinner foods (heavier meals, proteins, comfort foods, family-style dishes)
-
-   Note: Some meals can be appropriate for multiple times of day (e.g., rice dishes, soups)
-
-**Important Guidelines:**
-- Be conservative with estimates - it's better to slightly underestimate than overestimate
-- Only mark health conditions/allergens that are CLEARLY present or problematic
-- Consider both visible ingredients AND typical preparation methods
-- For serving_amount_g, estimate the total weight of the meal including all components
-- Provide a confidence level (high/medium/low) and brief reasoning
-
-Return your analysis in the structured format provided."""
-
-    def analyze_from_cloudinary_url(self, meal_name: str, cloudinary_url: str) -> Optional[MealAnalysisResponse]:
-        """
-        Convenience method for analyzing meals with Cloudinary URLs.
-
-        Args:
-            meal_name: Name of the meal
-            cloudinary_url: Cloudinary image URL
-
-        Returns:
-            MealAnalysisResponse or None
-        """
-        return self.analyze_meal(meal_name=meal_name, image_url=cloudinary_url)
+    def analyze_from_cloudinary_url(
+        self,
+        meal_name: str,
+        cloudinary_url: str,
+        fitness_goals: Optional[list[str]] = None,
+        health_conditions: Optional[list[str]] = None,
+        allergies: Optional[list[str]] = None,
+        cuisines: Optional[list[str]] = None,
+    ) -> Optional[MealAnalysisResponse]:
+        return self.analyze_meal(
+            meal_name=meal_name,
+            image_url=cloudinary_url,
+            fitness_goals=fitness_goals,
+            health_conditions=health_conditions,
+            allergies=allergies,
+            cuisines=cuisines
+        )

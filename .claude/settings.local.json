@@ -36,7 +36,10 @@
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/admin/__init__.py)",
       "Bash(git add:*)",
       "Bash(rm:*)",
-      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.schemas.meal_analysis import MealAnalysisResponse; print(''Import successful'')\")"
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.schemas.meal_analysis import MealAnalysisResponse; print(''Import successful'')\")",
+      "Bash(if not exist \"api\\management\" mkdir \"api\\management\")",
+      "Bash(if not exist \"api\\management\\commands\" mkdir \"api\\management\\commands\")",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/signals.py)"
     ],
     "deny": [],
     "ask": []

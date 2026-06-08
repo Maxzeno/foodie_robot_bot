@@ -65,21 +65,11 @@ class MealAdminForm(forms.ModelForm):
 
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
-    """
-    Admin interface for Meal model.
-
-    Note: AI analysis is automatically triggered via post_save signal
-    when a new meal is created with both name and image.
-    See api/signals.py for the implementation.
-    """
     form = MealAdminForm
 
 
 @admin.register(SpecialOccasion)
 class SpecialOccasionAdmin(admin.ModelAdmin):
-    """
-    Custom admin interface for managing special occasions with meal boost recommendations.
-    """
     list_display = ['name', 'date_display', 'boost_weight', 'is_recurring', 'active', 'meal_count', 'city_count']
     list_filter = ['active', 'is_recurring', 'month', 'cities']
     search_fields = ['name', 'description']
@@ -104,17 +94,14 @@ class SpecialOccasionAdmin(admin.ModelAdmin):
     )
 
     def meal_count(self, obj):
-        """Display number of associated meals"""
         return obj.meals.count()
     meal_count.short_description = 'Meals'
 
     def city_count(self, obj):
-        """Display number of cities or 'Global' if none"""
         count = obj.cities.count()
         return 'Global' if count == 0 else count
     city_count.short_description = 'Cities'
 
     def get_queryset(self, request):
-        """Optimize queries by prefetching related objects"""
         qs = super().get_queryset(request)
         return qs.prefetch_related('meals', 'cities')

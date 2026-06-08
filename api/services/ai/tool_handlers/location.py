@@ -1,17 +1,13 @@
 from typing import Optional
 from django.contrib.gis.geos import Point
 
-from api.models.meal import Meal, TimeOfDayChoices
 from api.models.message import Message
 from api.models.order import Order
-from api.models.recommendation import ChoiceOption, Recommendation
 from api.models.user import User
 from api.models.location import City
 from api.models.address import DeliveryAddress
 from api.services.ai.tool_handlers.meal import build_meal_recommendation
 from api.services.ai.tool_handlers.order import place_order
-from api.services.recommendation.meal_recommendation import MealRecommendationService
-from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 from datetime import timedelta
 
 
@@ -49,8 +45,10 @@ def save_delivery_location(
         )
         if is_new:
             Message.bot_message(f"Your delivery location has been set successfully. It falls under {city.name}", user=user)
+        elif old_city and (old_city.currency == user.city.currency):
+            Message.bot_message(f"Your delivery location has been updated successfully. It falls under {city.name}", user=user)
         else:
-            Message.bot_message("Your delivery location has been updated successfully. It's adviced to review your average meal budget anytime you change your delivery location.", user=user)
+            Message.bot_message(f"Your delivery location has been updated successfully. It falls under {city.name}. \n\nPlease review your average meal budget since your current location uses a different currency from your last location.", user=user)
 
     except Exception as e:
         print("Error in save_delivery_location:", e)

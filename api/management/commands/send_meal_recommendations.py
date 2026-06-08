@@ -7,8 +7,7 @@ Usage:
 
 from django.core.management.base import BaseCommand
 
-from api.cron.recommend_meal_optimized_v1 import send_meal_recommendations
-# from api.cron.recommend_meal import send_meal_recommendations
+from api.cron.recommend_meal import send_meal_recommendations
 
 
 class Command(BaseCommand):
