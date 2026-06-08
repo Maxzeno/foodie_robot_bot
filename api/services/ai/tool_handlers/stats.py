@@ -56,6 +56,21 @@ def _calculate_status(actual: float, target: float, period_days: int = 1):
         return "on track", "✅", difference
 
 
+def _get_progress_bar(current: float, target: float, width: int = 10) -> str:
+    """Generate a visual progress bar using Unicode characters."""
+    if target <= 0:
+        return "░" * width
+
+    percentage = min(current / target, 1.5)  # Allow up to 150% to show overage
+    filled = int(percentage * width)
+
+    # Cap filled blocks at width
+    filled = min(filled, width)
+    empty = width - filled
+
+    return "▓" * filled + "░" * empty
+
+
 def get_calorie_stats(user: User, period: str = "day") -> bool:
     """
     Show user's calorie consumption stats for a given period.
@@ -119,14 +134,17 @@ def get_calorie_stats(user: User, period: str = "day") -> bool:
 
         # Handle no tracked meals
         if order_count == 0:
-            message = f"""📊 Nutrition Stats - {period_label}
+            message = f"""📊 *Nutrition Stats - {period_label}*
 
 No meals tracked yet for this period.
 
 Start ordering meals and we'll automatically track your nutrition progress! 🍽️
 
+━━━━━━━━━━━━━━━━━━━━
 💡 Fitness Goal: {goal_display}
 🎯 Daily Target: {daily_target:,.0f} kcal
+
+_Ask for "this week" or "this month" to see more._
 """
             Message.bot_message(message.strip(), user=user)
             return True
@@ -138,33 +156,96 @@ Start ordering meals and we'll automatically track your nutrition progress! 🍽
             period_days
         )
 
-        # Build main stats message
-        message = f"""📊 Nutrition Stats - {period_label}
-
-🔥 Total Calories: {total_calories:,.0f} kcal
-"""
-
-        # Add average for multi-day periods
-        if period_days > 1:
-            avg_per_day = total_calories / period_days
-            message += f"📊 Daily Average: {avg_per_day:,.0f} kcal\n"
-
-        message += f"""🎯 Daily Target: {daily_target:,.0f} kcal
-{emoji} Status: You're {status}
-🍽️ Meals tracked: {order_count}
-
-💡 Fitness Goal: {goal_display}
-"""
-
-        # Add contextual guidance based on status
+        # Calculate percentage
         avg_calories = total_calories / period_days if period_days > 1 else total_calories
+        percentage = (avg_calories / daily_target) * 100 if daily_target > 0 else 0
 
-        if difference < -200:
-            message += f"\nYou're averaging {abs(difference):.0f} kcal below your target. Consider adding nutritious meals to meet your energy needs!"
-        elif difference > 200:
-            message += f"\nYou're averaging {difference:.0f} kcal above your target. Maybe opt for lighter options to stay on track."
+        # Build status headline
+        if status == "on track":
+            headline = f"✅ *You're on track!* ({goal_display})"
+        elif difference < -200:
+            headline = f"⚠️ *Below target* ({goal_display})"
         else:
-            message += "\nGreat job! You're right on track with your fitness goals! 🎉"
+            headline = f"⚠️ *Above target* ({goal_display})"
+
+        message = f"{headline}\n\n"
+        message += "━━━━━━━━━━━━━━━━━━━━\n"
+
+        # Period-specific formatting
+        if period == "day":
+            message += "*TODAY'S CALORIES*\n"
+            message += f"{total_calories:,.0f} / {daily_target:,.0f} kcal ({percentage:.0f}%)\n"
+            message += f"{_get_progress_bar(total_calories, daily_target)}\n\n"
+
+            # Show remaining or overage
+            remaining = daily_target - total_calories
+            if remaining > 0:
+                message += f"✨ *{remaining:,.0f} kcal remaining*\n\n"
+            else:
+                message += f"⚠️ *{abs(remaining):,.0f} kcal over target*\n\n"
+
+        else:
+            # Multi-day periods
+            period_upper = period_label.upper()
+            message += f"*{period_upper}'S CALORIES*\n"
+            message += f"{total_calories:,.0f} kcal total\n"
+            message += f"{avg_calories:,.0f} kcal daily average\n\n"
+            message += f"Target: {daily_target:,.0f} kcal/day ({percentage:.0f}%)\n"
+            message += f"{_get_progress_bar(avg_calories, daily_target)}\n\n"
+
+        message += "━━━━━━━━━━━━━━━━━━━━\n"
+        message += f"🍽️ {order_count} meal{'s' if order_count != 1 else ''} tracked\n\n"
+
+        # Add contextual encouragement
+        if difference < -200:
+            if period == "day":
+                message += "💡 Consider adding a nutritious meal to meet your energy needs!"
+            else:
+                message += f"💡 You're averaging {abs(difference):.0f} kcal below target. Consider adding more nutritious meals."
+        elif difference > 200:
+            if period == "day":
+                message += "💡 Maybe opt for lighter options if you plan to eat more today."
+            else:
+                message += f"💡 You're averaging {difference:.0f} kcal over target. Try lighter options to stay on track."
+        else:
+            motivations = [
+                "Great job! Keep it up! 🎉",
+                "You're crushing it! 💪",
+                "Perfect balance! Keep going! 🌟",
+                "Excellent work! Stay consistent! ✨"
+            ]
+            # Use order count to pick a consistent message per user session
+            message += motivations[order_count % len(motivations)]
+
+        # Add discovery tip (softer format)
+        period_to_exclude = {
+            "day": "daily",
+            "week": "weekly",
+            "month": "monthly",
+            "year": "yearly"
+        }
+
+        current_period_ly = period_to_exclude.get(period)
+        all_period_options = ["daily", "weekly", "monthly", "yearly"]
+        other_periods = [p for p in all_period_options if p != current_period_ly]
+
+        if len(other_periods) > 0:
+            period_hints = {
+                "daily": "today",
+                "weekly": "this week",
+                "monthly": "this month",
+                "yearly": "this year"
+            }
+            available = [period_hints.get(p, p) for p in other_periods]
+
+            if len(available) == 2:
+                hint = f"'{available[0]}' or '{available[1]}'"
+            elif len(available) == 3:
+                hint = f"'{available[0]}', '{available[1]}', or '{available[2]}'"
+            else:
+                hint = f"'{available[0]}'"
+
+            message += f"\n\n_Ask for {hint} to see more._"
 
         Message.bot_message(message.strip(), user=user)
         return True

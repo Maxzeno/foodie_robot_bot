@@ -210,14 +210,13 @@ def get_tool_definitions():
             "type": "function",
             "function": {
                 "name": "get_calorie_stats",
-                "description": "Show calorie and nutrition tracking stats for a time period. Use when user asks about calories, nutrition progress, how they're doing with their diet, or wants to see their meal stats.",
+                "description": "Show calorie tracking stats for a time period. Use when user asks about calories progress, how they're doing with their diet.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "period": {
                             "type": "string",
                             "enum": ["day", "week", "month", "year"],
-                            "description": "Time period for stats: 'day' for today, 'week' for this week, 'month' for this month, 'year' for this year"
                         }
                     },
                     "required": []

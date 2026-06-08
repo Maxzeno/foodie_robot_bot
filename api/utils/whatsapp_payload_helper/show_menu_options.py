@@ -76,8 +76,13 @@ def show_menu_options_payload(text):
                     ]
                 },
                 {
-                    "title": "Support",
+                    "title": "Others",
                     "rows": [
+                        {
+                            "id": "calorie-stats",
+                            "title": "Calorie Stats",
+                            "description": "View your calorie statistics"
+                        },
                         # {
                         #     "id": "meal-liked-disliked",
                         #     "title": "Liked/disliked meals",

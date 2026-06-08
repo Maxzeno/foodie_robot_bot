@@ -65,6 +65,13 @@ class MealAdminForm(forms.ModelForm):
 
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
+    """
+    Admin interface for Meal model.
+
+    Note: AI analysis is automatically triggered via post_save signal
+    when a new meal is created with both name and image.
+    See api/signals.py for the implementation.
+    """
     form = MealAdminForm
 
 

@@ -27,7 +27,16 @@
       "Bash(pip3 list:*)",
       "Bash(pip3 install:*)",
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.services.ai.tool_handlers.stats import get_calorie_stats; print(''Import successful'')\")",
-      "Bash(set:*)"
+      "Bash(set:*)",
+      "Bash(del:*)",
+      "Bash(if not exist \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\services\\ai\\schemas\" mkdir \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\services\\ai\\schemas\")",
+      "Bash(mkdir:*)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/services/ai/schemas/meal_analysis.py)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/services/ai/meal_analyzer.py)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/admin/__init__.py)",
+      "Bash(git add:*)",
+      "Bash(rm:*)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.schemas.meal_analysis import MealAnalysisResponse; print(''Import successful'')\")"
     ],
     "deny": [],
     "ask": []
