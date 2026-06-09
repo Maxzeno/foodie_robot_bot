@@ -9,7 +9,7 @@ from api.models.address import DeliveryAddress
 from api.services.ai.tool_handlers.meal import build_meal_recommendation
 from api.services.ai.tool_handlers.order import place_order
 from datetime import timedelta
-
+from api.services.ai.tool_handlers.menu_options import show_menu_options
 
 def save_delivery_location(
     user: User,
@@ -44,7 +44,7 @@ def save_delivery_location(
             is_default=False
         )
         if is_new:
-            Message.bot_message(f"Your delivery location has been set successfully. It falls under {city.name}", user=user)
+            show_menu_options(user, f"Your delivery location has been set successfully. It falls under {city.name}. \n\nYou can also explore our Quick Actions menu to see more things you can do, such as checking your calorie stats, referring a friend (and earning rewards), and more.")
         elif old_city and (old_city.currency == user.city.currency):
             Message.bot_message(f"Your delivery location has been updated successfully. It falls under {city.name}", user=user)
         else:

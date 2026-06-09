@@ -226,12 +226,35 @@ for host in _ALLOWED_HOST.split():
 
 # Huey Configuration
 # For Koyeb workers, use Redis as the backend
-REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+REDIS_URL = config('REDIS_URL', default='')
+
+# HUEY_IMMEDIATE: Set to False in production, True only for local testing without Redis
+# When True, tasks run synchronously (no Redis needed)
+# When False, tasks are queued to Redis (required for run_huey consumer)
+# Auto-enable immediate mode if no REDIS_URL is provided (for local dev)
+HUEY_IMMEDIATE = config('HUEY_IMMEDIATE', default=not bool(REDIS_URL), cast=bool)
 
 from huey import RedisHuey
 
 HUEY = RedisHuey(
     'foodie_robot',
-    url=REDIS_URL,
-    immediate=DEBUG,  # Run tasks immediately in DEBUG mode (for local testing)
+    url=REDIS_URL or 'redis://localhost:6379/0',
+    immediate=HUEY_IMMEDIATE,
+    # Reduce Redis polling frequency to save commands
+    # periodic=True enables periodic task scheduling
+    # blocking=True uses BRPOP (already used by default)
 )
+
+# Huey consumer settings - these are passed to run_huey command
+# To use: python manage.py run_huey --worker-type=thread --workers=2 --periodic-check-interval=60
+# Or set via environment variable
+HUEY_CONSUMER_OPTIONS = {
+    # Check for periodic tasks every 60 seconds instead of every 1 second
+    # Since your tasks run every 30 minutes, checking every 60 seconds is sufficient
+    'periodic_check_interval': 60,
+    # Worker health check interval (default is 1 second)
+    'health_check_interval': 60,
+    # BRPOP timeout - how long to wait for tasks before re-checking
+    # Higher value = fewer Redis commands, but slower response to new tasks
+    'scheduler_interval': 60,
+}

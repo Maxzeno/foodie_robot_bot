@@ -1,8 +1,8 @@
 from api.models.meal import Meal
 from api.models.message import CurrentIntentChoices, Message
 import json
+import logging
 from ninja import Router
-from api.models.order import Order
 from api.models.user import User
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
@@ -19,6 +19,8 @@ from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 import uuid
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
 router = Router(tags=["Webhook"])
 
 VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
@@ -33,7 +35,7 @@ def whatsapp_webhook(request):
         return HttpResponse("Forbidden: Invalid signature", status=403)
 
     json_data = json.loads(request.body)
-    print('json_data flow', json_data)
+    logger.debug('Webhook received: %s', json_data)
 
     try:
         entry = json_data["entry"][0]
@@ -46,6 +48,19 @@ def whatsapp_webhook(request):
         reply_message_id = None
         text = None
         json_resp = None
+        
+        # Rate limiting: 30 messages per minute per user
+        try:
+            check_rate_limit(
+                user_identifier=phone,
+                max_requests=30,
+                window_seconds=60
+            )
+        except RateLimitExceeded as e:
+            # Return success to WhatsApp to avoid retries, but don't process the message
+            # Note: We intentionally don't send a warning message here to avoid
+            # creating more messages when user is already spamming
+            return {"detail": "Rate limited"}
 
         if msg_type == 'text':
             text = message["text"]["body"]
@@ -87,38 +102,18 @@ def whatsapp_webhook(request):
             context = message["context"]
             reply_message_id = context["id"]
 
-        print("msg type:", msg_type)
-        print("Phone Number:", phone)
-        print("Message:", text)
-        print("sender_message_id:", sender_message_id)
-        print("reply_message_id:", reply_message_id)
+        logger.debug(
+            "Webhook parsed: type=%s, phone=%s, text=%s, msg_id=%s, reply_id=%s",
+            msg_type, phone, text, sender_message_id, reply_message_id
+        )
 
     except Exception as e:
-        print("Error parsing webhook:", e)
+        logger.exception("Error parsing webhook: %s", e)
         return {"detail": "Done"}
 
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
     if found_msg:
         return {"detail": "Done"}
-
-    # Rate limiting: 30 messages per minute per user
-    try:
-        check_rate_limit(
-            user_identifier=phone,
-            max_requests=30,
-            window_seconds=60
-        )
-    except RateLimitExceeded as e:
-        print(f"Rate limit exceeded for phone {phone}: {e}")
-        # Return success to WhatsApp to avoid retries, but don't process the message
-        # Optionally send a warning message to the user
-        user_obj = User.objects.filter(phone=phone).first()
-        if user_obj:
-            Message.bot_message(
-                "You're sending messages too quickly. Please wait a moment before trying again.",
-                user=user_obj
-            )
-        return {"detail": "Rate limited"}
 
     user, created = User.objects.get_or_create(phone=phone)
 
