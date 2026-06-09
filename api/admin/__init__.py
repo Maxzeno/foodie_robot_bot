@@ -14,6 +14,7 @@ from api.models.settings import AppSettings
 from api.models.user import User
 from api.models.message import Message
 from api.models.special_occasion import SpecialOccasion
+from api.models.meal_embedding import MealEmbedding
 from leaflet.admin import LeafletGeoAdmin
 
 
@@ -105,3 +106,24 @@ class SpecialOccasionAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('meals', 'cities')
+
+
+@admin.register(MealEmbedding)
+class MealEmbeddingAdmin(admin.ModelAdmin):
+    list_display = ['meal', 'content_hash', 'embedding_preview', 'updated_at']
+    list_filter = ['updated_at']
+    search_fields = ['meal__name', 'content_hash']
+    readonly_fields = ['meal', 'embedding', 'content_hash', 'embedding_text', 'created_at', 'updated_at']
+    ordering = ['-updated_at']
+
+    def embedding_preview(self, obj):
+        if obj.embedding:
+            return f"[{len(obj.embedding)} dims]"
+        return "-"
+    embedding_preview.short_description = 'Embedding'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

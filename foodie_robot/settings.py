@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "cloudinary_storage",
     "cloudinary",
+    "huey.contrib.djhuey",
     "api"
 ]
 
@@ -221,3 +222,16 @@ for host in _ALLOWED_HOST.split():
 for host in _ALLOWED_HOST.split():
     CORS_ALLOWED_ORIGINS.append(f'http://{host}')
     CORS_ALLOWED_ORIGINS.append(f'https://{host}')
+
+
+# Huey Configuration
+# For Koyeb workers, use Redis as the backend
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+
+from huey import RedisHuey
+
+HUEY = RedisHuey(
+    'foodie_robot',
+    url=REDIS_URL,
+    immediate=DEBUG,  # Run tasks immediately in DEBUG mode (for local testing)
+)

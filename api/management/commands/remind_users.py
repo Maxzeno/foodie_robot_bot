@@ -2,24 +2,43 @@
 Management command to remind users to reply within the 24-hour free messaging window.
 
 Usage:
-    python manage.py remind_users
+    python manage.py remind_users [--async]
+
+Options:
+    --async    Queue the task asynchronously via Huey (default: run synchronously)
 """
 
 from django.core.management.base import BaseCommand
-from api.cron.remind_user_to_reply import remind_users_to_reply
+from api.tasks.remind_user_to_reply import remind_users_to_reply_task
 
 
 class Command(BaseCommand):
     help = 'Remind users to reply within the 24-hour free messaging window'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--async',
+            action='store_true',
+            dest='run_async',
+            help='Queue the task asynchronously via Huey'
+        )
+
     def handle(self, **options):
         self.stdout.write("="*60)
-        self.stdout.write(self.style.HTTP_INFO("Remind Users to Reply - Cron Job"))
+        self.stdout.write(self.style.HTTP_INFO("Remind Users to Reply - Huey Task"))
         self.stdout.write("="*60)
-        self.stdout.write(self.style.WARNING("Sending reminders to users..."))
+
+        if options['run_async']:
+            self.stdout.write(self.style.WARNING("Queuing task asynchronously..."))
+            remind_users_to_reply_task()
+            self.stdout.write(self.style.SUCCESS("Task queued successfully!"))
+            return
+
+        self.stdout.write(self.style.WARNING("Sending reminders to users (synchronous)..."))
         self.stdout.write("")
 
-        result = remind_users_to_reply()
+        # Call the task function directly for synchronous execution
+        result = remind_users_to_reply_task.call_local()
 
         # Display results
         self.stdout.write("")

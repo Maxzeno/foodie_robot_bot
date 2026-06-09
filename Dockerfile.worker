@@ -1,0 +1,26 @@
+FROM python:3.11.4-slim-bullseye
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install GDAL + PostgreSQL headers (needed by psycopg2) + cleanup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin \
+    libgdal-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Optional: let pip know where to find GDAL headers
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+# Copy and install Python dependencies
+COPY ./requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the code
+COPY . /app
+
+# Run Huey worker (periodic tasks run by default)
+CMD ["python", "manage.py", "run_huey"]

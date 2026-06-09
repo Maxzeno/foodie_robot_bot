@@ -297,9 +297,9 @@ class MealRecommendationService:
             Q(available_to_time__isnull=True) | Q(available_to_time__gte=current_time)
         )
 
-        # Budget filter (soft - allow 20% over budget)
+        # Budget filter (soft - allow 50% over budget)
         if user.average_meal_budget and user.average_meal_budget > 0:
-            max_price = float(user.average_meal_budget) * 1.2
+            max_price = float(user.average_meal_budget) * 1.5
             queryset = queryset.filter(price__lte=max_price)
             logger.debug(f"Budget filter: max price {max_price}")
 

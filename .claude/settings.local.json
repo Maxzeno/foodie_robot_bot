@@ -41,7 +41,16 @@
       "Bash(if not exist \"api\\management\\commands\" mkdir \"api\\management\\commands\")",
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/signals.py)",
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe test_meal_m2m.py)",
-      "Bash(env\\Scripts\\python.exe:*)"
+      "Bash(env\\Scripts\\python.exe:*)",
+      "Bash(if not exist \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\services\\recommendation\" mkdir \"C:\\Users\\user\\code\\foodie_robot_backend\\api\\services\\recommendation\")",
+      "Bash(envScriptspython.exe -m py_compile api/models/meal_embedding.py)",
+      "Bash(envScriptspython.exe -m py_compile api/services/recommendation/meal_embedding.py)",
+      "Bash(envScriptspython.exe -m py_compile api/services/recommendation/user_taste_profile.py)",
+      "Bash(envScriptspython.exe -m py_compile api/services/recommendation/hybrid_recommendation.py)",
+      "Bash(envScriptspython.exe -m py_compile api/tasks/__init__.py)",
+      "Bash(envScriptspython.exe -m py_compile api/tasks/remind_user_to_reply.py)",
+      "Bash(envScriptspython.exe -m py_compile api/tasks/recommend_meal.py)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []
