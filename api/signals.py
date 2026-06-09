@@ -6,6 +6,7 @@ This module contains signal handlers for various model events.
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db import transaction
 from api.models.order import Order, OrderStatus
 from api.models.review import Review
 from api.models.message import Message
@@ -102,7 +103,6 @@ def analyze_meal_with_ai(sender, instance: Meal, created, **kwargs):
             cuisines=cuisines
         )
         
-        print(f"analysis {analysis}")
         if not analysis:
             logger.warning(f"AI analysis returned None for meal: {instance.name} (ID: {instance.id})")
             return
@@ -140,42 +140,45 @@ def analyze_meal_with_ai(sender, instance: Meal, created, **kwargs):
             Meal.objects.filter(pk=instance.pk).update(**update_fields)
             logger.info(f"Updated nutritional fields for meal {instance.id}: {list(update_fields.keys())}")
 
-        # Apply ManyToMany fields
-        if analysis.fitness_goals:
-            logger.info(f"AI returned fitness goals: {analysis.fitness_goals}")
-            fitness_goal_objects = FitnessGoal.objects.filter(name__in=analysis.fitness_goals)
-            if fitness_goal_objects.exists():
-                instance.fitness_goals.set(fitness_goal_objects)
-                logger.info(f"Set fitness goals for meal {instance.id}: {list(fitness_goal_objects.values_list('name', flat=True))}")
-            else:
-                logger.warning(f"No matching FitnessGoal objects found for: {analysis.fitness_goals}. Run 'python manage.py populate_meal_lookups' to create them.")
+        # Apply ManyToMany fields AFTER transaction commits
+        # This is critical because ManyToMany changes in signals can be rolled back
+        def set_many_to_many_fields():
+            meal_instance = Meal.objects.get(pk=instance.pk)
 
-        if analysis.restricted_health_conditions:
-            logger.info(f"AI returned health conditions: {analysis.restricted_health_conditions}")
-            health_condition_objects = HealthCondition.objects.filter(name__in=analysis.restricted_health_conditions)
-            if health_condition_objects.exists():
-                instance.restricted_health_conditions.set(health_condition_objects)
-                logger.info(f"Set health conditions for meal {instance.id}: {list(health_condition_objects.values_list('name', flat=True))}")
-            else:
-                logger.warning(f"No matching HealthCondition objects found for: {analysis.restricted_health_conditions}. Run 'python manage.py populate_meal_lookups' to create them.")
+            if analysis.fitness_goals:
+                fitness_goal_objects = FitnessGoal.objects.filter(name__in=analysis.fitness_goals)
+                if fitness_goal_objects.exists():
+                    meal_instance.fitness_goals.set(fitness_goal_objects)
+                    logger.info(f"Set fitness goals for meal {meal_instance.id}: {list(fitness_goal_objects.values_list('name', flat=True))}")
+                else:
+                    logger.warning(f"No matching FitnessGoal objects found for: {analysis.fitness_goals}")
 
-        if analysis.restricted_allergies:
-            logger.info(f"AI returned allergies: {analysis.restricted_allergies}")
-            allergy_objects = Allergy.objects.filter(name__in=analysis.restricted_allergies)
-            if allergy_objects.exists():
-                instance.restricted_allergies.set(allergy_objects)
-                logger.info(f"Set allergies for meal {instance.id}: {list(allergy_objects.values_list('name', flat=True))}")
-            else:
-                logger.warning(f"No matching Allergy objects found for: {analysis.restricted_allergies}. Run 'python manage.py populate_meal_lookups' to create them.")
+            if analysis.restricted_health_conditions:
+                health_condition_objects = HealthCondition.objects.filter(name__in=analysis.restricted_health_conditions)
+                if health_condition_objects.exists():
+                    meal_instance.restricted_health_conditions.set(health_condition_objects)
+                    logger.info(f"Set health conditions for meal {meal_instance.id}: {list(health_condition_objects.values_list('name', flat=True))}")
+                else:
+                    logger.warning(f"No matching HealthCondition objects found for: {analysis.restricted_health_conditions}")
 
-        if analysis.cuisine:
-            logger.info(f"AI returned cuisines: {analysis.cuisine}")
-            cuisine_objects = PreferredCuisine.objects.filter(name__in=analysis.cuisine)
-            if cuisine_objects.exists():
-                instance.cuisine.set(cuisine_objects)
-                logger.info(f"Set cuisines for meal {instance.id}: {list(cuisine_objects.values_list('name', flat=True))}")
-            else:
-                logger.warning(f"No matching PreferredCuisine objects found for: {analysis.cuisine}. Run 'python manage.py populate_meal_lookups' to create them.")
+            if analysis.restricted_allergies:
+                allergy_objects = Allergy.objects.filter(name__in=analysis.restricted_allergies)
+                if allergy_objects.exists():
+                    meal_instance.restricted_allergies.set(allergy_objects)
+                    logger.info(f"Set allergies for meal {meal_instance.id}: {list(allergy_objects.values_list('name', flat=True))}")
+                else:
+                    logger.warning(f"No matching Allergy objects found for: {analysis.restricted_allergies}")
+
+            if analysis.cuisine:
+                cuisine_objects = PreferredCuisine.objects.filter(name__in=analysis.cuisine)
+                if cuisine_objects.exists():
+                    meal_instance.cuisine.set(cuisine_objects)
+                    logger.info(f"Set cuisines for meal {meal_instance.id}: {list(cuisine_objects.values_list('name', flat=True))}")
+                else:
+                    logger.warning(f"No matching PreferredCuisine objects found for: {analysis.cuisine}")
+
+        # Execute ManyToMany updates after the transaction commits
+        transaction.on_commit(set_many_to_many_fields)
 
         # Log success with confidence level
         confidence = getattr(analysis, 'confidence', 'unknown')

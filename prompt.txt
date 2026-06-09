@@ -1,3 +1,0 @@
-i noticed that sometimes my cronjob runs at the same time users set their first city and that can result is they getting the 2 meal recommendation we send twice 
-
-is they anyway to prevent this from happening please tell me how you plan to do it and don't implement yet

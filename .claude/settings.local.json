@@ -39,7 +39,9 @@
       "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -c \"from api.schemas.meal_analysis import MealAnalysisResponse; print(''Import successful'')\")",
       "Bash(if not exist \"api\\management\" mkdir \"api\\management\")",
       "Bash(if not exist \"api\\management\\commands\" mkdir \"api\\management\\commands\")",
-      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/signals.py)"
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe -m py_compile api/signals.py)",
+      "Bash(C:Usersusercodefoodie_robot_backendenvScriptspython.exe test_meal_m2m.py)",
+      "Bash(env\\Scripts\\python.exe:*)"
     ],
     "deny": [],
     "ask": []
