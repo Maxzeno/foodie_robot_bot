@@ -217,7 +217,7 @@ class Meal(BaseModel):
     cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="meals")
 
     def __str__(self):
-        return f"{self.name} - {self.city.name} - {self.fitness_goals} - {self.cuisine} - {self.restricted_health_conditions} - {self.restricted_allergies}"
+        return f"{self.name} - {self.city.name} - {', '.join(list(self.fitness_goals.all().values_list('name', flat=True)))}"
 
     def is_available_at_time(self, check_time=None):
         """

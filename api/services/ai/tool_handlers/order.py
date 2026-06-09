@@ -9,7 +9,7 @@ from api.models.address import DeliveryAddress
 from api.models.message import Message
 import requests
 from django.conf import settings
-
+import math
 from api.utils.distance import cal_delivery_fee
 
 # Format status message
@@ -129,7 +129,6 @@ def place_order(
     rider_instructions: Optional[str] = None,
     recreated_with_new_address: bool = False
 ) -> bool:
-    print("Placing order...", meal_id, number_of_plates, special_instructions)
     try:
         if not number_of_plates:
             Message.bot_message(
@@ -212,7 +211,8 @@ def place_order(
                                                     meal.restaurant.point.x, 
                                                     delivery_address.point.y, 
                                                     delivery_address.point.x)))
-
+        
+        delivery_fee = delivery_fee * math.ceil(number_of_plates/5)
         total_price = meal_price + delivery_fee
 
         # Create order
