@@ -57,6 +57,10 @@ class User(AbstractUser, BaseModel):
         related_name="referrals"
     )
 
+    def set_password(self, raw_password, user=None):
+        if not user or user and user.password != self.password:
+            super().set_password(raw_password)
+        
     def save(self, *args, **kwargs):
         if self.email:
             self.email = self.email.strip()
@@ -69,6 +73,13 @@ class User(AbstractUser, BaseModel):
         
         if not self.code:
             self.code = unique_user_code()
+
+
+        if not self._password:
+            user = None
+            if self.pk:
+                user = self.__class__.objects.filter(pk=self.pk).first()
+            self.set_password(self.password, user)
 
         super().save(*args, **kwargs)
 

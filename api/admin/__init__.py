@@ -39,7 +39,7 @@ class UserAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('User Info', {
-            'fields': ('code', 'phone', 'email', 'username', 'first_name', 'last_name')
+            'fields': ('code', 'phone', 'email', 'username', 'password', 'first_name', 'last_name')
         }),
         ('Profile', {
             'fields': ('city', 'gender', 'average_meal_budget', 'fitness_goals')

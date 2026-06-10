@@ -108,7 +108,8 @@ def place_order_form(
             data={
                 "current_address": delivery_address.street_address or 'Last set address',
                 "maps_url": f"https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x}",
-                "meal_id": meal_id
+                "meal_id": meal_id,
+                "username": user.username,
             }
         )
     except Exception as e:
@@ -124,6 +125,7 @@ def place_order(
     user: User,
     meal_id: int,
     number_of_plates: int=None,
+    username: str=None,
     # delivery_address_id: Optional[int] = None,
     special_instructions: Optional[str] = None,
     rider_instructions: Optional[str] = None,
@@ -265,6 +267,10 @@ def place_order(
 """.strip()
 
         Message.bot_message_url_cta(message, action_text="Pay now", action_url=payment_url, user=user)
+
+        if username:
+            user.username = username
+            user.save(update_fields=['username'])
 
         return True
 

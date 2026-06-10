@@ -118,7 +118,7 @@ def whatsapp_webhook(request):
         return {"detail": "Done"}
 
     user, created = User.objects.get_or_create(phone=phone)
-    if username and (not user.username or user.username.strip().lower() != username.strip().lower()):
+    if username and not user.username:
         user.username = username
         user.save(update_fields=['username'])
 
