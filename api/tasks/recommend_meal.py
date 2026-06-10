@@ -2,6 +2,18 @@ import logging
 from huey import crontab
 from huey.contrib.djhuey import periodic_task, task
 
+from api.models.meal import Meal, TimeOfDayChoices
+from api.models.recommendation import Recommendation, ChoiceOption
+from api.services.recommendation.meal_recommendation import MealRecommendationService
+from django.db import transaction
+
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Max, Q
+from api.models.user import User
+from api.models.message import RoleChoices
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -11,16 +23,7 @@ def send_meal_recommendations_task():
     Task to send meal recommendations to active users.
     Can be triggered manually or scheduled via periodic task.
     """
-    from django.utils import timezone
-    from datetime import timedelta
-    from django.db.models import Max, Q
-    from api.models.user import User
-    from api.models.message import Message, RoleChoices
-    from api.models.meal import Meal, TimeOfDayChoices
-    from api.models.recommendation import Recommendation, ChoiceOption
-    from api.services.recommendation.meal_recommendation import MealRecommendationService
-    from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
-
+    
     now = timezone.now()
     twenty_four_hours_ago = now - timedelta(hours=24)
 
@@ -108,77 +111,73 @@ def send_meal_recommendations_task():
 
 def _generate_and_send_recommendations(user, current_time_period, today):
     """Helper function to generate and send recommendations for a user."""
-    from api.models.meal import Meal, TimeOfDayChoices
-    from api.models.message import Message
-    from api.models.recommendation import Recommendation, ChoiceOption
-    from api.services.recommendation.meal_recommendation import MealRecommendationService
-    from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
 
-    try:
-        # Initialize recommendation service
-        service = MealRecommendationService()
+    with transaction.atomic():
+        try:
+            # Initialize recommendation service
+            service = MealRecommendationService()
 
-        # Generate recommendations for all time periods
-        recommended_meal_dict = service.get_recommendations(
-            user=user,
-            num_recommendations_per_period=2,
-        )
+            # Generate recommendations for all time periods
+            recommended_meal_dict = service.get_recommendations(
+                user=user,
+                num_recommendations_per_period=2,
+            )
 
-        messages_sent = 0
+            messages_sent = 0
 
-        # Process recommendations for all time periods
-        for time_period in ['morning', 'afternoon', 'evening']:
-            meal_ids = recommended_meal_dict.get(time_period, [])
+            # Process recommendations for all time periods
+            for time_period in ['morning', 'afternoon', 'evening']:
+                meal_ids = recommended_meal_dict.get(time_period, [])
 
-            if not meal_ids:
-                continue
-
-            # Get meal objects
-            recommended_meals = Meal.objects.filter(id__in=meal_ids)
-
-            # Create recommendation objects and send messages
-            for index, meal in enumerate(recommended_meals):
-                # Determine choice option (first or second)
-                choice_option = ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND
-
-                # Check if this recommendation already exists
-                existing_rec = Recommendation.objects.filter(
-                    user=user,
-                    meal=meal,
-                    time_of_day=TimeOfDayChoices.get_period(time_period),
-                    day=today,
-                    choice_option=choice_option
-                ).first()
-
-                if existing_rec:
-                    # Recommendation already exists, just check if we need to send it
-                    if time_period == current_time_period and not existing_rec.sent_to_user:
-                        _send_recommendation_message(user, meal, existing_rec, time_period, index)
-                        existing_rec.sent_to_user = True
-                        existing_rec.save(update_fields=['sent_to_user'])
-                        messages_sent += 1
+                if not meal_ids:
                     continue
 
-                # Create new recommendation object
-                recommendation_obj = Recommendation.objects.create(
-                    user=user,
-                    meal=meal,
-                    time_of_day=TimeOfDayChoices.get_period(time_period),
-                    choice_option=choice_option,
-                    sent_to_user=(time_period == current_time_period),
-                    day=today
-                )
+                # Get meal objects
+                recommended_meals = Meal.objects.filter(id__in=meal_ids)
 
-                # Send message only if this is the current time period
-                if time_period == current_time_period:
-                    _send_recommendation_message(user, meal, recommendation_obj, time_period, index)
-                    messages_sent += 1
+                # Create recommendation objects and send messages
+                for index, meal in enumerate(recommended_meals):
+                    # Determine choice option (first or second)
+                    choice_option = ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND
 
-        return messages_sent
+                    # Check if this recommendation already exists
+                    existing_rec = Recommendation.objects.filter(
+                        user=user,
+                        meal=meal,
+                        time_of_day=TimeOfDayChoices.get_period(time_period),
+                        day=today,
+                        choice_option=choice_option
+                    ).first()
 
-    except Exception as e:
-        logger.error(f"Error generating recommendations for user {user.id}: {e}")
-        return 0
+                    if existing_rec:
+                        # Recommendation already exists, just check if we need to send it
+                        if time_period == current_time_period and not existing_rec.sent_to_user:
+                            _send_recommendation_message(user, meal, existing_rec, time_period, index)
+                            existing_rec.sent_to_user = True
+                            existing_rec.save(update_fields=['sent_to_user'])
+                            messages_sent += 1
+                        continue
+
+                    # Create new recommendation object
+                    recommendation_obj = Recommendation.objects.create(
+                        user=user,
+                        meal=meal,
+                        time_of_day=TimeOfDayChoices.get_period(time_period),
+                        choice_option=choice_option,
+                        sent_to_user=(time_period == current_time_period),
+                        day=today
+                    )
+
+                    # Send message only if this is the current time period
+                    if time_period == current_time_period:
+                        _send_recommendation_message(user, meal, recommendation_obj, time_period, index)
+                        messages_sent += 1
+
+            return messages_sent
+
+        except Exception as e:
+            logger.error(f"Error generating recommendations for user {user.id}: {e}")
+            return 0
 
 
 def _send_recommendation_message(user, meal, recommendation_obj, time_period, index):

@@ -1,4 +1,3 @@
-from api.models.meal import Meal
 from api.models.message import CurrentIntentChoices, Message
 import json
 import logging
@@ -10,14 +9,11 @@ from django.db import transaction
 from django.conf import settings
 
 from api.services.ai.orchestrator import FoodBotAIHandler
-from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
 from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 from api.utils.whatsapp_verification import verify_whatsapp_signature
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
-import uuid
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -163,56 +159,56 @@ def whatsapp_verify(request):
     return HttpResponse("Error: token mismatch", status=403)
 
 
-@csrf_exempt
-@router.post("/whatsapp-test")
-def whatsapp_test(request, text:str):
-    sender_message_id = uuid.uuid4().hex
-    found_msg = Message.objects.filter(message_id=sender_message_id).first()
-    if found_msg:
-        return {"detail": "Done"}
+# @csrf_exempt
+# @router.post("/whatsapp-test")
+# def whatsapp_test(request, text:str):
+#     sender_message_id = uuid.uuid4().hex
+#     found_msg = Message.objects.filter(message_id=sender_message_id).first()
+#     if found_msg:
+#         return {"detail": "Done"}
     
-    user = User.objects.get(phone="2349077745730")
+#     user = User.objects.get(phone="2349077745730")
 
-    Message.user_message(message_id=sender_message_id, 
-        resp={}, content=text, 
-        user=user, enable_typing_indicator=True, reply_message_id=None)
+#     Message.user_message(message_id=sender_message_id, 
+#         resp={}, content=text, 
+#         user=user, enable_typing_indicator=True, reply_message_id=None)
     
-    response_message = FoodBotAIHandler(user, sender_message_id, None).process_message()
-    if response_message:
-        Message.bot_message(response_message, user=user)
+#     response_message = FoodBotAIHandler(user, sender_message_id, None).process_message()
+#     if response_message:
+#         Message.bot_message(response_message, user=user)
 
-    return {"detail": "Done"}
+#     return {"detail": "Done"}
 
-# TODO: to be removed in production
-@csrf_exempt
-@router.get("/test-temp-recommendation")
-def text_temp_recommendation(request):
-    user = User.objects.filter(phone="2349077745730").first()
-    print("User:", user)
-    service = MealRecommendationService()
+# # TODO: to be removed in production
+# @csrf_exempt
+# @router.get("/test-temp-recommendation")
+# def text_temp_recommendation(request):
+#     user = User.objects.filter(phone="2349077745730").first()
+#     print("User:", user)
+#     service = MealRecommendationService()
 
-    # recommend by LLM
-    recommended_meal_ids = service.get_recommendations(
-        user=user,
-        num_recommendations_per_period=2,
-    )
+#     # recommend by LLM
+#     recommended_meal_ids = service.get_recommendations(
+#         user=user,
+#         num_recommendations_per_period=2,
+#     )
 
-    res = {}
-    for k, v in recommended_meal_ids.items():
-        meals = Meal.objects.filter(id__in=v).values('id', 'name')
-        print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
-        res[k] = list(meals)
-    print("Recommended Meal IDs:", recommended_meal_ids)
-    return res
+#     res = {}
+#     for k, v in recommended_meal_ids.items():
+#         meals = Meal.objects.filter(id__in=v).values('id', 'name')
+#         print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
+#         res[k] = list(meals)
+#     print("Recommended Meal IDs:", recommended_meal_ids)
+#     return res
 
-# TODO: to be removed in production
+# # TODO: to be removed in production
 
-@csrf_exempt
-@router.get("/test-temp-time")
-def text_temp_time(request):
-    user = User.objects.filter(phone="2349077745730").first()
-    print("User:", user)
-    print("User:", user.get_local_time(), user.get_local_time().hour)
-    print('now', timezone.now(), timezone.now().hour)
+# @csrf_exempt
+# @router.get("/test-temp-time")
+# def text_temp_time(request):
+#     user = User.objects.filter(phone="2349077745730").first()
+#     print("User:", user)
+#     print("User:", user.get_local_time(), user.get_local_time().hour)
+#     print('now', timezone.now(), timezone.now().hour)
  
-    return {"status": 'ok'}
+#     return {"status": 'ok'}

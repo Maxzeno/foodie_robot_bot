@@ -134,10 +134,10 @@ class City(BaseModel):
     boundary = gis_models.PolygonField(srid=4326)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='cities')
     preferred_cuisine = models.ManyToManyField("PreferredCuisine", blank=True, related_name="cities")
-    average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    referral_bonus = models.DecimalField(max_digits=10, decimal_places=2)
-    delivery_fee_per_km = models.DecimalField(max_digits=10, decimal_places=2)
-    min_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    average_meal_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    referral_bonus = models.DecimalField(max_digits=12, decimal_places=2)
+    delivery_fee_per_km = models.DecimalField(max_digits=12, decimal_places=2)
+    min_delivery_fee = models.DecimalField(max_digits=12, decimal_places=2)
 
     timezone = models.CharField(
             max_length=63,

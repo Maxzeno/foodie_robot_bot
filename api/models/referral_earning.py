@@ -19,7 +19,7 @@ class ReferralEarning(BaseModel):
         blank=True,
         related_name="referral_earning_source"
     )
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='referral_earnings')
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='referral_earnings')
 

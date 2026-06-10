@@ -50,7 +50,9 @@
       "Bash(envScriptspython.exe -m py_compile api/tasks/__init__.py)",
       "Bash(envScriptspython.exe -m py_compile api/tasks/remind_user_to_reply.py)",
       "Bash(envScriptspython.exe -m py_compile api/tasks/recommend_meal.py)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(envScriptspython.exe -c \"from huey.consumer import Consumer; import inspect; sig = inspect.signature(Consumer.__init__); print([p for p in sig.parameters])\")",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py run_huey --help)"
     ],
     "deny": [],
     "ask": []

@@ -109,6 +109,12 @@ def flow_handler(request):
 
 @router.post("/upload-public-key")
 def upload_public_key(request):
+    if (not request.user or not request.user.is_authenticated) or not request.user.is_staff:
+          return HttpResponse("Unauthorized", status=401)
+    print(request.user.is_staff)
+    print(request.user.is_authenticated)
+    return {"status": "started"}
+    
     # Load public key path from environment variable, fallback to default path
     public_key_path = settings.WHATSAPP_FLOW_PUBLIC_KEY_PATH
 

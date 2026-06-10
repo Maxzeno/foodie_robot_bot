@@ -152,7 +152,7 @@ class Meal(BaseModel):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='meals')
 
     description = models.TextField()
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='meals')
 

@@ -49,10 +49,10 @@ class Order(BaseModel):
     
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='orders')
 
-    total_price = models.DecimalField(max_digits=8, decimal_places=2)
-    meal_price = models.DecimalField(max_digits=8, decimal_places=2)
-    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2)
-    amount_paid = models.DecimalField(max_digits=8, decimal_places=2)
+    total_price = models.DecimalField(max_digits=12, decimal_places=2)
+    meal_price = models.DecimalField(max_digits=12, decimal_places=2)
+    delivery_fee = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     paid = models.BooleanField(default=False)
     delivered_at = models.DateTimeField(null=True, blank=True)
 

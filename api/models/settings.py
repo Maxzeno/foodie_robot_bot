@@ -5,7 +5,7 @@ from api.models.base import BaseModel
 
 
 class AppSettings(BaseModel):
-    minimum_withdrawal = models.DecimalField(max_digits=10, decimal_places=2)
+    minimum_withdrawal = models.DecimalField(max_digits=12, decimal_places=2)
     whatsapp_support_phone_number = models.CharField(max_length=20)
     whatsapp_phone_number = models.CharField(max_length=20)
 

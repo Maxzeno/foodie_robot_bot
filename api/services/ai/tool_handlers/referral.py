@@ -15,8 +15,8 @@ def referral_link(
             
         extra_text = ""
         if user.city:
-            extra_text = f"In {user.city.name} you earn {user.city.currency.code} {user.city.referral_bonus} per referral other cities may vary."
-        Message.bot_message(f"Your referral link: {link} \n\n{extra_text}", user=user)
+            extra_text = f"In {user.city.name} you earn {user.city.currency.code} {user.city.referral_bonus} per referral (After first order payment) other cities may vary."
+        Message.bot_message(f"Your referral link (Share with friends): {link} \n\n{extra_text}", user=user)
         return True
     except Exception as e:
         Message.bot_message("Sorry, something went wrong", user=user)

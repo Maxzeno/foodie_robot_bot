@@ -97,3 +97,4 @@ def make_withdrawal(
         return True
     except:
         Message.bot_message("Failed to place withdrawal. Please contact customer support.", user=user)
+        return False

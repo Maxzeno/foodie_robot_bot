@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # Run Huey worker with reduced Redis polling frequency
-# --check-worker-health 60: Check worker health every 60 seconds instead of 1 second
+# --health-check-interval 60: Check worker health every 60 seconds instead of 1 second
 # --scheduler-interval 60: Check for scheduled tasks every 60 seconds
 # This drastically reduces Redis commands from ~260/minute to ~4/minute
-CMD ["python", "manage.py", "run_huey", "--check-worker-health", "60", "--scheduler-interval", "60"]
+CMD ["python", "manage.py", "run_huey", "--health-check-interval", "60", "--scheduler-interval", "60"]

@@ -1,4 +1,3 @@
-from typing import Dict
 
 from api.models.message import Message
 from api.models.user import User
@@ -6,43 +5,45 @@ from api.models.meal import Meal, TimeOfDayChoices
 from api.models.recommendation import Recommendation, ChoiceOption
 from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
+from django.db import transaction
 
 
 def build_meal_recommendation(user: User):
-    service = MealRecommendationService()
-    
-    recommended_meal_map = service.get_recommendations(
-        user=user,
-        num_recommendations_per_period=2,
-    )
+    with transaction.atomic():
+        service = MealRecommendationService()
+        
+        recommended_meal_map = service.get_recommendations(
+            user=user,
+            num_recommendations_per_period=2,
+        )
 
-    for period, recommended_meals_list in recommended_meal_map.items():
-        recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
-        for index, meal in enumerate(recommended_meals):
-            text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
-            image_url = meal.image_url.url if meal.image_url else None
-            meal_id = str(meal.id)
-            
-            recomendation_obj = Recommendation.objects.create(
-                user=user,
-                meal=meal,
-                time_of_day=TimeOfDayChoices.get_period(period),
-                choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
-                sent_to_user=True if user.get_time_period() == period else False,
-                day=user.get_local_time()
-            )
-
-            if user.get_time_period() == period:
-                payload = recommend_product_payload(recomendation_obj.id, text, image_url)
-
-                Message.bot_message_action_reply(text, user,
-                    payload=payload,
-                    metadata={
-                        "meal_id": meal_id, 
-                        "recomendation_id": recomendation_obj.id,
-                        "description": "Users can order, like or hate meal"
-                        }
+        for period, recommended_meals_list in recommended_meal_map.items():
+            recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
+            for index, meal in enumerate(recommended_meals):
+                text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
+                image_url = meal.image_url.url if meal.image_url else None
+                meal_id = str(meal.id)
+                
+                recomendation_obj = Recommendation.objects.create(
+                    user=user,
+                    meal=meal,
+                    time_of_day=TimeOfDayChoices.get_period(period),
+                    choice_option=ChoiceOption.FIRST if index == 0 else ChoiceOption.SECOND,
+                    sent_to_user=True if user.get_time_period() == period else False,
+                    day=user.get_local_time()
                 )
+
+                if user.get_time_period() == period:
+                    payload = recommend_product_payload(recomendation_obj.id, text, image_url)
+
+                    Message.bot_message_action_reply(text, user,
+                        payload=payload,
+                        metadata={
+                            "meal_id": meal_id, 
+                            "recomendation_id": recomendation_obj.id,
+                            "description": "Users can order, like or hate meal"
+                            }
+                    )
 
 def meal_recommendations(
     user: User,

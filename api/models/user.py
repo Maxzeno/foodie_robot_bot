@@ -29,7 +29,7 @@ class User(AbstractUser, BaseModel):
     code = models.CharField(max_length=100, unique=True, blank=True)
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
-    average_meal_budget = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    average_meal_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     gender = models.CharField(max_length=10, choices=GenderChoices.choices, null=True, blank=True)
     phone = models.CharField(

@@ -240,21 +240,20 @@ HUEY = RedisHuey(
     'foodie_robot',
     url=REDIS_URL or 'redis://localhost:6379/0',
     immediate=HUEY_IMMEDIATE,
-    # Reduce Redis polling frequency to save commands
-    # periodic=True enables periodic task scheduling
-    # blocking=True uses BRPOP (already used by default)
+    # read_timeout sets BRPOP timeout in seconds (default is 1)
+    # Higher value = fewer Redis commands, but slower task pickup
+    # 60 seconds reduces BRPOP calls from 60/min to 1/min
+    read_timeout=60,
 )
 
-# Huey consumer settings - these are passed to run_huey command
-# To use: python manage.py run_huey --worker-type=thread --workers=2 --periodic-check-interval=60
-# Or set via environment variable
-HUEY_CONSUMER_OPTIONS = {
-    # Check for periodic tasks every 60 seconds instead of every 1 second
-    # Since your tasks run every 30 minutes, checking every 60 seconds is sufficient
-    'periodic_check_interval': 60,
-    # Worker health check interval (default is 1 second)
-    'health_check_interval': 60,
-    # BRPOP timeout - how long to wait for tasks before re-checking
-    # Higher value = fewer Redis commands, but slower response to new tasks
-    'scheduler_interval': 60,
-}
+# Huey consumer settings documentation
+# To reduce Redis commands, use these flags when running Huey:
+#   python manage.py run_huey --health-check-interval 60 --scheduler-interval 60
+#
+# --scheduler-interval: How often to check for scheduled/periodic tasks (default: 1)
+# read_timeout=60 in RedisHuey: BRPOP timeout in seconds (default: 1)
+#
+# Combined effect:
+# - BRPOP: 1 command per 60 seconds (instead of 60/min)
+# - Scheduler check: 1 per 60 seconds (instead of 60/min)
+# - Total: ~2-3 commands/minute instead of ~260/minute

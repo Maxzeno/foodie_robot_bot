@@ -16,7 +16,7 @@ class UserBalance(BaseModel):
     )
 
     amount = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=0,
         help_text="Balance amount in the specified currency"
