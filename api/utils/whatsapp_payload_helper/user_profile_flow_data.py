@@ -1,6 +1,8 @@
+from api.models.location import City
 from api.models.user import User
 from api.models.meal import FitnessGoal, HealthCondition, Allergy, PreferredCuisine
-
+from phonenumbers.phonenumberutil import region_code_for_number
+import phonenumbers
 
 def user_data_profile_flow(user: User):
     fitness_goals = [
@@ -48,7 +50,15 @@ def user_data_profile_flow(user: User):
     ]
 
     # Get currency helper text from user's city
-    currency_code = user.city.currency.code if user.city and user.city.currency else "NGN"
+    default_currency = "NGN"
+    try:
+        pn = phonenumbers.parse(f"+{user.phone.lstrip('+')}")
+        cities_under_ph = City.objects.filter(state__country__code=region_code_for_number(pn).upper())
+        default_currency = cities_under_ph[0].currency.code if cities_under_ph.exists() else "NGN"
+    except:
+        pass
+     
+    currency_code = user.city.currency.code if user.city else default_currency
     currency_helper = f"Enter amount per meal ({currency_code})"
 
     return {

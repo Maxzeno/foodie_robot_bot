@@ -35,7 +35,15 @@ def whatsapp_webhook(request):
     try:
         entry = json_data["entry"][0]
         change = entry["changes"][0]["value"]
+        if change.get("messages") is None:
+            return {"detail": "Done"}
+        
         message = change["messages"][0]
+        try:
+            username = change["contacts"][0]['profile']['name']
+        except:
+            username = None
+
         msg_type = message['type']
 
         phone = message["from"]
@@ -68,6 +76,10 @@ def whatsapp_webhook(request):
             longitude = json_resp.get('longitude')
             text = f"Location - name: {name or ''}, address: {address or ''}, latitude: {latitude}, longitude: {longitude}"
         
+        elif msg_type == "button":
+            json_resp = message[msg_type]
+            text = json_resp.get('text') or ''
+        
         elif msg_type == "interactive":
             interactive = message["interactive"]
             interactive_type = interactive.get("type")
@@ -98,7 +110,7 @@ def whatsapp_webhook(request):
             reply_message_id = context["id"]
 
     except Exception as e:
-        print("Error parsing webhook: %s", e)
+        print("Error parsing webhook:", e)
         return {"detail": "Done"}
 
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
@@ -106,6 +118,9 @@ def whatsapp_webhook(request):
         return {"detail": "Done"}
 
     user, created = User.objects.get_or_create(phone=phone)
+    if username and (not user.username or user.username.strip().lower() != username.strip().lower()):
+        user.username = username
+        user.save(update_fields=['username'])
 
     Message.user_message(message_id=sender_message_id, 
         resp=json_resp, content=text, 
