@@ -1,0 +1,199 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Send Template to Important Users{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; Send Template
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Send Template to Important Users</h1>
+
+    <p class="help">
+        Send WhatsApp template messages to the most important and active users who are
+        <strong>outside the 24-hour free messaging window</strong>.
+    </p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #17a2b8;">
+        <h3 style="margin-top: 0;">User Importance Scoring</h3>
+        <p style="margin-bottom: 10px;">Users are ranked by importance score (max 250 points):</p>
+        <ul style="margin: 0; padding-left: 20px;">
+            <li><strong>Has ordered before:</strong> 50 points (highest priority)</li>
+            <li><strong>Total orders:</strong> 5 points/order (max 50)</li>
+            <li><strong>Total spending:</strong> 1 point/1000 spent (max 30)</li>
+            <li><strong>Messages sent:</strong> 1 point/10 messages (max 20)</li>
+            <li><strong>Days active:</strong> 2 points/day (max 30)</li>
+            <li><strong>Reviews written:</strong> 5 points/review (max 20)</li>
+            <li><strong>Referrals made:</strong> 10 points/referral (max 30)</li>
+            <li><strong>Recommendation acceptance:</strong> up to 20 points</li>
+        </ul>
+    </div>
+
+    <form method="post" id="send-template-form">
+        {% csrf_token %}
+
+        <fieldset class="module aligned">
+            <h2>Template Configuration</h2>
+
+            <div class="form-row">
+                <div>
+                    <label for="id_template_name" class="required">Template Name:</label>
+                    {{ form.template_name }}
+                    {% if form.template_name.help_text %}
+                    <p class="help">{{ form.template_name.help_text }}</p>
+                    {% endif %}
+                    {% if form.template_name.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.template_name.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label for="id_language_code">Language Code:</label>
+                    {{ form.language_code }}
+                    {% if form.language_code.help_text %}
+                    <p class="help">{{ form.language_code.help_text }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label for="id_limit">User Limit:</label>
+                    {{ form.limit }}
+                    {% if form.limit.help_text %}
+                    <p class="help">{{ form.limit.help_text }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="submit-row" style="padding: 15px 0; display: flex; gap: 15px;">
+            <button type="submit" name="action" value="preview"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                           color: white;
+                           border: none;
+                           padding: 12px 28px;
+                           font-size: 14px;
+                           font-weight: 600;
+                           border-radius: 8px;
+                           cursor: pointer;
+                           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                           transition: all 0.3s ease;
+                           display: inline-flex;
+                           align-items: center;
+                           gap: 8px;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';">
+                <i class="fas fa-eye"></i> Preview Users
+            </button>
+            <button type="submit" name="action" value="send"
+                    style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                           color: white;
+                           border: none;
+                           padding: 12px 28px;
+                           font-size: 14px;
+                           font-weight: 600;
+                           border-radius: 8px;
+                           cursor: pointer;
+                           box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+                           transition: all 0.3s ease;
+                           display: inline-flex;
+                           align-items: center;
+                           gap: 8px;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(17, 153, 142, 0.5)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(17, 153, 142, 0.4)';"
+                    onclick="return confirm('Are you sure you want to send this template to the selected users? This action cannot be undone.');">
+                <i class="fas fa-paper-plane"></i> Send Template Messages
+            </button>
+        </div>
+    </form>
+
+    {% if preview_data %}
+    <div style="margin-top: 30px;">
+        <h2>Preview: {{ preview_data|length }} Users Would Receive the Template</h2>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+                <tr style="background: #79aec8; color: white;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">#</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">User Code</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Phone</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Score</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Orders</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Messages</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Reviews</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Referrals</th>
+                    <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Hours Since Last Activity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in preview_data %}
+                <tr style="{% if forloop.counter|divisibleby:2 %}background: #f9f9f9;{% endif %}">
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ forloop.counter }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">
+                        <a href="{% url 'admin:api_user_change' user.user_id %}">{{ user.user_code }}</a>
+                    </td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ user.phone|default:"-" }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                        <strong style="{% if user.score >= 100 %}color: #28a745;{% elif user.score >= 50 %}color: #ffc107;{% else %}color: #6c757d;{% endif %}">
+                            {{ user.score }}
+                        </strong>
+                    </td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ user.metrics.total_orders }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ user.metrics.total_messages }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ user.metrics.total_reviews }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ user.metrics.total_referrals }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">
+                        {% if user.metrics.hours_since_last_activity %}
+                            {{ user.metrics.hours_since_last_activity|floatformat:1 }}h
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" style="padding: 20px; text-align: center; color: #666;">
+                        No users found outside the 24-hour window.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if preview_data %}
+        <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
+            <strong>Note:</strong> These users are outside the 24-hour WhatsApp free messaging window.
+            Sending template messages to them may incur charges based on your WhatsApp Business API pricing.
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 30px; padding: 15px; background: #f1f1f1; border-radius: 5px;">
+        <h3>Score Breakdown Legend</h3>
+        <p>Each user's score breakdown shows which factors contributed to their importance score:</p>
+        <ul>
+            <li><strong>has_ordered:</strong> Whether they've placed at least one order</li>
+            <li><strong>orders:</strong> Points from total order count</li>
+            <li><strong>spending:</strong> Points from total spending amount</li>
+            <li><strong>messages:</strong> Points from message engagement</li>
+            <li><strong>days_active:</strong> Points from account longevity</li>
+            <li><strong>reviews:</strong> Points from review contributions</li>
+            <li><strong>referrals:</strong> Points from successful referrals</li>
+            <li><strong>acceptance_rate:</strong> Points from recommendation acceptance</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

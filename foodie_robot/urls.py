@@ -20,6 +20,27 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from api.urls import api
+from api.admin.template_campaign import TemplateCampaignAdminSite
+
+# Extend admin site with custom URLs
+_original_get_urls = admin.site.get_urls
+
+def custom_get_urls():
+    custom_urls = [
+        path(
+            'api/send-template/',
+            admin.site.admin_view(TemplateCampaignAdminSite.send_template_view),
+            name='send_template'
+        ),
+        path(
+            'api/send-template/preview/',
+            admin.site.admin_view(TemplateCampaignAdminSite.preview_users_api),
+            name='send_template_preview'
+        ),
+    ]
+    return custom_urls + _original_get_urls()
+
+admin.site.get_urls = custom_get_urls
 
 urlpatterns = [
     path("admin/", admin.site.urls),

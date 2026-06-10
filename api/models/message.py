@@ -165,7 +165,6 @@ class Message(BaseModel):
         message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent, metadata=metadata)
         return message
     
-
     @staticmethod
     def bot_message_flow(content: str, user, flow_cta: str, flow_id: str, screen_name: str, data: dict, current_intent: str=CurrentIntentChoices.NO_INTENT):
         if screen_name not in {'ORDER_FLOW', 'USER_PROFILE', 'ORDER_REVIEW', 'WITHDRAWAL'}:
@@ -195,6 +194,20 @@ class Message(BaseModel):
         }
         message_id = Message.send_message(user, msg_type, payload)
         message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=content, user=user, current_intent=current_intent)
+        return message
+    
+    @staticmethod
+    def bot_message_template(template_name: str, user, language_code = "en_US", current_intent: str=CurrentIntentChoices.NO_INTENT):
+        
+        payload = {
+            "name": template_name,
+            "language": {
+                "code": language_code
+            }
+        }
+        
+        message_id = Message.send_message(user, "template", payload)
+        message = Message.objects.create(message_id=message_id, role=RoleChoices.BOT, content=template_name, user=user, current_intent=current_intent)
         return message
     
     @staticmethod
@@ -247,7 +260,7 @@ class Message(BaseModel):
         }
         
         data[msg_type] = payload
-            
+
         try:
             response = requests.post(url, headers=headers, json=data)
             print("WhatsApp API response:", response.text)

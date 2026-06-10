@@ -257,3 +257,31 @@ HUEY = RedisHuey(
 # - BRPOP: 1 command per 60 seconds (instead of 60/min)
 # - Scheduler check: 1 per 60 seconds (instead of 60/min)
 # - Total: ~2-3 commands/minute instead of ~260/minute
+
+
+# Jazzmin Admin Configuration
+JAZZMIN_SETTINGS = {
+    "site_title": "Foodie Robot Admin",
+    "site_header": "Foodie Robot",
+    "site_brand": "Foodie Robot",
+    "welcome_sign": "Welcome to Foodie Robot Admin",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "api.user": "fas fa-users",
+        "api.order": "fas fa-shopping-cart",
+        "api.meal": "fas fa-utensils",
+        "api.message": "fas fa-comments",
+        "api.restaurant": "fas fa-store",
+        "api.recommendation": "fas fa-thumbs-up",
+        "api.review": "fas fa-star",
+    },
+    "custom_links": {
+        "api": [{
+            "name": "Send Template Messages",
+            "url": "admin:send_template",
+            "icon": "fas fa-paper-plane",
+            "permissions": ["api.view_user"]
+        }]
+    },
+}

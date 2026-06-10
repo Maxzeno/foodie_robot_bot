@@ -1,3 +1,4 @@
+import uuid
 from api.models.message import CurrentIntentChoices, Message
 import json
 import logging
@@ -15,8 +16,6 @@ from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_p
 from api.utils.whatsapp_verification import verify_whatsapp_signature
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 
-logger = logging.getLogger(__name__)
-
 router = Router(tags=["Webhook"])
 
 VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
@@ -31,7 +30,7 @@ def whatsapp_webhook(request):
         return HttpResponse("Forbidden: Invalid signature", status=403)
 
     json_data = json.loads(request.body)
-    logger.debug('Webhook received: %s', json_data)
+    print('Webhook received:', json_data)
 
     try:
         entry = json_data["entry"][0]
@@ -98,13 +97,8 @@ def whatsapp_webhook(request):
             context = message["context"]
             reply_message_id = context["id"]
 
-        logger.debug(
-            "Webhook parsed: type=%s, phone=%s, text=%s, msg_id=%s, reply_id=%s",
-            msg_type, phone, text, sender_message_id, reply_message_id
-        )
-
     except Exception as e:
-        logger.exception("Error parsing webhook: %s", e)
+        print("Error parsing webhook: %s", e)
         return {"detail": "Done"}
 
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
@@ -159,25 +153,33 @@ def whatsapp_verify(request):
     return HttpResponse("Error: token mismatch", status=403)
 
 
-# @csrf_exempt
-# @router.post("/whatsapp-test")
-# def whatsapp_test(request, text:str):
-#     sender_message_id = uuid.uuid4().hex
-#     found_msg = Message.objects.filter(message_id=sender_message_id).first()
-#     if found_msg:
-#         return {"detail": "Done"}
+@csrf_exempt
+@router.post("/whatsapp-test")
+def whatsapp_test(request, text:str):
+    sender_message_id = uuid.uuid4().hex
+    found_msg = Message.objects.filter(message_id=sender_message_id).first()
+    if found_msg:
+        return {"detail": "Done"}
     
-#     user = User.objects.get(phone="2349077745730")
+    user = User.objects.get(phone="2349077745730")
 
-#     Message.user_message(message_id=sender_message_id, 
-#         resp={}, content=text, 
-#         user=user, enable_typing_indicator=True, reply_message_id=None)
+    Message.user_message(message_id=sender_message_id, 
+        resp={}, content=text, 
+        user=user, enable_typing_indicator=True, reply_message_id=None)
     
-#     response_message = FoodBotAIHandler(user, sender_message_id, None).process_message()
-#     if response_message:
-#         Message.bot_message(response_message, user=user)
+    response_message = FoodBotAIHandler(user, sender_message_id, None).process_message()
+    if response_message:
+        Message.bot_message(response_message, user=user)
 
-#     return {"detail": "Done"}
+    return {"detail": "Done"}
+
+# # TODO: to be removed in production
+@csrf_exempt
+@router.get("/whatsapp-test-template")
+def whatsapp_test_template(request):
+    user = User.objects.get(phone="2349077745730")
+    Message.bot_message_template("still_want_meal_recommendations", user=user)
+    return {"detail": "Done"}
 
 # # TODO: to be removed in production
 # @csrf_exempt
@@ -202,7 +204,6 @@ def whatsapp_verify(request):
 #     return res
 
 # # TODO: to be removed in production
-
 # @csrf_exempt
 # @router.get("/test-temp-time")
 # def text_temp_time(request):
