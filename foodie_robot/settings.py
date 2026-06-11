@@ -61,24 +61,16 @@ cloudinary.config(
     secure=True
 )
 
-ADD_GDAL_PATH = config('ADD_GDAL_PATH', default=False, cast=bool)
-
-if ADD_GDAL_PATH:
-    GDAL_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\gdal311.dll'
-    GEOS_LIBRARY_PATH = r'C:\Users\user\AppData\Local\Programs\OSGeo4W\bin\geos_c.dll'
-
 # Application definition
 
 INSTALLED_APPS = [
     "jazzmin",
-    "leaflet",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.gis",
     "corsheaders",
     "cloudinary_storage",
     "cloudinary",

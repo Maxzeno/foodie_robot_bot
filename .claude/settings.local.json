@@ -58,7 +58,15 @@
       "Bash(wc:*)",
       "Bash(git check-ignore:*)",
       "Bash(env\\Scripts\\python.exe manage.py runserver:*)",
-      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py runserver)"
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py runserver)",
+      "Bash(env\\Scripts\\python.exe manage.py check:*)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py check)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\pip.exe\" install shapely==2.0.7)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py makemigrations api --name gdal_free_geojson_fields)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" manage.py shell -c \"from api.models.location import City; from api.models.address import DeliveryAddress; from api.models.restaurant import Restaurant; from api.models.order import Order; print(''All models imported successfully!'')\")",
+      "Bash(findstr:*)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\pip.exe\" list)",
+      "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\pip.exe\" uninstall django-geojson django-leaflet -y)"
     ],
     "deny": [],
     "ask": []

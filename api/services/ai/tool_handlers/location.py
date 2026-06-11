@@ -1,5 +1,4 @@
 from typing import Optional
-from django.contrib.gis.geos import Point
 
 from api.models.message import Message
 from api.models.order import Order
@@ -32,13 +31,16 @@ def save_delivery_location(
         user.city = city
         user.save()
 
-        # Create or update delivery address
-        point = Point(longitude, latitude, srid=4326)
+        # Create or update delivery address using GeoJSON format
+        point_geojson = {
+            "type": "Point",
+            "coordinates": [longitude, latitude]
+        }
 
         # Create new default address
         DeliveryAddress.objects.create(
             user=user,
-            point=point,
+            point=point_geojson,
             name=name,
             street_address=address,
             is_default=False
@@ -93,9 +95,13 @@ def request_delivery_location(user: User) -> bool:
 def get_current_location(user: User) -> bool:
     try:
         text = f"Your current delivery address"
-        
+
         latest_delivery_address = DeliveryAddress.objects.filter(user=user).first()
-        Message.bot_message_location(latest_delivery_address.name or text, user, latitude=latest_delivery_address.point.y, longitude=latest_delivery_address.point.x, address=latest_delivery_address.street_address)
+        # GeoJSON format: {"type": "Point", "coordinates": [longitude, latitude]}
+        point = latest_delivery_address.point
+        longitude = point["coordinates"][0] if point else None
+        latitude = point["coordinates"][1] if point else None
+        Message.bot_message_location(latest_delivery_address.name or text, user, latitude=latitude, longitude=longitude, address=latest_delivery_address.street_address)
 
         return True
     except Exception as e:

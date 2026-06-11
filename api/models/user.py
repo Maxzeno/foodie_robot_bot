@@ -44,6 +44,9 @@ class User(AbstractUser, BaseModel):
         ],
     )
 
+    is_active = models.BooleanField(default=True)
+    is_blocked = models.BooleanField(default=False)
+
     fitness_goals = models.ForeignKey(FitnessGoal, on_delete=models.PROTECT, related_name="users", null=True, blank=True)
     health_conditions = models.ManyToManyField(HealthCondition, blank=True, related_name="users")
     allergies = models.ManyToManyField(Allergy, blank=True, related_name="users")

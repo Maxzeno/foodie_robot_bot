@@ -3,7 +3,6 @@ from api.models.base import BaseModel
 from api.models.currency import Currency
 from api.models.meal import Meal
 from api.models.user import User
-from django.contrib.gis.db import models as gis_models
 
 from api.utils.generate import generate_unique_code
 
@@ -31,10 +30,10 @@ class Order(BaseModel):
     meal = models.ForeignKey(Meal, on_delete=models.PROTECT, related_name="orders")
     
     pickup_street_address = models.CharField(max_length=255, blank=True, null=True) # e.g. "123 Allen Avenue"
-    pickup_point = gis_models.PointField(srid=4326, blank=True, null=True)
-    
+    pickup_point = models.JSONField(blank=True, null=True, help_text="GeoJSON Point")
+
     dropoff_street_address = models.CharField(max_length=255, blank=True, null=True) # e.g. "123 Allen Avenue"
-    dropoff_point = gis_models.PointField(srid=4326, blank=True, null=True)
+    dropoff_point = models.JSONField(blank=True, null=True, help_text="GeoJSON Point")
 
     quantity = models.IntegerField(default=1)
     status = models.CharField(max_length=20, default=OrderStatus.PENDING, choices=OrderStatus.choices)

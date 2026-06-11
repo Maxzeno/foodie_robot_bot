@@ -1,5 +1,5 @@
 import uuid
-from api.models.message import CurrentIntentChoices, Message
+from api.models.message import CurrentIntentChoices, Message, RoleChoices
 import json
 import logging
 from ninja import Router
@@ -91,6 +91,9 @@ def whatsapp_webhook(request):
             elif interactive_type == "nfm_reply":
                 user, created = User.objects.get_or_create(phone=phone)
 
+                if user.is_blocked:
+                    return {"detail": "Done"}
+
                 fields = interactive['nfm_reply']['response_json']
                 fields = json.loads(fields)
                 flow_token = fields.pop('flow_token', None)
@@ -118,6 +121,10 @@ def whatsapp_webhook(request):
         return {"detail": "Done"}
 
     user, created = User.objects.get_or_create(phone=phone)
+
+    if user.is_blocked:
+        return {"detail": "Done"}
+
     if username and not user.username:
         user.username = username
         user.save(update_fields=['username'])
@@ -125,8 +132,10 @@ def whatsapp_webhook(request):
     Message.user_message(message_id=sender_message_id, 
         resp=json_resp, content=text, 
         user=user, enable_typing_indicator=True, reply_message_id=reply_message_id)
-    
-    if created:
+
+    found_bot_msg = Message.objects.filter(user=user, role=RoleChoices.BOT).exists()
+
+    if not found_bot_msg:
         user_code = extract_user_code(text)
         if user_code:
             referrer = User.objects.filter(code=user_code.lower()).first()

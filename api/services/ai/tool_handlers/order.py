@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from decimal import Decimal
 
 from api.models.location import City
@@ -11,6 +11,16 @@ import requests
 from django.conf import settings
 import math
 from api.utils.distance import cal_delivery_fee
+
+
+def get_point_coordinates(point) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Extract longitude and latitude from a GeoJSON point.
+    Returns (longitude, latitude) tuple.
+    """
+    if point and isinstance(point, dict) and "coordinates" in point:
+        return point["coordinates"][0], point["coordinates"][1]
+    return None, None
 
 # Format status message
 ORDER_STATUS_EMOJI = {
@@ -91,7 +101,8 @@ def place_order_form(
         )
         return False
     
-    address_city = City.get_city_by_coordinates(delivery_address.point.x, delivery_address.point.y)
+    addr_lng, addr_lat = get_point_coordinates(delivery_address.point)
+    address_city = City.get_city_by_coordinates(addr_lng, addr_lat)
     if address_city != user.city:
         Message.bot_message(
             "Your selected delivery address is outside your current city. Please update your delivery address or change your delivery location.",
@@ -100,14 +111,14 @@ def place_order_form(
         return False
 
     try:
-        message = Message.bot_message_flow(f"Please complete your order for {meal.name} so we can process it immediately", 
-            user=user, 
-            flow_cta="Complete Order", 
-            flow_id="1531243271627499", 
+        message = Message.bot_message_flow(f"Please complete your order for {meal.name} so we can process it immediately",
+            user=user,
+            flow_cta="Complete Order",
+            flow_id="1531243271627499",
             screen_name="ORDER_FLOW",
             data={
                 "current_address": delivery_address.street_address or 'Last set address',
-                "maps_url": f"https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x}",
+                "maps_url": f"https://www.google.com/maps?q={addr_lat},{addr_lng}",
                 "meal_id": meal_id,
                 "username": user.username,
             }
@@ -196,23 +207,25 @@ def place_order(
             )
             return False
         
-        address_city = City.get_city_by_coordinates(delivery_address.point.x, delivery_address.point.y)
+        addr_lng, addr_lat = get_point_coordinates(delivery_address.point)
+        address_city = City.get_city_by_coordinates(addr_lng, addr_lat)
         if address_city != user.city:
             Message.bot_message(
                 "Your selected delivery address is outside your current city. Please update your delivery address or change your delivery location.",
                 user=user
             )
             return False
-        
+
         # Calculate pricing
         meal_price = meal.price * number_of_plates
 
-        delivery_fee = Decimal(str(cal_delivery_fee(meal.city.delivery_fee_per_km, 
-                                                    meal.city.min_delivery_fee, 
-                                                    meal.restaurant.point.y, 
-                                                    meal.restaurant.point.x, 
-                                                    delivery_address.point.y, 
-                                                    delivery_address.point.x)))
+        rest_lng, rest_lat = get_point_coordinates(meal.restaurant.point)
+        delivery_fee = Decimal(str(cal_delivery_fee(meal.city.delivery_fee_per_km,
+                                                    meal.city.min_delivery_fee,
+                                                    rest_lat,
+                                                    rest_lng,
+                                                    addr_lat,
+                                                    addr_lng)))
         
         delivery_fee = delivery_fee * math.ceil(number_of_plates/5)
         total_price = meal_price + delivery_fee
@@ -259,9 +272,9 @@ def place_order(
 • Delivery: {currency_symbol}{delivery_fee:,.2f}
 • Total: {currency_symbol}{total_price:,.2f}
 
-📍 Delivery to: 
-• Address: {delivery_address.street_address or 'Last set address'} 
-• View current delivery address: https://www.google.com/maps?q={delivery_address.point.y},{delivery_address.point.x} (You can update the delivery address if this isn’t your desired location.)
+📍 Delivery to:
+• Address: {delivery_address.street_address or 'Last set address'}
+• View current delivery address: https://www.google.com/maps?q={addr_lat},{addr_lng} (You can update the delivery address if this isn't your desired location.)
 
 💳 Please proceed to payment to confirm your order.
 """.strip()

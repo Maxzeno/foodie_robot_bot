@@ -1,7 +1,7 @@
 from django.db import models
 from api.models.base import BaseModel
 from api.models.user import User
-from django.contrib.gis.db import models as gis_models
+
 
 class DeliveryAddress(BaseModel):
     user = models.ForeignKey(
@@ -10,7 +10,7 @@ class DeliveryAddress(BaseModel):
 
     name = models.CharField(max_length=255, blank=True, null=True) # e.g. "Shoprite"
     street_address = models.CharField(max_length=255, blank=True, null=True) # e.g. "123 Allen Avenue"
-    point = gis_models.PointField(srid=4326)
+    point = models.JSONField(blank=True, null=True, help_text="GeoJSON Point")
 
     is_default = models.BooleanField(default=False)
 

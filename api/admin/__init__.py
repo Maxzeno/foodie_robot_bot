@@ -21,7 +21,6 @@ from api.models.special_occasion import SpecialOccasion
 from api.models.meal_embedding import MealEmbedding
 from api.models.user_balance import UserBalance
 from api.models.withdrawal import Withdrawal
-from leaflet.admin import LeafletGeoAdmin
 
 
 # =============================================================================
@@ -96,7 +95,7 @@ class UserAdmin(admin.ModelAdmin):
 # ORDER ADMIN
 # =============================================================================
 @admin.register(Order)
-class OrderAdmin(LeafletGeoAdmin):
+class OrderAdmin(admin.ModelAdmin):
     list_display = ['code', 'user_link', 'meal_name', 'quantity', 'total_price_display', 'status_badge', 'paid_badge', 'ordered_via', 'created_at']
     list_filter = ['status', 'paid', 'ordered_via', 'currency', 'created_at']
     search_fields = ['code', 'user__phone', 'user__code', 'meal__name', 'rider_phone', 'rider_name']
@@ -255,10 +254,7 @@ class MealAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('code', 'name', 'restaurant', 'city', 'description', 'price', 'available')
-        }),
-        ('Image', {
-            'fields': ('image_url', 'image_preview_large'),
+            'fields': ('code', 'name', 'restaurant', 'city', 'description', 'price', 'available', 'image_url', 'image_preview_large')
         }),
         ('Availability', {
             'fields': ('times_of_day', 'available_from_time', 'available_to_time'),
@@ -324,7 +320,7 @@ class MealAdmin(admin.ModelAdmin):
 # RESTAURANT ADMIN
 # =============================================================================
 @admin.register(Restaurant)
-class RestaurantAdmin(LeafletGeoAdmin):
+class RestaurantAdmin(admin.ModelAdmin):
     list_display = ['name', 'phone', 'address', 'hours_display', 'inactive_badge', 'meal_count']
     list_filter = ['inactive', 'created_at']
     search_fields = ['name', 'phone', 'address', 'email']
@@ -531,7 +527,7 @@ class WithdrawalAdmin(admin.ModelAdmin):
 # LOCATION ADMINS
 # =============================================================================
 @admin.register(City)
-class CityAdmin(LeafletGeoAdmin):
+class CityAdmin(admin.ModelAdmin):
     list_display = ['name', 'state', 'timezone', 'user_count', 'meal_count']
     list_filter = ['state']
     search_fields = ['name', 'state__name']
@@ -585,7 +581,7 @@ class CountryAdmin(admin.ModelAdmin):
 # OTHER ADMINS
 # =============================================================================
 @admin.register(DeliveryAddress)
-class DeliveryAddressAdmin(LeafletGeoAdmin):
+class DeliveryAddressAdmin(admin.ModelAdmin):
     list_display = ['user_link', 'street_address', 'is_default', 'created_at']
     list_filter = ['is_default', 'created_at']
     search_fields = ['user__phone', 'user__code', 'street_address']

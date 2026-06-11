@@ -1,8 +1,7 @@
 from django.db import models
 from api.models.base import BaseModel
 from api.models.currency import Currency
-from django.contrib.gis.db import models as gis_models
-from django.contrib.gis.geos import Point
+from shapely.geometry import Point as ShapelyPoint, shape
 
 # from api.models.meal import PreferredCuisine
 
@@ -131,7 +130,7 @@ class City(BaseModel):
     state = models.ForeignKey(
         State, on_delete=models.PROTECT, related_name="cities"
     )
-    boundary = gis_models.PolygonField(srid=4326)
+    boundary = models.JSONField(blank=True, null=True, help_text="GeoJSON Polygon")
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='cities')
     preferred_cuisine = models.ManyToManyField("PreferredCuisine", blank=True, related_name="cities")
     average_meal_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -145,20 +144,27 @@ class City(BaseModel):
             choices=CommonTimezoneChoices.choices,
             help_text="IANA timezone name (e.g., 'Africa/Lagos', 'America/New_York')"
         )
- 
+
     @classmethod
     def get_city_by_coordinates(cls, longitude, latitude):
-        point = Point(longitude, latitude, srid=4326)
-        
-        try:
-            # Use spatial lookup to find city whose boundary contains the point
-            city = cls.objects.get(boundary__contains=point)
-            return city
-        except cls.DoesNotExist:
-            return None
-        except cls.MultipleObjectsReturned:
-            # In case of overlapping boundaries, return the first match
-            return cls.objects.filter(boundary__contains=point).first()
+        """
+        Find city whose boundary contains the given coordinates.
+        Uses shapely for point-in-polygon check (GDAL-free implementation).
+        """
+        point = ShapelyPoint(longitude, latitude)
+
+        # Iterate through cities with boundaries and check containment
+        for city in cls.objects.exclude(boundary__isnull=True):
+            try:
+                if city.boundary:
+                    # Convert GeoJSON boundary to shapely geometry
+                    boundary_geom = shape(city.boundary)
+                    if boundary_geom.contains(point):
+                        return city
+            except Exception:
+                continue
+
+        return None
     
     class Meta:
         unique_together = ('name', 'state') # Prevent duplicate city names within same state

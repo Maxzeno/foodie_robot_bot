@@ -55,3 +55,10 @@ BUILD IT RIGID FIRST BEFORE MAKING DYNAMIC WITH AI AND ALLOWING TYPING AND STUFF
 - generate meal recommendation run in async
 
 - Let them use a 4 digit code to confirm the order - send it to user, vendor and rider - rider on pickup from the vendor gives him his code and then when it gets to the user he asks for the code same code.
+
+
+- convert resturants and user location into a basic lat and lon maybe comma seperated field and also all a preview locatio url link.
+  ---- eg. (lat, lon)
+- maybe also remove gdal entirely and use they same system is used in benji and also add a preview link with the area circled
+  ---- eg. [(lat,lon), (lat, lon)] with validation of course
+  
