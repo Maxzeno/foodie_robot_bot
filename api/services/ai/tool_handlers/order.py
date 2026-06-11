@@ -102,6 +102,12 @@ def place_order_form(
         return False
     
     addr_lng, addr_lat = get_point_coordinates(delivery_address.point)
+    if addr_lng is None or addr_lat is None:
+        Message.bot_message(
+            "Your delivery address doesn't have valid coordinates. Please update your delivery address.",
+            user=user
+        )
+        return False
     address_city = City.get_city_by_coordinates(addr_lng, addr_lat)
     if address_city != user.city:
         Message.bot_message(

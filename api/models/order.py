@@ -5,6 +5,7 @@ from api.models.meal import Meal
 from api.models.user import User
 
 from api.utils.generate import generate_unique_code
+from api.utils.validation import validate_geojson_point
 
 
 class OrderStatus(models.TextChoices):
@@ -56,8 +57,14 @@ class Order(BaseModel):
     delivered_at = models.DateTimeField(null=True, blank=True)
 
 
+    def clean(self):
+        super().clean()
+        validate_geojson_point(self.pickup_point, field_name="pickup_point")
+        validate_geojson_point(self.dropoff_point, field_name="dropoff_point")
+
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = unique_order_code()
 
+        self.full_clean()
         super().save(*args, **kwargs)

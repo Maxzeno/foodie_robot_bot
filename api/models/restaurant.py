@@ -1,7 +1,7 @@
 from api.models.base import BaseModel
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from datetime import datetime, time
+from api.utils.validation import validate_geojson_point
 
 class DayOfWeekChoices(models.TextChoices):
     MONDAY = 'monday', 'Monday'
@@ -32,11 +32,7 @@ class Restaurant(BaseModel):
         default=time(22, 0),
         help_text="Restaurant closing time (default: 22:00)"
     )
-    available_days = ArrayField(
-        models.CharField(
-            max_length=20,
-            choices=DayOfWeekChoices.choices
-        ),
+    available_days = models.JSONField(
         default=list,
         blank=True,
         help_text="Days when restaurant is open (empty = open all days)"
@@ -78,3 +74,11 @@ class Restaurant(BaseModel):
 
         # Check if within operating hours
         return self.open_time <= current_time <= self.close_time
+
+    def clean(self):
+        super().clean()
+        validate_geojson_point(self.point, field_name="point")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

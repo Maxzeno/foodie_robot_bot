@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from api.models.base import BaseModel
 from api.models.meal import Meal
 
@@ -21,10 +20,8 @@ class MealEmbedding(BaseModel):
     )
 
     # The embedding vector (1536 dimensions for text-embedding-3-small)
-    embedding = ArrayField(
-        models.FloatField(),
-        size=1536,
-        help_text="OpenAI embedding vector for semantic similarity"
+    embedding = models.JSONField(
+        help_text="OpenAI embedding vector for semantic similarity (1536 floats)"
     )
 
     # Hash of meal attributes used to generate embedding

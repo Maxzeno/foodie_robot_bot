@@ -1,0 +1,3 @@
+in the admin make the coordinate boundary and coordinate point JSONFields to be more better visually repremented and also add previewing or points and boundary in like google map via like or something like that
+
+also before you start working on this in the admin separate them into different files for better organization

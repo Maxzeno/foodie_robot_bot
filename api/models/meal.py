@@ -1,7 +1,6 @@
 from django.db import models
 from api.models.base import BaseModel
 from api.models.location import City
-from django.contrib.postgres.fields import ArrayField
 from cloudinary.models import CloudinaryField
 
 from api.models.restaurant import Restaurant
@@ -160,14 +159,10 @@ class Meal(BaseModel):
 
     available = models.BooleanField(default=True)
 
-    times_of_day = ArrayField(
-        models.CharField(
-            max_length=50,
-            choices=TimeOfDayChoices.choices,
-        ),
+    times_of_day = models.JSONField(
         default=list,
         blank=True,
-        help_text="Times of day this meal is go for (e.g., morning, afternoon, evening)"
+        help_text="Times of day this meal is good for (e.g., ['morning', 'afternoon', 'evening'])"
     )
 
     # Time-based availability

@@ -774,7 +774,7 @@ class Command(BaseCommand):
                 restaurant=restaurant,
                 image_url=None,  # Can be added later
                 available=random.choice([True, True, True, False]),  # 75% available
-                times_of_day=meal_data['times_of_day'],
+                times_of_day=[str(t) for t in meal_data['times_of_day']],
                 calories=Decimal(random.uniform(*meal_data['calories'])).quantize(Decimal('0.01')),
                 protein=Decimal(random.uniform(*meal_data['protein'])).quantize(Decimal('0.01')),
                 carbs=Decimal(random.uniform(*meal_data['carbs'])).quantize(Decimal('0.01')),

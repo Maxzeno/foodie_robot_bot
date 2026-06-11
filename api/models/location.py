@@ -1,7 +1,9 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from api.models.base import BaseModel
 from api.models.currency import Currency
 from shapely.geometry import Point as ShapelyPoint, shape
+from api.utils.validation import validate_geojson_polygon
 
 # from api.models.meal import PreferredCuisine
 
@@ -174,3 +176,11 @@ class City(BaseModel):
 
     def __str__(self):
         return f"{self.name}, {self.state.name}"
+
+    def clean(self):
+        super().clean()
+        validate_geojson_polygon(self.boundary, field_name="boundary")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

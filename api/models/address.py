@@ -1,6 +1,7 @@
 from django.db import models
 from api.models.base import BaseModel
 from api.models.user import User
+from api.utils.validation import validate_geojson_point
 
 
 class DeliveryAddress(BaseModel):
@@ -21,3 +22,11 @@ class DeliveryAddress(BaseModel):
 
     def __str__(self):
         return f"{self.point} - {self.name}"
+
+    def clean(self):
+        super().clean()
+        validate_geojson_point(self.point, field_name="point")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

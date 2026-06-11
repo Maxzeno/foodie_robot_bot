@@ -582,14 +582,14 @@ class CountryAdmin(admin.ModelAdmin):
 # =============================================================================
 @admin.register(DeliveryAddress)
 class DeliveryAddressAdmin(admin.ModelAdmin):
-    list_display = ['user_link', 'street_address', 'is_default', 'created_at']
+    list_display = ['user', 'street_address', 'is_default', 'created_at']
     list_filter = ['is_default', 'created_at']
     search_fields = ['user__phone', 'user__code', 'street_address']
-    raw_id_fields = ['user']
+    # raw_id_fields = ['user']
 
-    def user_link(self, obj):
-        return format_html('<a href="/admin/api/user/{}/change/">{}</a>', obj.user.id, obj.user.phone or obj.user.code)
-    user_link.short_description = 'User'
+    # def user_link(self, obj):
+    #     return format_html('<a href="/admin/api/user/{}/change/">{}</a>', obj.user.id, obj.user.phone or obj.user.code)
+    # user_link.short_description = 'User'
 
 
 @admin.register(Currency)
