@@ -1,3 +1,12 @@
-in the admin make the coordinate boundary and coordinate point JSONFields to be more better visually repremented and also add previewing or points and boundary in like google map via like or something like that
+make this more graphically pleasing in django admin under meals
+times_of_day: ["morning", "afternoon", "evening"]
 
-also before you start working on this in the admin separate them into different files for better organization
+
+> this doesn't show \
+\
+Route Map (Pickup → Dropoff) in order admin 
+
+
+Convert the City.boundary field from PostGIS geometry to JSONField (jsonb).
+-- So i will delete the db but backup some data first then manually add some or automatically
+

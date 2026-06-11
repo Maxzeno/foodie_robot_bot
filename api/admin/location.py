@@ -142,17 +142,21 @@ class DeliveryAddressAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     # user_link.short_description = 'User'
 
     def has_location(self, obj):
-        if obj.point:
-            coords = obj.point.get('coordinates', [])
-            if len(coords) >= 2:
-                lng_str = f"{coords[0]:.4f}"
-                lat_str = f"{coords[1]:.4f}"
-                return format_html(
-                    '<span style="background: #28a745; color: white; padding: 3px 8px; '
-                    'border-radius: 3px; font-size: 11px;" title="{}, {}">'
-                    '{}, {}</span>',
-                    coords[0], coords[1], lng_str, lat_str
-                )
+        try:
+            if obj.point:
+                coords = obj.point.get('coordinates', [])
+                if len(coords) >= 2:
+                    lng_str = f"{coords[0]:.4f}"
+                    lat_str = f"{coords[1]:.4f}"
+                    return format_html(
+                        '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                        'border-radius: 3px; font-size: 11px;" title="{}, {}">'
+                        '{}, {}</span>',
+                        coords[0], coords[1], lng_str, lat_str
+                    )
+        except:
+            pass
+        
         return format_html(
             '<span style="background: #6c757d; color: white; padding: 3px 8px; '
             'border-radius: 3px; font-size: 11px;">NOT SET</span>'

@@ -46,7 +46,7 @@ class GeoJSONPointWidget(forms.Widget):
                     data = value
                 if data and data.get('type') == 'Point':
                     current_coords = data.get('coordinates', [])
-            except (json.JSONDecodeError, TypeError):
+            except:
                 pass
 
         # Generate unique ID
@@ -223,7 +223,7 @@ class GeoJSONPolygonWidget(forms.Widget):
                     data = value
                 if data and data.get('type') == 'Polygon':
                     current_polygon = data
-            except (json.JSONDecodeError, TypeError):
+            except:
                 pass
 
         # Generate unique ID
