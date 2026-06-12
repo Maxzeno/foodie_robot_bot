@@ -5,25 +5,78 @@ from api.models.meal import Meal, TimeOfDayChoices
 from api.models.recommendation import Recommendation, ChoiceOption
 from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
+from api.utils.whatsapp_payload_helper.no_recommendation import (
+    get_no_recommendation_message,
+    should_show_profile_update_flow
+)
+from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 from django.db import transaction
 
 
-def build_meal_recommendation(user: User):
+def build_meal_recommendation(user: User) -> bool:
+    """
+    Build and send meal recommendations to the user.
+
+    Returns:
+        bool: True if recommendations were sent, False if no meals available
+    """
     with transaction.atomic():
         service = MealRecommendationService()
-        
+
         recommended_meal_map = service.get_recommendations(
             user=user,
             num_recommendations_per_period=2,
         )
 
+        # Check if no meals are available
+        no_results_reason = recommended_meal_map.get('no_results_reason')
+        current_period = user.get_time_period()
+        current_period_meals = recommended_meal_map.get(current_period, [])
+
+        if not current_period_meals and no_results_reason:
+            # Send explanation message to user
+            currency_symbol = "₦"
+            if user.city and user.city.currency:
+                currency_symbol = user.city.currency.symbol
+
+            message_text = get_no_recommendation_message(no_results_reason, currency_symbol)
+            primary_reason = no_results_reason.get('primary_reason', 'unknown')
+
+            # Check if profile update can help fix this issue
+            if should_show_profile_update_flow(primary_reason):
+                # Send message with profile update flow button
+                Message.bot_message_flow(
+                    content=message_text,
+                    user=user,
+                    flow_cta="Update profile",
+                    flow_id="1822264872503617",
+                    screen_name="USER_PROFILE",
+                    data=user_data_profile_flow(user),
+                )
+            else:
+                # Send regular text message
+                Message.bot_message(
+                    content=message_text,
+                    user=user,
+                    metadata={
+                        "type": "no_recommendation",
+                        "reason": primary_reason
+                    }
+                )
+            return False
+
+        messages_sent = 0
         for period, recommended_meals_list in recommended_meal_map.items():
+            # Skip the no_results_reason key (it's not a time period)
+            if period == 'no_results_reason':
+                continue
+
             recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
             for index, meal in enumerate(recommended_meals):
                 text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
                 image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
-                
+
                 recomendation_obj = Recommendation.objects.create(
                     user=user,
                     meal=meal,
@@ -39,46 +92,63 @@ def build_meal_recommendation(user: User):
                     Message.bot_message_action_reply(text, user,
                         payload=payload,
                         metadata={
-                            "meal_id": meal_id, 
+                            "meal_id": meal_id,
                             "recomendation_id": recomendation_obj.id,
                             "description": "Users can order, like or hate meal"
                             }
                     )
+                    messages_sent += 1
+
+        return messages_sent > 0
 
 def meal_recommendations(
     user: User,
 ) -> bool:
+    """
+    Get meal recommendations for the user.
+
+    Returns:
+        bool: True if recommendations were sent, False otherwise
+    """
     time_of_day = user.get_time_period()
     try:
-        found_recommendations = Recommendation.objects.filter(user=user, time_of_day=time_of_day, day=user.get_local_time())[:2]
+        # Check for existing recommendations first
+        found_recommendations = Recommendation.objects.filter(
+            user=user,
+            time_of_day=time_of_day,
+            day=user.get_local_time()
+        )[:2]
         found_recommendations = list(found_recommendations)[::-1]
+
         if found_recommendations:
             for recom in found_recommendations:
                 meal = recom.meal
                 text = f"Your {recom.choice_option.lower()} {time_of_day} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
                 image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
-                
+
                 payload = recommend_product_payload(recom.id, text, image_url)
 
                 Message.bot_message_action_reply(text, user,
                     payload=payload,
                     metadata={
-                        "meal_id": meal_id, 
+                        "meal_id": meal_id,
                         "recomendation_id": recom.id,
                         "description": "Users can order, like or hate meal"
                         }
                 )
             return True
-        
-        if user.city == None:
+
+        # If user has no city, request location and stop (can't generate recommendations)
+        if user.city is None:
             Message.bot_message_request_location(
-            content="To start getting meal recommendations, please share your delivery location.",
-            user=user,
-        )
-            
-        build_meal_recommendation(user=user)
-        return True
+                content="To start getting meal recommendations, please share your delivery location.",
+                user=user,
+            )
+            return False
+
+        # Generate new recommendations
+        return build_meal_recommendation(user=user)
 
     except Exception as e:
         Message.bot_message("Error generating meal recommendations", user=user)

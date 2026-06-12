@@ -107,7 +107,7 @@ class MealRecommendationService:
         num_recommendations_per_period: int = 2,
         exclude_meal_ids: Optional[List[int]] = None,
         exploration_rate: Optional[float] = None
-    ) -> Dict[str, List[int]]:
+    ) -> Dict:
         """
         Get personalized meal recommendations for morning, afternoon, and evening.
         Uses epsilon-greedy exploration to balance personalization with discovery.
@@ -124,10 +124,22 @@ class MealRecommendationService:
 
         Returns:
             Dict with keys 'morning', 'afternoon', 'evening', each containing meal IDs
-            Example: {
+            When no meals are available, includes 'no_results_reason' with filter stats
+            Example success: {
                 "morning": [1, 2],
                 "afternoon": [3, 4],
                 "evening": [5, 6]
+            }
+            Example no results: {
+                "morning": [],
+                "afternoon": [],
+                "evening": [],
+                "no_results_reason": {
+                    "primary_reason": "budget",
+                    "total_meals_in_city": 50,
+                    "filtered_by_budget": 45,
+                    ...
+                }
             }
         """
         logger.info(f"Getting recommendations for user {user.id} ({num_recommendations_per_period} per period)")
@@ -142,16 +154,19 @@ class MealRecommendationService:
         if exclude_meal_ids:
             all_exclusions.update(exclude_meal_ids)
 
-        # Get eligible meals (safety + availability filters)
-        available_meals = self._get_eligible_meals(user, list(all_exclusions))
+        # Get eligible meals (safety + availability filters) with tracking
+        available_meals, filter_stats = self._get_eligible_meals(
+            user, list(all_exclusions), track_filter_reasons=True
+        )
         logger.info(f"Eligible meals after filtering: {len(available_meals)}")
 
         if not available_meals:
-            logger.warning("No eligible meals found for user")
+            logger.warning(f"No eligible meals found for user. Reason: {filter_stats.get('primary_reason', 'unknown')}")
             return {
                 "morning": [],
                 "afternoon": [],
-                "evening": []
+                "evening": [],
+                "no_results_reason": filter_stats
             }
 
         # === LAYER 2: SMART SCORING SYSTEM ===
@@ -223,7 +238,12 @@ class MealRecommendationService:
             ).values_list('meal_id', flat=True).distinct()
         )
 
-    def _get_eligible_meals(self, user, exclude_meal_ids: Optional[List[int]] = None) -> List[Meal]:
+    def _get_eligible_meals(
+        self,
+        user,
+        exclude_meal_ids: Optional[List[int]] = None,
+        track_filter_reasons: bool = False
+    ) -> List[Meal] | Tuple[List[Meal], Dict]:
         """
         Layer 1: Apply hard constraints to filter eligible meals.
 
@@ -232,9 +252,37 @@ class MealRecommendationService:
         2. Availability filters (stock, time, restaurant status)
         3. Exclusion lists (today's meals, custom exclusions)
 
+        Args:
+            user: User instance
+            exclude_meal_ids: Meal IDs to exclude
+            track_filter_reasons: If True, returns tuple of (meals, filter_stats)
+
         Returns:
             List of Meal objects that pass all constraints
+            OR tuple of (List[Meal], Dict) if track_filter_reasons=True
         """
+        filter_stats = {
+            'total_meals_in_city': 0,
+            'filtered_by_unavailable': 0,
+            'filtered_by_inactive_restaurant': 0,
+            'filtered_by_allergies': 0,
+            'filtered_by_health_conditions': 0,
+            'filtered_by_hated': 0,
+            'filtered_by_stock': 0,
+            'filtered_by_restaurant_hours': 0,
+            'filtered_by_meal_hours': 0,
+            'filtered_by_budget': 0,
+            'filtered_by_exclusions': 0,
+            'remaining_after_filters': 0,
+            'user_budget': float(user.average_meal_budget) if user.average_meal_budget else None,
+            'user_allergies': [],
+            'user_health_conditions': [],
+        }
+
+        # Get total meals in city for context
+        if track_filter_reasons:
+            filter_stats['total_meals_in_city'] = Meal.objects.filter(city=user.city).count()
+
         # Start with base query
         queryset = Meal.objects.filter(
             available=True,
@@ -247,41 +295,63 @@ class MealRecommendationService:
         # Exclude meals with user's allergies (CRITICAL)
         user_allergies = user.allergies.all()
         if user_allergies.exists():
+            allergy_names = list(user_allergies.values_list('name', flat=True))
+            if track_filter_reasons:
+                filter_stats['user_allergies'] = allergy_names
+                # Count meals that would be filtered by allergies
+                filter_stats['filtered_by_allergies'] = queryset.filter(
+                    restricted_allergies__in=user_allergies
+                ).distinct().count()
             queryset = queryset.exclude(
                 restricted_allergies__in=user_allergies
             )
-            logger.debug(f"Filtering out meals with allergies: {list(user_allergies.values_list('name', flat=True))}")
+            logger.debug(f"Filtering out meals with allergies: {allergy_names}")
 
         # Exclude meals with restricted health conditions
         user_health_conditions = user.health_conditions.all()
         if user_health_conditions.exists():
+            health_condition_names = list(user_health_conditions.values_list('name', flat=True))
+            if track_filter_reasons:
+                filter_stats['user_health_conditions'] = health_condition_names
+                # Count meals that would be filtered by health conditions
+                filter_stats['filtered_by_health_conditions'] = queryset.filter(
+                    restricted_health_conditions__in=user_health_conditions
+                ).distinct().count()
             queryset = queryset.exclude(
                 restricted_health_conditions__in=user_health_conditions
             )
-            logger.debug(f"Filtering out meals for health conditions: {list(user_health_conditions.values_list('name', flat=True))}")
+            logger.debug(f"Filtering out meals for health conditions: {health_condition_names}")
 
         # Exclude hated meals (user preference)
         hated_meal_ids = list(
             user.meal_preferences.filter(preference='hate').values_list('meal_id', flat=True)
         )
         if hated_meal_ids:
+            if track_filter_reasons:
+                filter_stats['filtered_by_hated'] = queryset.filter(id__in=hated_meal_ids).count()
             queryset = queryset.exclude(id__in=hated_meal_ids)
             logger.debug(f"Excluding {len(hated_meal_ids)} hated meals")
 
         # === AVAILABILITY FILTERS ===
 
         # Stock filter - exclude out-of-stock meals
+        if track_filter_reasons:
+            before_stock = queryset.count()
         queryset = queryset.filter(
             Q(daily_stock_limit__isnull=True) |  # Unlimited stock
             Q(remaining_stock__isnull=True) |     # Stock not initialized
             Q(remaining_stock__gt=0)               # Has stock remaining
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_stock'] = before_stock - queryset.count()
 
         # Time-based filtering
         current_time = user.get_local_time().time()
         current_day = user.get_local_time().strftime('%A').lower()
 
         # Filter by restaurant operating hours and days
+        if track_filter_reasons:
+            before_restaurant_hours = queryset.count()
         queryset = queryset.filter(
             Q(restaurant__available_days=[]) |  # Open all days
             Q(restaurant__available_days__contains=[current_day])  # Open today
@@ -289,24 +359,36 @@ class MealRecommendationService:
             restaurant__open_time__lte=current_time,
             restaurant__close_time__gte=current_time
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_restaurant_hours'] = before_restaurant_hours - queryset.count()
 
         # Filter by meal availability times
+        if track_filter_reasons:
+            before_meal_hours = queryset.count()
         queryset = queryset.filter(
             Q(available_from_time__isnull=True) | Q(available_from_time__lte=current_time)
         ).filter(
             Q(available_to_time__isnull=True) | Q(available_to_time__gte=current_time)
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_meal_hours'] = before_meal_hours - queryset.count()
 
         # Budget filter (soft - allow 50% over budget)
         if user.average_meal_budget and user.average_meal_budget > 0:
             max_price = float(user.average_meal_budget) * 1.5
+            if track_filter_reasons:
+                before_budget = queryset.count()
             queryset = queryset.filter(price__lte=max_price)
+            if track_filter_reasons:
+                filter_stats['filtered_by_budget'] = before_budget - queryset.count()
             logger.debug(f"Budget filter: max price {max_price}")
 
         # === EXCLUSION FILTERS ===
 
         # Exclude specific meals (today's recommendations + custom)
         if exclude_meal_ids:
+            if track_filter_reasons:
+                filter_stats['filtered_by_exclusions'] = queryset.filter(id__in=exclude_meal_ids).count()
             queryset = queryset.exclude(id__in=exclude_meal_ids)
             logger.debug(f"Excluding {len(exclude_meal_ids)} specific meals")
 
@@ -330,7 +412,54 @@ class MealRecommendationService:
         )
 
         # Limit query size for performance
-        return list(queryset[:self.MAX_CANDIDATE_MEALS])
+        result = list(queryset[:self.MAX_CANDIDATE_MEALS])
+
+        if track_filter_reasons:
+            filter_stats['remaining_after_filters'] = len(result)
+            # Determine primary reason for no results
+            if len(result) == 0:
+                filter_stats['primary_reason'] = self._determine_primary_filter_reason(filter_stats)
+            return result, filter_stats
+
+        return result
+
+    def _determine_primary_filter_reason(self, filter_stats: Dict) -> str:
+        """
+        Determine the primary reason why no meals are available.
+
+        Priority order (most actionable first):
+        1. No meals in city at all
+        2. Budget too restrictive
+        3. Health conditions
+        4. Allergies
+        5. Restaurant hours (time-based)
+        6. Hated meals
+
+        Returns:
+            str: Primary reason code
+        """
+        if filter_stats['total_meals_in_city'] == 0:
+            return 'no_meals_in_city'
+
+        # Check which filter eliminated the most meals (biggest impact)
+        filter_counts = [
+            ('budget', filter_stats.get('filtered_by_budget', 0)),
+            ('health_conditions', filter_stats.get('filtered_by_health_conditions', 0)),
+            ('allergies', filter_stats.get('filtered_by_allergies', 0)),
+            ('restaurant_hours', filter_stats.get('filtered_by_restaurant_hours', 0)),
+            ('meal_hours', filter_stats.get('filtered_by_meal_hours', 0)),
+            ('hated', filter_stats.get('filtered_by_hated', 0)),
+            ('stock', filter_stats.get('filtered_by_stock', 0)),
+        ]
+
+        # Sort by count (descending)
+        filter_counts.sort(key=lambda x: x[1], reverse=True)
+
+        # Return the biggest filter reason, or 'unknown' if all are 0
+        if filter_counts[0][1] > 0:
+            return filter_counts[0][0]
+
+        return 'unknown'
 
     # ============================================================================
     # LAYER 2: SMART SCORING SYSTEM

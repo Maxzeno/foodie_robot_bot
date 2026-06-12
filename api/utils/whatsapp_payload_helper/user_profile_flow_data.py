@@ -31,9 +31,6 @@ def user_data_profile_flow(user: User):
     # Get user's selected fitness goal
     selected_fitness_goal = str(user.fitness_goals.id) if user.fitness_goals else ""
 
-    # Get user's current meal budget
-    current_meal_budget = float(user.average_meal_budget) if user.average_meal_budget else 0
-
     # Get user's selected health conditions
     selected_health_conditions = [
         str(hc.id) for hc in user.health_conditions.all()
@@ -53,11 +50,17 @@ def user_data_profile_flow(user: User):
     default_currency = "NGN"
     try:
         pn = phonenumbers.parse(f"+{user.phone.lstrip('+')}")
-        cities_under_ph = City.objects.filter(state__country__code=region_code_for_number(pn).upper())
-        default_currency = cities_under_ph[0].currency.code if cities_under_ph.exists() else "NGN"
+        cities_under_pn = City.objects.filter(state__country__code=region_code_for_number(pn).upper())
+        default_currency = cities_under_pn[0].currency.code if cities_under_pn.exists() else "NGN"
+        
+        default_current_meal_budget = float(cities_under_pn[0].average_meal_budget) if cities_under_pn.exists() else 0
     except:
         pass
      
+     
+    # Get user's current meal budget
+    current_meal_budget = float(user.average_meal_budget) if user.average_meal_budget is not None else default_current_meal_budget 
+
     currency_code = user.city.currency.code if user.city else default_currency
     currency_helper = f"Enter amount per meal ({currency_code})"
 

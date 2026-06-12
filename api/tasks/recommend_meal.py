@@ -45,6 +45,7 @@ def send_meal_recommendations_task():
             "users_sent": 0,
             "users_skipped_no_city": 0,
             "users_skipped_already_sent": 0,
+            "users_no_meals_available": 0,
             "users_failed": 0,
             "total_messages_sent": 0
         }
@@ -55,6 +56,7 @@ def send_meal_recommendations_task():
     users_sent = 0
     users_skipped_no_city = 0
     users_skipped_already_sent = 0
+    users_no_meals_available = 0
     users_failed = 0
     total_messages_sent = 0
 
@@ -83,11 +85,14 @@ def send_meal_recommendations_task():
                 continue
 
             # Generate and send recommendations
-            messages_sent = _generate_and_send_recommendations(user, time_period, today)
+            messages_sent, notified_no_meals = _generate_and_send_recommendations(user, time_period, today)
 
             if messages_sent > 0:
                 users_sent += 1
                 total_messages_sent += messages_sent
+            elif notified_no_meals:
+                # User was notified that no meals are available (not a failure)
+                users_no_meals_available += 1
             else:
                 users_failed += 1
 
@@ -101,6 +106,7 @@ def send_meal_recommendations_task():
         "users_sent": users_sent,
         "users_skipped_no_city": users_skipped_no_city,
         "users_skipped_already_sent": users_skipped_already_sent,
+        "users_no_meals_available": users_no_meals_available,
         "users_failed": users_failed,
         "total_messages_sent": total_messages_sent
     }
@@ -124,6 +130,15 @@ def _generate_and_send_recommendations(user, current_time_period, today):
             )
 
             messages_sent = 0
+
+            # Check if no recommendations were found for the current time period
+            current_period_meals = recommended_meal_dict.get(current_time_period, [])
+            no_results_reason = recommended_meal_dict.get('no_results_reason')
+
+            if not current_period_meals and no_results_reason:
+                # No meals available - send explanation message to user
+                _send_no_recommendation_message(user, no_results_reason)
+                return (0, True)  # Return (messages_sent=0, notified_no_meals=True)
 
             # Process recommendations for all time periods
             for time_period in ['morning', 'afternoon', 'evening']:
@@ -173,11 +188,11 @@ def _generate_and_send_recommendations(user, current_time_period, today):
                         _send_recommendation_message(user, meal, recommendation_obj, time_period, index)
                         messages_sent += 1
 
-            return messages_sent
+            return (messages_sent, False)  # (messages_sent, notified_no_meals=False)
 
         except Exception as e:
             logger.error(f"Error generating recommendations for user {user.id}: {e}")
-            return 0
+            return (0, False)  # Error occurred
 
 
 def _send_recommendation_message(user, meal, recommendation_obj, time_period, index):
@@ -211,6 +226,63 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
     except Exception as e:
         logger.error(f"Error sending recommendation message to user {user.id}: {e}")
         raise
+
+
+def _send_no_recommendation_message(user, filter_stats):
+    """
+    Send a message to the user explaining why no meal recommendations are available.
+
+    Args:
+        user: User instance
+        filter_stats: Dictionary containing filter statistics from MealRecommendationService
+    """
+    from api.models.message import Message
+    from api.utils.whatsapp_payload_helper.no_recommendation import (
+        get_no_recommendation_message,
+        get_no_recommendation_message_short,
+        should_show_profile_update_flow
+    )
+    from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
+
+    try:
+        # Get currency symbol from user's city
+        currency_symbol = "₦"  # Default to Naira
+        if user.city and user.city.currency:
+            currency_symbol = user.city.currency.symbol
+
+        # Generate user-friendly message
+        message_text = get_no_recommendation_message(filter_stats, currency_symbol)
+
+        # Log the reason
+        primary_reason = filter_stats.get('primary_reason', 'unknown')
+        short_reason = get_no_recommendation_message_short(primary_reason)
+        logger.info(f"Sending no-recommendation message to user {user.id}: {short_reason}")
+
+        # Check if profile update can help fix this issue
+        if should_show_profile_update_flow(primary_reason):
+            # Send message with profile update flow button
+            Message.bot_message_flow(
+                content=message_text,
+                user=user,
+                flow_cta="Update profile",
+                flow_id="1822264872503617",
+                screen_name="USER_PROFILE",
+                data=user_data_profile_flow(user),
+            )
+        else:
+            # Send regular text message (for issues that can't be fixed by profile update)
+            Message.bot_message(
+                content=message_text,
+                user=user,
+                metadata={
+                    "type": "no_recommendation",
+                    "reason": primary_reason,
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error sending no-recommendation message to user {user.id}: {e}")
+        # Don't raise - this is a non-critical message
 
 
 @periodic_task(crontab(minute='0,30'))

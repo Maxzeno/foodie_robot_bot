@@ -7,6 +7,4 @@ times_of_day: ["morning", "afternoon", "evening"]
 Route Map (Pickup → Dropoff) in order admin 
 
 
-Convert the City.boundary field from PostGIS geometry to JSONField (jsonb).
--- So i will delete the db but backup some data first then manually add some or automatically
-
+make the 
