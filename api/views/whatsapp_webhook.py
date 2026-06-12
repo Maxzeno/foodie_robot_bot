@@ -18,6 +18,7 @@ from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 router = Router(tags=["Webhook"])
 
 VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
+WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
 
 @csrf_exempt
 @transaction.atomic
@@ -39,6 +40,18 @@ def whatsapp_webhook(request):
             return {"detail": "Done"}
         
         message = change["messages"][0]
+
+        try:
+            phone_number_id = change['metadata']['phone_number_id']
+            print("Phone Number ID:", phone_number_id)
+            print("Configured Phone Number ID:", WHATSAPP_PHONE_NUMBER_ID)
+            print(type(phone_number_id), type(WHATSAPP_PHONE_NUMBER_ID), phone_number_id == WHATSAPP_PHONE_NUMBER_ID, "check equality")
+            if phone_number_id != WHATSAPP_PHONE_NUMBER_ID:
+                return {"detail": "Skipped: Not for this service"}
+        except Exception as e:
+            print("Error extracting phone number ID:", e)
+            return {"detail": "Skipped: No phone number ID"}
+        
         try:
             username = change["contacts"][0]['profile']['name']
         except:
