@@ -1,28 +1,27 @@
-
+from django.conf import settings
 from api.models.user import User
 from api.models.meal_preference import MealPreference
 from api.models.message import Message
-from api.models.meal import FitnessGoal, PreferredCuisine, HealthCondition, Allergy
+from api.models.meal import FitnessGoal
 from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 
 
 def update_user_profile(
-    user: User, fitness_goal: str, health_conditions: list=[], allergies_diet: list=[],
-    preferred_cuisines: list=[], meal_budget: float=None) -> bool:
+    user: User, fitness_goal: str, meal_budget: float=None) -> bool:
     is_new = user.city is None
 
     try:
         fitness_goal_obj = FitnessGoal.objects.filter(id=fitness_goal).first()
         user.fitness_goals = fitness_goal_obj
 
-        health_condition_objs = HealthCondition.objects.filter(id__in=health_conditions)
-        user.health_conditions.set(health_condition_objs)
+        # health_condition_objs = HealthCondition.objects.filter(id__in=health_conditions)
+        # user.health_conditions.set(health_condition_objs)
 
-        allergy_objs = Allergy.objects.filter(id__in=allergies_diet)
-        user.allergies.set(allergy_objs)
+        # allergy_objs = Allergy.objects.filter(id__in=allergies_diet)
+        # user.allergies.set(allergy_objs)
 
-        cuisine_objs = PreferredCuisine.objects.filter(id__in=preferred_cuisines)
-        user.preferred_cuisine.set(cuisine_objs)
+        # cuisine_objs = PreferredCuisine.objects.filter(id__in=preferred_cuisines)
+        # user.preferred_cuisine.set(cuisine_objs)
 
         if type(meal_budget) == str:
             if meal_budget == "":
@@ -61,17 +60,17 @@ def get_update_user_profile_form(user: User) -> bool:
         # Get fitness goal
         fitness_goal = user.fitness_goals.get_name_display() if user.fitness_goals else "Not set"
 
-        # Get health conditions
-        health_conditions = [hc.get_name_display() for hc in user.health_conditions.all()]
-        health_conditions_str = ", ".join(health_conditions) if health_conditions else "None"
+        # # Get health conditions
+        # health_conditions = [hc.get_name_display() for hc in user.health_conditions.all()]
+        # health_conditions_str = ", ".join(health_conditions) if health_conditions else "None"
 
-        # Get allergies
-        allergies = [a.get_name_display() for a in user.allergies.all()]
-        allergies_str = ", ".join(allergies) if allergies else "None"
+        # # Get allergies
+        # allergies = [a.get_name_display() for a in user.allergies.all()]
+        # allergies_str = ", ".join(allergies) if allergies else "None"
 
-        # Get preferred cuisines
-        cuisines = [c.get_name_display() for c in user.preferred_cuisine.all()]
-        cuisines_str = ", ".join(cuisines) if cuisines else "Not set"
+        # # Get preferred cuisines
+        # cuisines = [c.get_name_display() for c in user.preferred_cuisine.all()]
+        # cuisines_str = ", ".join(cuisines) if cuisines else "Not set"
 
         # Get budget info
         city_name = user.city.name if user.city else "Not set"
@@ -83,12 +82,6 @@ def get_update_user_profile_form(user: User) -> bool:
 
 🎯 Fitness Goal: {fitness_goal}
 
-⚕️ Health Conditions: {health_conditions_str}
-
-🚫 Allergies: {allergies_str}
-
-🍽️ Preferred Cuisines: {cuisines_str}
-
 💰 Average Meal Budget: {budget_str}
 
 📍 Location: {city_name}
@@ -96,10 +89,10 @@ def get_update_user_profile_form(user: User) -> bool:
 """.strip()
 
         Message.bot_message_flow(
-            message, 
+            message,
             user=user,
-            flow_cta="Update profile", 
-            flow_id="1822264872503617", 
+            flow_cta="Update profile",
+            flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
             screen_name="USER_PROFILE",
             data=user_data_profile_flow(user),
             )

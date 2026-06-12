@@ -9,10 +9,11 @@ This is the main recommendation service that combines:
 
 Architecture:
 ┌─────────────────────────────────────────────────────────────────┐
-│  Layer 1: Hard Constraint Filtering (Safety First)              │
-│  - Allergies, health conditions, hated meals                    │
+│  Layer 1: Hard Constraint Filtering (Availability)              │
+│  - Hated meals                                                   │
 │  - Availability, stock, restaurant status                       │
 │  - Budget limits                                                 │
+│  - Note: Allergies/health conditions removed for simplicity     │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -246,7 +247,7 @@ class HybridMealRecommendationService:
     def _get_eligible_meals(self, user, exclude_meal_ids: Optional[List[int]] = None) -> List[Meal]:
         """
         Apply hard constraints to filter eligible meals.
-        (Kept mostly the same as original - these rules are important)
+        Note: Allergies and health conditions filtering removed for simplicity.
         """
         queryset = Meal.objects.filter(
             available=True,
@@ -255,13 +256,8 @@ class HybridMealRecommendationService:
         ).select_related('restaurant', 'city', 'city__currency')
 
         # === SAFETY FILTERS ===
-        user_allergies = user.allergies.all()
-        if user_allergies.exists():
-            queryset = queryset.exclude(restricted_allergies__in=user_allergies)
-
-        user_health_conditions = user.health_conditions.all()
-        if user_health_conditions.exists():
-            queryset = queryset.exclude(restricted_health_conditions__in=user_health_conditions)
+        # Note: Allergies and health conditions filtering removed for simplicity
+        # These may be re-added as the product matures
 
         hated_meal_ids = list(
             user.meal_preferences.filter(preference='hate').values_list('meal_id', flat=True)

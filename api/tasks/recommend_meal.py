@@ -1,4 +1,5 @@
 import logging
+from django.conf import settings
 from huey import crontab
 from huey.contrib.djhuey import periodic_task, task
 
@@ -265,7 +266,7 @@ def _send_no_recommendation_message(user, filter_stats):
                 content=message_text,
                 user=user,
                 flow_cta="Update profile",
-                flow_id="1822264872503617",
+                flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
                 screen_name="USER_PROFILE",
                 data=user_data_profile_flow(user),
             )

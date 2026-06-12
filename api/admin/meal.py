@@ -1,19 +1,54 @@
 """
 Admin configuration for Meal and MealEmbedding models.
 """
+from django import forms
 from django.contrib import admin
 from django.db.models import Count
 from django.utils.html import format_html
 
-from api.models.meal import Meal
+from api.models.meal import Meal, TimeOfDayChoices
 from api.models.meal_embedding import MealEmbedding
+
+
+TIME_OF_DAY_STYLES = {
+    'morning': ('🌅', '#ff9800', '#fff3e0'),      # Orange - sunrise
+    'afternoon': ('☀️', '#2196f3', '#e3f2fd'),    # Blue - sunny
+    'evening': ('🌙', '#673ab7', '#ede7f6'),      # Purple - moon
+}
+
+
+class MealAdminForm(forms.ModelForm):
+    times_of_day_choices = forms.MultipleChoiceField(
+        choices=TimeOfDayChoices.choices,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Times of Day"
+    )
+
+    class Meta:
+        model = Meal
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.times_of_day:
+            self.fields['times_of_day_choices'].initial = self.instance.times_of_day
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.times_of_day = self.cleaned_data.get('times_of_day_choices', [])
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 @admin.register(Meal)
 class MealAdmin(admin.ModelAdmin):
+    form = MealAdminForm
     list_display = [
         'image_preview', 'name', 'restaurant', 'city', 'price_display',
-        'available_badge', 'stock_display', 'order_count', 'times_of_day'
+        'available_badge', 'stock_display', 'order_count', 'times_of_day_display'
     ]
     list_filter = ['available', 'city', 'restaurant', 'fitness_goals', 'cuisine', 'created_at']
     search_fields = ['name', 'code', 'description', 'restaurant__name']
@@ -27,9 +62,8 @@ class MealAdmin(admin.ModelAdmin):
             'fields': ('code', 'name', 'restaurant', 'city', 'description', 'price', 'available', 'image_url', 'image_preview_large')
         }),
         ('Availability', {
-            'fields': ('times_of_day', 'available_from_time', 'available_to_time'),
+            'fields': ('times_of_day_choices', 'available_from_time', 'available_to_time'),
             'classes': ('collapse',),
-            'description': 'times_of_day: ["morning", "afternoon", "evening"]'
         }),
         ('Stock', {
             'fields': ('daily_stock_limit', 'remaining_stock'),
@@ -97,6 +131,21 @@ class MealAdmin(admin.ModelAdmin):
         return obj._order_count
     order_count.short_description = 'Orders'
     order_count.admin_order_field = '_order_count'
+
+    def times_of_day_display(self, obj):
+        if not obj.times_of_day:
+            return '-'
+        badges = []
+        for time in obj.times_of_day:
+            if time in TIME_OF_DAY_STYLES:
+                emoji, border_color, bg_color = TIME_OF_DAY_STYLES[time]
+                badges.append(
+                    f'<span style="background: {bg_color}; border: 1px solid {border_color}; '
+                    f'color: #333; padding: 2px 8px; border-radius: 12px; font-size: 11px; '
+                    f'margin-right: 4px; white-space: nowrap;">{emoji} {time.title()}</span>'
+                )
+        return format_html(''.join(badges)) if badges else '-'
+    times_of_day_display.short_description = 'Times of Day'
 
 
 @admin.register(MealEmbedding)

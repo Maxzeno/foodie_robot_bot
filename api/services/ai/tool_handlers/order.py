@@ -120,7 +120,7 @@ def place_order_form(
         message = Message.bot_message_flow(f"Please complete your order for {meal.name} so we can process it immediately",
             user=user,
             flow_cta="Complete Order",
-            flow_id="1531243271627499",
+            flow_id=settings.WHATSAPP_FLOW_ORDER,
             screen_name="ORDER_FLOW",
             data={
                 "current_address": delivery_address.street_address or 'Last set address',
@@ -214,6 +214,12 @@ def place_order(
             return False
         
         addr_lng, addr_lat = get_point_coordinates(delivery_address.point)
+        if addr_lng is None or addr_lat is None:
+            Message.bot_message(
+                "Your delivery address doesn't have valid coordinates. Please update your delivery address.",
+                user=user
+            )
+            return False
         address_city = City.get_city_by_coordinates(addr_lng, addr_lat)
         if address_city != user.city:
             Message.bot_message(
@@ -226,6 +232,12 @@ def place_order(
         meal_price = meal.price * number_of_plates
 
         rest_lng, rest_lat = get_point_coordinates(meal.restaurant.point)
+        if rest_lng is None or rest_lat is None:
+            Message.bot_message(
+                "Sorry, the restaurant location is not properly configured. Please contact support or try another meal.",
+                user=user
+            )
+            return False
         delivery_fee = Decimal(str(cal_delivery_fee(meal.city.delivery_fee_per_km,
                                                     meal.city.min_delivery_fee,
                                                     rest_lat,

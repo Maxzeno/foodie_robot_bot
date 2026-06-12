@@ -4,7 +4,9 @@ times_of_day: ["morning", "afternoon", "evening"]
 
 > this doesn't show \
 \
-Route Map (Pickup → Dropoff) in order admin 
 
 
-make the 
+
+make the order pickup and dropoff location in admin model to have links to google maps and also make them editable in the admin (the coordinates) follow the design for other coordinates fields
+
+is it also possible to make the route to be a google map link rather than the map that shows on the admin

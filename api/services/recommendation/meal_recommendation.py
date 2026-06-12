@@ -4,9 +4,10 @@ Meal Recommendation Service - 3-Layer Architecture
 
 This service provides personalized meal recommendations using a three-layer approach:
 
-Layer 1: Hard Constraint Filtering (Safety First)
-    - Filters out meals that violate user constraints (allergies, health conditions, etc.)
-    - Ensures only available meals are considered
+Layer 1: Hard Constraint Filtering (Availability)
+    - Filters out hated meals and unavailable meals
+    - Ensures only available meals from active restaurants are considered
+    - Note: Allergies, health conditions, and preferred cuisine filtering removed for simplicity
 
 Layer 2: Smart Scoring System (Personalization)
     - Scores eligible meals based on multiple weighted factors
@@ -59,7 +60,6 @@ class MealRecommendationService:
 
     # === PREFERENCE ALIGNMENT WEIGHTS ===
     WEIGHT_FITNESS_GOAL = 20.0          # Matches user's fitness goal
-    WEIGHT_CUISINE_MATCH = 15.0         # Matches preferred cuisine
     WEIGHT_BUDGET_OPTIMAL = 10.0        # Perfect budget fit (80-100%)
     WEIGHT_BUDGET_GOOD = 5.0            # Good budget fit (60-120%)
     WEIGHT_NUTRITION_MAX = 10.0         # Nutritional alignment bonus
@@ -248,9 +248,11 @@ class MealRecommendationService:
         Layer 1: Apply hard constraints to filter eligible meals.
 
         Filters applied:
-        1. Safety filters (allergies, health conditions, hated meals)
+        1. Safety filters (hated meals)
         2. Availability filters (stock, time, restaurant status)
         3. Exclusion lists (today's meals, custom exclusions)
+
+        Note: Allergies and health conditions filtering removed for simplicity.
 
         Args:
             user: User instance
@@ -265,8 +267,6 @@ class MealRecommendationService:
             'total_meals_in_city': 0,
             'filtered_by_unavailable': 0,
             'filtered_by_inactive_restaurant': 0,
-            'filtered_by_allergies': 0,
-            'filtered_by_health_conditions': 0,
             'filtered_by_hated': 0,
             'filtered_by_stock': 0,
             'filtered_by_restaurant_hours': 0,
@@ -275,8 +275,6 @@ class MealRecommendationService:
             'filtered_by_exclusions': 0,
             'remaining_after_filters': 0,
             'user_budget': float(user.average_meal_budget) if user.average_meal_budget else None,
-            'user_allergies': [],
-            'user_health_conditions': [],
         }
 
         # Get total meals in city for context
@@ -292,35 +290,8 @@ class MealRecommendationService:
 
         # === SAFETY FILTERS ===
 
-        # Exclude meals with user's allergies (CRITICAL)
-        user_allergies = user.allergies.all()
-        if user_allergies.exists():
-            allergy_names = list(user_allergies.values_list('name', flat=True))
-            if track_filter_reasons:
-                filter_stats['user_allergies'] = allergy_names
-                # Count meals that would be filtered by allergies
-                filter_stats['filtered_by_allergies'] = queryset.filter(
-                    restricted_allergies__in=user_allergies
-                ).distinct().count()
-            queryset = queryset.exclude(
-                restricted_allergies__in=user_allergies
-            )
-            logger.debug(f"Filtering out meals with allergies: {allergy_names}")
-
-        # Exclude meals with restricted health conditions
-        user_health_conditions = user.health_conditions.all()
-        if user_health_conditions.exists():
-            health_condition_names = list(user_health_conditions.values_list('name', flat=True))
-            if track_filter_reasons:
-                filter_stats['user_health_conditions'] = health_condition_names
-                # Count meals that would be filtered by health conditions
-                filter_stats['filtered_by_health_conditions'] = queryset.filter(
-                    restricted_health_conditions__in=user_health_conditions
-                ).distinct().count()
-            queryset = queryset.exclude(
-                restricted_health_conditions__in=user_health_conditions
-            )
-            logger.debug(f"Filtering out meals for health conditions: {health_condition_names}")
+        # Note: Allergies and health conditions filtering removed for simplicity
+        # These may be re-added as the product matures
 
         # Exclude hated meals (user preference)
         hated_meal_ids = list(
@@ -430,10 +401,8 @@ class MealRecommendationService:
         Priority order (most actionable first):
         1. No meals in city at all
         2. Budget too restrictive
-        3. Health conditions
-        4. Allergies
-        5. Restaurant hours (time-based)
-        6. Hated meals
+        3. Restaurant hours (time-based)
+        4. Hated meals
 
         Returns:
             str: Primary reason code
@@ -444,8 +413,6 @@ class MealRecommendationService:
         # Check which filter eliminated the most meals (biggest impact)
         filter_counts = [
             ('budget', filter_stats.get('filtered_by_budget', 0)),
-            ('health_conditions', filter_stats.get('filtered_by_health_conditions', 0)),
-            ('allergies', filter_stats.get('filtered_by_allergies', 0)),
             ('restaurant_hours', filter_stats.get('filtered_by_restaurant_hours', 0)),
             ('meal_hours', filter_stats.get('filtered_by_meal_hours', 0)),
             ('hated', filter_stats.get('filtered_by_hated', 0)),
@@ -494,11 +461,6 @@ class MealRecommendationService:
             user, liked_meal_ids
         )
 
-        # User preferences
-        user_preferred_cuisine_ids = set(
-            user.preferred_cuisine.values_list('id', flat=True)
-        )
-
         # Special occasions data
         special_occasion_boosts = self._get_special_occasion_boosts(user)
 
@@ -509,7 +471,6 @@ class MealRecommendationService:
             'recent_meal_history': recent_data['recent_meal_history'],
             'meal_frequency': recent_data['meal_frequency'],
             'collaborative_meal_ids': collaborative_meal_ids,
-            'user_preferred_cuisine_ids': user_preferred_cuisine_ids,
             'recent_meal_keywords': recent_data['recent_meal_keywords'],
             'special_occasion_boosts': special_occasion_boosts,
         }
@@ -585,6 +546,7 @@ class MealRecommendationService:
     def _score_preferences(self, meal: Meal, user, user_data: Dict) -> float:
         """
         Score based on user's stated preferences and constraints.
+        Note: Preferred cuisine matching removed for simplicity.
         """
         score = 0.0
 
@@ -593,12 +555,6 @@ class MealRecommendationService:
             meal_fitness_goal_ids = set(meal.fitness_goals.values_list('id', flat=True))
             if user.fitness_goals.id in meal_fitness_goal_ids:
                 score += self.WEIGHT_FITNESS_GOAL
-
-        # Cuisine preference match
-        if user_data['user_preferred_cuisine_ids']:
-            meal_cuisine_ids = set(meal.cuisine.values_list('id', flat=True))
-            if meal_cuisine_ids & user_data['user_preferred_cuisine_ids']:  # Intersection
-                score += self.WEIGHT_CUISINE_MATCH
 
         # Budget fit
         score += self._score_budget(meal, user)

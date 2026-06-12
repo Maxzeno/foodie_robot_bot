@@ -4,6 +4,7 @@ Django signals for the API app.
 This module contains signal handlers for various model events.
 """
 
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.db import transaction
@@ -41,7 +42,7 @@ def send_review_request_on_order_received(sender, instance, created, **kwargs):
             content=f"🎉 Your order #{instance.code} has been delivered! How was your experience?",
             user=instance.user,
             flow_cta="Leave a Review",
-            flow_id="2324812558034573",
+            flow_id=settings.WHATSAPP_FLOW_ORDER_REVIEW,
             screen_name="ORDER_REVIEW",
             data={
                 "order_id": instance.id,

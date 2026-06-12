@@ -1,7 +1,6 @@
 import uuid
 from api.models.message import CurrentIntentChoices, Message, RoleChoices
 import json
-import logging
 from ninja import Router
 from api.models.user import User
 from django.views.decorators.csrf import csrf_exempt
@@ -24,6 +23,7 @@ VERIFY_TOKEN = settings.WHATSAPP_API_VERIFY_TOKEN
 @transaction.atomic
 @router.post('/whatsapp', auth=None)
 def whatsapp_webhook(request):
+    print("Received WhatsApp webhook")
     # Verify that the request is from WhatsApp by checking the signature
     signature = request.headers.get('X-Hub-Signature-256', '')
     if not verify_whatsapp_signature(request.body, signature):
@@ -145,10 +145,10 @@ def whatsapp_webhook(request):
 
         message = "Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please fill out your user profile?"
         Message.bot_message_flow(
-            message, 
+            message,
             user=user,
-            flow_cta="Create profile", 
-            flow_id="1822264872503617", 
+            flow_cta="Create profile",
+            flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
             screen_name="USER_PROFILE",
             data=user_data_profile_flow(user),
         )

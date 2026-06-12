@@ -1,4 +1,4 @@
-
+from django.conf import settings
 from api.models.message import Message
 from api.models.user import User
 from api.models.meal import Meal, TimeOfDayChoices
@@ -49,7 +49,7 @@ def build_meal_recommendation(user: User) -> bool:
                     content=message_text,
                     user=user,
                     flow_cta="Update profile",
-                    flow_id="1822264872503617",
+                    flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
                     screen_name="USER_PROFILE",
                     data=user_data_profile_flow(user),
                 )

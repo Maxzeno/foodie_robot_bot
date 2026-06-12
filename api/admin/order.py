@@ -6,10 +6,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 
 from api.models.order import Order, OrderStatus
-from api.admin.base import (
-    GeoJSONFieldMixin,
-    render_point_map_preview,
-)
+from api.admin.base import GeoJSONFieldMixin
 
 
 @admin.register(Order)
@@ -107,109 +104,113 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
         )
     paid_badge.short_description = 'Payment'
 
+    def _get_coords(self, point):
+        """Extract (lng, lat) from a GeoJSON point."""
+        if point and isinstance(point, dict):
+            coords = point.get('coordinates', [])
+            if len(coords) >= 2:
+                return coords[0], coords[1]
+        return None, None
+
+    def _render_point_with_gmaps(self, point, label, color):
+        """Render a point preview with Google Maps link."""
+        lng, lat = self._get_coords(point)
+        if lng is None or lat is None:
+            return format_html(
+                '<div style="padding: 20px; background: #f8f9fa; border-radius: 8px; '
+                'text-align: center; color: #6c757d;">No {} location set</div>',
+                label.lower()
+            )
+
+        gmaps_url = f"https://www.google.com/maps?q={lat},{lng}"
+        return format_html('''
+            <div style="margin: 10px 0;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="background: {}; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 12px;">{}</span>
+                        <span style="font-family: monospace; color: #666;">{:.6f}, {:.6f}</span>
+                    </div>
+                    <a href="{}" target="_blank"
+                       style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px;
+                              background: #4285f4; color: white; text-decoration: none; border-radius: 6px;
+                              font-weight: 500; transition: background 0.2s;"
+                       onmouseover="this.style.background='#3367d6'"
+                       onmouseout="this.style.background='#4285f4'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        View on Google Maps
+                    </a>
+                </div>
+            </div>
+        ''', color, label, lat, lng, gmaps_url)
+
     def pickup_point_preview(self, obj):
-        return render_point_map_preview(obj.pickup_point, 'pickup', height=250)
-    pickup_point_preview.short_description = 'Pickup Map'
+        return self._render_point_with_gmaps(obj.pickup_point, 'PICKUP', '#28a745')
+    pickup_point_preview.short_description = 'Pickup Location'
 
     def dropoff_point_preview(self, obj):
-        return render_point_map_preview(obj.dropoff_point, 'dropoff', height=250)
-    dropoff_point_preview.short_description = 'Dropoff Map'
+        return self._render_point_with_gmaps(obj.dropoff_point, 'DROPOFF', '#dc3545')
+    dropoff_point_preview.short_description = 'Dropoff Location'
 
     def route_preview(self, obj):
-        """Render a map showing both pickup and dropoff locations."""
-        if not obj.pickup_point and not obj.dropoff_point:
+        """Render Google Maps directions link for the route."""
+        pickup_lng, pickup_lat = self._get_coords(obj.pickup_point)
+        dropoff_lng, dropoff_lat = self._get_coords(obj.dropoff_point)
+
+        if pickup_lng is None and dropoff_lng is None:
             return format_html(
                 '<div style="padding: 20px; background: #f8f9fa; border-radius: 8px; '
                 'text-align: center; color: #6c757d;">No locations set</div>'
             )
 
-        pickup_coords = obj.pickup_point.get('coordinates', []) if obj.pickup_point else []
-        dropoff_coords = obj.dropoff_point.get('coordinates', []) if obj.dropoff_point else []
+        # Build the route info display
+        html_parts = ['<div style="margin: 10px 0;">']
 
-        # Calculate center
-        all_coords = []
-        if len(pickup_coords) >= 2:
-            all_coords.append(pickup_coords)
-        if len(dropoff_coords) >= 2:
-            all_coords.append(dropoff_coords)
+        # Location summary
+        html_parts.append('<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">')
 
-        if not all_coords:
-            return format_html(
-                '<div style="padding: 20px; background: #f8f9fa; border-radius: 8px; '
-                'text-align: center; color: #6c757d;">Invalid coordinates</div>'
-            )
+        if pickup_lat is not None:
+            html_parts.append(f'''
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                    <span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 12px;">PICKUP</span>
+                    <span style="font-family: monospace; color: #666;">{pickup_lat:.6f}, {pickup_lng:.6f}</span>
+                    <a href="https://www.google.com/maps?q={pickup_lat},{pickup_lng}" target="_blank" style="color: #4285f4; font-size: 12px;">View</a>
+                </div>
+            ''')
 
-        center_lng = sum(c[0] for c in all_coords) / len(all_coords)
-        center_lat = sum(c[1] for c in all_coords) / len(all_coords)
-        map_id = f"route_map_{obj.pk}"
+        if dropoff_lat is not None:
+            html_parts.append(f'''
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                    <span style="background: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 12px;">DROPOFF</span>
+                    <span style="font-family: monospace; color: #666;">{dropoff_lat:.6f}, {dropoff_lng:.6f}</span>
+                    <a href="https://www.google.com/maps?q={dropoff_lat},{dropoff_lng}" target="_blank" style="color: #4285f4; font-size: 12px;">View</a>
+                </div>
+            ''')
 
-        pickup_js = ""
-        dropoff_js = ""
-        bounds_js = "var bounds = [];"
+        # Google Maps directions link (only if both points exist)
+        if pickup_lat is not None and dropoff_lat is not None:
+            directions_url = f"https://www.google.com/maps/dir/{pickup_lat},{pickup_lng}/{dropoff_lat},{dropoff_lng}"
+            html_parts.append(f'''
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                    <a href="{directions_url}" target="_blank"
+                       style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px;
+                              background: #4285f4; color: white; text-decoration: none; border-radius: 6px;
+                              font-weight: 500; transition: background 0.2s;"
+                       onmouseover="this.style.background='#3367d6'"
+                       onmouseout="this.style.background='#4285f4'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
+                        </svg>
+                        Get Directions on Google Maps
+                    </a>
+                </div>
+            ''')
 
-        if len(pickup_coords) >= 2:
-            pickup_js = f"""
-                var pickupMarker = L.marker([{pickup_coords[1]}, {pickup_coords[0]}], {{
-                    icon: L.divIcon({{
-                        className: 'custom-div-icon',
-                        html: '<div style="background: #28a745; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold;">PICKUP</div>',
-                        iconSize: [70, 30],
-                        iconAnchor: [35, 30]
-                    }})
-                }}).addTo(map);
-                bounds.push([{pickup_coords[1]}, {pickup_coords[0]}]);
-            """
+        html_parts.append('</div></div>')
 
-        if len(dropoff_coords) >= 2:
-            dropoff_js = f"""
-                var dropoffMarker = L.marker([{dropoff_coords[1]}, {dropoff_coords[0]}], {{
-                    icon: L.divIcon({{
-                        className: 'custom-div-icon',
-                        html: '<div style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold;">DROPOFF</div>',
-                        iconSize: [70, 30],
-                        iconAnchor: [35, 30]
-                    }})
-                }}).addTo(map);
-                bounds.push([{dropoff_coords[1]}, {dropoff_coords[0]}]);
-            """
-
-        # Add line between points if both exist
-        line_js = ""
-        if len(pickup_coords) >= 2 and len(dropoff_coords) >= 2:
-            line_js = f"""
-                L.polyline([
-                    [{pickup_coords[1]}, {pickup_coords[0]}],
-                    [{dropoff_coords[1]}, {dropoff_coords[0]}]
-                ], {{color: '#007bff', weight: 3, dashArray: '10, 10'}}).addTo(map);
-            """
-
-        return format_html('''
-            <div style="margin: 10px 0;">
-                <div id="{}" style="height: 350px; border-radius: 8px; border: 1px solid #dee2e6;"></div>
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                <script>
-                    (function() {{
-                        setTimeout(function() {{
-                            if (typeof L !== 'undefined') {{
-                                var map = L.map('{}').setView([{}, {}], 13);
-                                L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-                                    attribution: '&copy; OpenStreetMap contributors'
-                                }}).addTo(map);
-                                {}
-                                {}
-                                {}
-                                {}
-                                if (bounds.length > 1) {{
-                                    map.fitBounds(bounds, {{padding: [50, 50]}});
-                                }}
-                            }}
-                        }}, 100);
-                    }})();
-                </script>
-            </div>
-        ''', map_id, map_id, center_lat, center_lng, bounds_js, pickup_js, dropoff_js, line_js)
-    route_preview.short_description = 'Route Map (Pickup → Dropoff)'
+        return format_html(''.join(html_parts))
+    route_preview.short_description = 'Route (Pickup → Dropoff)'
 
     @admin.action(description='Mark selected orders as Dispatched')
     def mark_as_dispatched(self, request, queryset):

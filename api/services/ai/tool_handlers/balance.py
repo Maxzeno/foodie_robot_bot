@@ -1,3 +1,4 @@
+from django.conf import settings
 from api.models.currency import Currency
 from api.models.message import Message
 from api.models.user import User
@@ -18,10 +19,10 @@ def show_balance_withdraw(
             for balance in balances:
                 message += f"{balance.currency.symbol}{balance.amount:,.2f} ({balance.currency.code})\n"
 
-        Message.bot_message_flow(message.strip(), 
+        Message.bot_message_flow(message.strip(),
             user=user,
-            flow_cta="Place Withdrawal", 
-            flow_id="1870920103798521", 
+            flow_cta="Place Withdrawal",
+            flow_id=settings.WHATSAPP_FLOW_WITHDRAWAL,
             screen_name="WITHDRAWAL",
             data={
                 "balance_options": [{"id": currency.code, "title": currency.code} for currency in currencies],
