@@ -188,8 +188,15 @@ class GeoJSONPointWidget(forms.Widget):
 
 class GeoJSONPolygonWidget(forms.Widget):
     """
-    Interactive map widget for GeoJSON Polygon fields.
-    Users can draw a polygon on the map.
+    Advanced interactive map widget for GeoJSON Polygon fields.
+    Features:
+    - Click to add points
+    - Drag points to reposition
+    - Click points to select/delete
+    - Click edges to insert new points
+    - Undo/redo functionality
+    - Area calculation
+    - Zoom to fit
     """
     template_name = 'django/forms/widgets/textarea.html'
 
@@ -248,30 +255,88 @@ class GeoJSONPolygonWidget(forms.Widget):
 
         html = f'''
         <div style="margin-bottom: 15px;">
-            <div style="background: #e9ecef; padding: 10px; border-radius: 8px 8px 0 0; font-size: 13px;">
-                <strong>Instructions:</strong> Click points on the map to draw boundary. Click first point again to close.
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; border-radius: 8px 8px 0 0; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 13px;">
+                        <strong>🗺️ Advanced Boundary Editor</strong>
+                        <div style="font-size: 11px; opacity: 0.9; margin-top: 3px;">
+                            Click to add • Drag to move • Click point to select/delete • Click edge to insert
+                        </div>
+                    </div>
+                    <div id="{widget_id}_info" style="text-align: right; font-size: 12px; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 4px;">
+                        <div id="{widget_id}_points_count">0 points</div>
+                        <div id="{widget_id}_area" style="font-size: 11px; opacity: 0.9;">Area: --</div>
+                    </div>
+                </div>
             </div>
-            <div id="{map_id}" style="height: 400px; border: 2px solid #dee2e6; border-top: none;"></div>
-            <div style="display: flex; gap: 10px; margin: 10px 0;">
-                <button type="button" onclick="clearPolygon_{widget_id}()"
-                        style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Clear Boundary
-                </button>
-                <button type="button" onclick="undoLastPoint_{widget_id}()"
-                        style="padding: 8px 16px; background: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
-                    Undo Last Point
-                </button>
-                <span id="{widget_id}_status" style="padding: 8px; color: #666;"></span>
+            <div id="{map_id}" style="height: 500px; border: 2px solid #667eea; border-top: none; position: relative;"></div>
+
+            <!-- Control Panel -->
+            <div style="background: #f8f9fa; padding: 12px; border: 2px solid #dee2e6; border-top: none; border-radius: 0 0 8px 8px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <!-- Drawing Tools -->
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" onclick="setMode_{widget_id}('draw')" id="{widget_id}_btn_draw"
+                                style="padding: 8px 14px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                            ✏️ Draw
+                        </button>
+                        <button type="button" onclick="setMode_{widget_id}('edit')" id="{widget_id}_btn_edit"
+                                style="padding: 8px 14px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                            ✋ Edit
+                        </button>
+                    </div>
+
+                    <div style="border-left: 2px solid #dee2e6; height: 30px;"></div>
+
+                    <!-- Edit Tools -->
+                    <button type="button" onclick="deleteSelected_{widget_id}()" id="{widget_id}_btn_delete"
+                            style="padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;" disabled>
+                        🗑️ Delete Point
+                    </button>
+                    <button type="button" onclick="undo_{widget_id}()" id="{widget_id}_btn_undo"
+                            style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;" disabled>
+                        ↶ Undo
+                    </button>
+                    <button type="button" onclick="redo_{widget_id}()" id="{widget_id}_btn_redo"
+                            style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;" disabled>
+                        ↷ Redo
+                    </button>
+
+                    <div style="border-left: 2px solid #dee2e6; height: 30px;"></div>
+
+                    <!-- Utility Tools -->
+                    <button type="button" onclick="zoomToFit_{widget_id}()" id="{widget_id}_btn_zoom"
+                            style="padding: 8px 14px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;" disabled>
+                        🔍 Zoom to Fit
+                    </button>
+                    <button type="button" onclick="clearPolygon_{widget_id}()"
+                            style="padding: 8px 14px; background: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                        🗑️ Clear All
+                    </button>
+                </div>
+
+                <!-- Status Bar -->
+                <div id="{widget_id}_status" style="margin-top: 10px; padding: 8px 12px; background: white; border-radius: 4px; font-size: 12px; border: 1px solid #dee2e6;">
+                    <span style="color: #666;">Ready to draw. Click on the map to add boundary points.</span>
+                </div>
             </div>
+
             <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; color: #666; font-size: 12px;">Show/Edit Raw JSON</summary>
+                <summary style="cursor: pointer; color: #666; font-size: 12px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                    📝 Show/Edit Raw GeoJSON
+                </summary>
                 <textarea name="{name}" id="{widget_id}" rows="8"
                           style="width: 100%; font-family: monospace; font-size: 12px; margin-top: 5px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
                 >{formatted_value}</textarea>
+                <button type="button" onclick="loadFromTextarea_{widget_id}()"
+                        style="margin-top: 8px; padding: 8px 16px; background: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                    📥 Load from JSON
+                </button>
             </details>
         </div>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
         <script>
         (function() {{
             var checkLeaflet = setInterval(function() {{
@@ -281,7 +346,10 @@ class GeoJSONPolygonWidget(forms.Widget):
                 }}
             }}, 100);
 
-            var map_{widget_id}, polygon_{widget_id}, points_{widget_id} = [], markers_{widget_id} = [], polyline_{widget_id};
+            var map_{widget_id}, polygon_{widget_id}, points_{widget_id} = [],
+                markers_{widget_id} = [], midpointMarkers_{widget_id} = [],
+                selectedIndex_{widget_id} = null, mode_{widget_id} = 'draw',
+                history_{widget_id} = [], historyIndex_{widget_id} = -1;
 
             function initPolygonMap_{widget_id}() {{
                 map_{widget_id} = L.map('{map_id}').setView([{center_lat}, {center_lng}], {zoom});
@@ -293,68 +361,151 @@ class GeoJSONPolygonWidget(forms.Widget):
                 var existingPolygon = {polygon_json};
                 if (existingPolygon && existingPolygon.coordinates && existingPolygon.coordinates[0]) {{
                     var coords = existingPolygon.coordinates[0];
-                    // Don't include the closing point in our points array
                     for (var i = 0; i < coords.length - 1; i++) {{
                         points_{widget_id}.push([coords[i][1], coords[i][0]]);
                     }}
+                    saveToHistory_{widget_id}();
                     drawPolygon_{widget_id}();
-                    updateStatus_{widget_id}();
+                    updateUI_{widget_id}();
                 }}
 
-                // Click to add points
+                // Map click handler
                 map_{widget_id}.on('click', function(e) {{
-                    // Check if clicking near first point to close
-                    if (points_{widget_id}.length >= 3) {{
-                        var firstPoint = points_{widget_id}[0];
-                        var dist = map_{widget_id}.distance(e.latlng, L.latLng(firstPoint[0], firstPoint[1]));
-                        if (dist < 50) {{ // Within 50 meters
-                            closePolygon_{widget_id}();
-                            return;
+                    if (mode_{widget_id} === 'draw') {{
+                        // Check if clicking near first point to close
+                        if (points_{widget_id}.length >= 3) {{
+                            var firstPoint = points_{widget_id}[0];
+                            var dist = map_{widget_id}.distance(e.latlng, L.latLng(firstPoint[0], firstPoint[1]));
+                            if (dist < 50) {{
+                                updateStatus_{widget_id}('Polygon closed!', '#28a745');
+                                return;
+                            }}
                         }}
-                    }}
 
-                    points_{widget_id}.push([e.latlng.lat, e.latlng.lng]);
-                    drawPolygon_{widget_id}();
-                    updateStatus_{widget_id}();
-                    savePolygon_{widget_id}();
+                        points_{widget_id}.push([e.latlng.lat, e.latlng.lng]);
+                        saveToHistory_{widget_id}();
+                        drawPolygon_{widget_id}();
+                        updateUI_{widget_id}();
+                        savePolygon_{widget_id}();
+                    }}
                 }});
+
+                updateUI_{widget_id}();
             }}
 
             function drawPolygon_{widget_id}() {{
-                // Clear existing
+                // Clear existing layers
                 markers_{widget_id}.forEach(function(m) {{ map_{widget_id}.removeLayer(m); }});
+                midpointMarkers_{widget_id}.forEach(function(m) {{ map_{widget_id}.removeLayer(m); }});
                 markers_{widget_id} = [];
-                if (polyline_{widget_id}) map_{widget_id}.removeLayer(polyline_{widget_id});
+                midpointMarkers_{widget_id} = [];
                 if (polygon_{widget_id}) map_{widget_id}.removeLayer(polygon_{widget_id});
 
                 if (points_{widget_id}.length === 0) return;
 
-                // Draw markers
+                // Draw vertex markers
                 points_{widget_id}.forEach(function(p, i) {{
-                    var color = i === 0 ? 'green' : 'blue';
+                    var isSelected = i === selectedIndex_{widget_id};
+                    var isFirst = i === 0;
+                    var color = isSelected ? 'red' : (isFirst ? '#28a745' : '#3388ff');
+                    var radius = isSelected ? 10 : 8;
+
                     var marker = L.circleMarker([p[0], p[1]], {{
-                        radius: 8, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.8
+                        radius: radius,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        fillOpacity: 0.9,
+                        draggable: false
                     }}).addTo(map_{widget_id});
-                    if (i === 0) marker.bindTooltip('Start (click to close)', {{permanent: false}});
+
+                    // Tooltip with point number
+                    var label = isFirst ? 'Start Point' : 'Point ' + (i + 1);
+                    if (isSelected) label += ' (Selected)';
+                    marker.bindTooltip(label, {{permanent: false}});
+
+                    // Click to select
+                    marker.on('click', function(e) {{
+                        L.DomEvent.stopPropagation(e);
+                        if (mode_{widget_id} === 'edit') {{
+                            selectedIndex_{widget_id} = i;
+                            drawPolygon_{widget_id}();
+                            updateUI_{widget_id}();
+                            updateStatus_{widget_id}('Point ' + (i + 1) + ' selected. Click "Delete Point" to remove.', '#17a2b8');
+                        }}
+                    }});
+
+                    // Make draggable in edit mode
+                    if (mode_{widget_id} === 'edit') {{
+                        marker.dragging = new L.Handler.MarkerDrag(marker);
+                        marker.dragging.enable();
+
+                        marker.on('drag', function(e) {{
+                            var pos = e.target.getLatLng();
+                            points_{widget_id}[i] = [pos.lat, pos.lng];
+                            drawPolygon_{widget_id}();
+                        }});
+
+                        marker.on('dragend', function(e) {{
+                            saveToHistory_{widget_id}();
+                            savePolygon_{widget_id}();
+                            updateUI_{widget_id}();
+                            updateStatus_{widget_id}('Point moved!', '#28a745');
+                        }});
+                    }}
+
                     markers_{widget_id}.push(marker);
                 }});
 
-                // Draw polygon or polyline
+                // Draw polygon
                 if (points_{widget_id}.length >= 3) {{
                     polygon_{widget_id} = L.polygon(points_{widget_id}, {{
-                        color: '#3388ff', weight: 3, fillOpacity: 0.2
+                        color: '#3388ff',
+                        weight: 3,
+                        fillOpacity: 0.2
                     }}).addTo(map_{widget_id});
-                }} else {{
-                    polyline_{widget_id} = L.polyline(points_{widget_id}, {{
-                        color: '#3388ff', weight: 3
-                    }}).addTo(map_{widget_id});
-                }}
-            }}
 
-            function closePolygon_{widget_id}() {{
-                if (points_{widget_id}.length >= 3) {{
-                    savePolygon_{widget_id}();
-                    drawPolygon_{widget_id}();
+                    // Add midpoint markers for inserting new points
+                    if (mode_{widget_id} === 'edit') {{
+                        for (var i = 0; i < points_{widget_id}.length; i++) {{
+                            var p1 = points_{widget_id}[i];
+                            var p2 = points_{widget_id}[(i + 1) % points_{widget_id}.length];
+                            var midLat = (p1[0] + p2[0]) / 2;
+                            var midLng = (p1[1] + p2[1]) / 2;
+
+                            var midMarker = L.circleMarker([midLat, midLng], {{
+                                radius: 6,
+                                fillColor: '#ffc107',
+                                color: '#fff',
+                                weight: 2,
+                                fillOpacity: 0.7,
+                                draggable: false
+                            }}).addTo(map_{widget_id});
+
+                            midMarker.bindTooltip('Click to insert point', {{permanent: false}});
+
+                            (function(insertIndex) {{
+                                midMarker.on('click', function(e) {{
+                                    L.DomEvent.stopPropagation(e);
+                                    var pos = e.target.getLatLng();
+                                    points_{widget_id}.splice(insertIndex + 1, 0, [pos.lat, pos.lng]);
+                                    saveToHistory_{widget_id}();
+                                    drawPolygon_{widget_id}();
+                                    updateUI_{widget_id}();
+                                    savePolygon_{widget_id}();
+                                    updateStatus_{widget_id}('Point inserted!', '#28a745');
+                                }});
+                            }})(i);
+
+                            midpointMarkers_{widget_id}.push(midMarker);
+                        }}
+                    }}
+                }} else if (points_{widget_id}.length > 0) {{
+                    // Draw polyline if less than 3 points
+                    polygon_{widget_id} = L.polyline(points_{widget_id}, {{
+                        color: '#3388ff',
+                        weight: 3
+                    }}).addTo(map_{widget_id});
                 }}
             }}
 
@@ -365,8 +516,7 @@ class GeoJSONPolygonWidget(forms.Widget):
                 }}
 
                 var coords = points_{widget_id}.map(function(p) {{ return [p[1], p[0]]; }});
-                // Close the ring
-                coords.push(coords[0]);
+                coords.push(coords[0]); // Close the ring
 
                 var geojson = {{
                     "type": "Polygon",
@@ -375,31 +525,163 @@ class GeoJSONPolygonWidget(forms.Widget):
                 document.getElementById('{widget_id}').value = JSON.stringify(geojson, null, 2);
             }}
 
-            function updateStatus_{widget_id}() {{
-                var status = document.getElementById('{widget_id}_status');
+            function updateUI_{widget_id}() {{
                 var count = points_{widget_id}.length;
-                if (count < 3) {{
-                    status.textContent = count + ' points (need at least 3)';
-                    status.style.color = '#dc3545';
+
+                // Update points count
+                document.getElementById('{widget_id}_points_count').textContent = count + ' point' + (count !== 1 ? 's' : '');
+
+                // Calculate and display area
+                if (count >= 3) {{
+                    try {{
+                        var areaM2 = L.GeometryUtil.geodesicArea(points_{widget_id}.map(function(p) {{
+                            return L.latLng(p[0], p[1]);
+                        }}));
+                        var areaKm2 = (areaM2 / 1000000).toFixed(2);
+                        document.getElementById('{widget_id}_area').textContent = 'Area: ' + areaKm2 + ' km²';
+                    }} catch(e) {{
+                        // Fallback if GeometryUtil not available
+                        document.getElementById('{widget_id}_area').textContent = 'Area: Calculated';
+                    }}
                 }} else {{
-                    status.textContent = count + ' points - boundary set!';
-                    status.style.color = '#28a745';
+                    document.getElementById('{widget_id}_area').textContent = 'Area: --';
                 }}
+
+                // Update button states
+                document.getElementById('{widget_id}_btn_delete').disabled = selectedIndex_{widget_id} === null || count <= 3;
+                document.getElementById('{widget_id}_btn_undo').disabled = historyIndex_{widget_id} <= 0;
+                document.getElementById('{widget_id}_btn_redo').disabled = historyIndex_{widget_id} >= history_{widget_id}.length - 1;
+                document.getElementById('{widget_id}_btn_zoom').disabled = count < 3;
+
+                // Update mode buttons
+                document.getElementById('{widget_id}_btn_draw').style.opacity = mode_{widget_id} === 'draw' ? '1' : '0.6';
+                document.getElementById('{widget_id}_btn_edit').style.opacity = mode_{widget_id} === 'edit' ? '1' : '0.6';
             }}
 
-            window.clearPolygon_{widget_id} = function() {{
-                points_{widget_id} = [];
+            function updateStatus_{widget_id}(message, color) {{
+                var status = document.getElementById('{widget_id}_status');
+                status.innerHTML = '<span style="color: ' + (color || '#666') + ';">' + message + '</span>';
+            }}
+
+            function saveToHistory_{widget_id}() {{
+                // Remove any history after current index
+                history_{widget_id} = history_{widget_id}.slice(0, historyIndex_{widget_id} + 1);
+                // Add current state
+                history_{widget_id}.push(JSON.parse(JSON.stringify(points_{widget_id})));
+                historyIndex_{widget_id} = history_{widget_id}.length - 1;
+                updateUI_{widget_id}();
+            }}
+
+            window.setMode_{widget_id} = function(mode) {{
+                mode_{widget_id} = mode;
+                selectedIndex_{widget_id} = null;
                 drawPolygon_{widget_id}();
-                updateStatus_{widget_id}();
-                document.getElementById('{widget_id}').value = '';
+                updateUI_{widget_id}();
+
+                if (mode === 'draw') {{
+                    updateStatus_{widget_id}('Draw mode: Click on map to add points.', '#28a745');
+                }} else {{
+                    updateStatus_{widget_id}('Edit mode: Drag points to move, click points to select, click edges to insert.', '#17a2b8');
+                }}
             }};
 
-            window.undoLastPoint_{widget_id} = function() {{
-                if (points_{widget_id}.length > 0) {{
-                    points_{widget_id}.pop();
+            window.deleteSelected_{widget_id} = function() {{
+                if (selectedIndex_{widget_id} !== null && points_{widget_id}.length > 3) {{
+                    points_{widget_id}.splice(selectedIndex_{widget_id}, 1);
+                    selectedIndex_{widget_id} = null;
+                    saveToHistory_{widget_id}();
                     drawPolygon_{widget_id}();
-                    updateStatus_{widget_id}();
+                    updateUI_{widget_id}();
                     savePolygon_{widget_id}();
+                    updateStatus_{widget_id}('Point deleted!', '#dc3545');
+                }}
+            }};
+
+            window.undo_{widget_id} = function() {{
+                if (historyIndex_{widget_id} > 0) {{
+                    historyIndex_{widget_id}--;
+                    points_{widget_id} = JSON.parse(JSON.stringify(history_{widget_id}[historyIndex_{widget_id}]));
+                    selectedIndex_{widget_id} = null;
+                    drawPolygon_{widget_id}();
+                    updateUI_{widget_id}();
+                    savePolygon_{widget_id}();
+                    updateStatus_{widget_id}('Undo successful!', '#6c757d');
+                }}
+            }};
+
+            window.redo_{widget_id} = function() {{
+                if (historyIndex_{widget_id} < history_{widget_id}.length - 1) {{
+                    historyIndex_{widget_id}++;
+                    points_{widget_id} = JSON.parse(JSON.stringify(history_{widget_id}[historyIndex_{widget_id}]));
+                    selectedIndex_{widget_id} = null;
+                    drawPolygon_{widget_id}();
+                    updateUI_{widget_id}();
+                    savePolygon_{widget_id}();
+                    updateStatus_{widget_id}('Redo successful!', '#6c757d');
+                }}
+            }};
+
+            window.zoomToFit_{widget_id} = function() {{
+                if (polygon_{widget_id}) {{
+                    map_{widget_id}.fitBounds(polygon_{widget_id}.getBounds(), {{padding: [50, 50]}});
+                    updateStatus_{widget_id}('Zoomed to boundary!', '#007bff');
+                }}
+            }};
+
+            window.clearPolygon_{widget_id} = function() {{
+                if (points_{widget_id}.length > 0 && !confirm('Are you sure you want to clear the entire boundary?')) {{
+                    return;
+                }}
+                points_{widget_id} = [];
+                selectedIndex_{widget_id} = null;
+                history_{widget_id} = [];
+                historyIndex_{widget_id} = -1;
+                saveToHistory_{widget_id}();
+                drawPolygon_{widget_id}();
+                updateUI_{widget_id}();
+                document.getElementById('{widget_id}').value = '';
+                updateStatus_{widget_id}('Boundary cleared. Ready to draw.', '#ffc107');
+            }};
+
+            window.loadFromTextarea_{widget_id} = function() {{
+                try {{
+                    var text = document.getElementById('{widget_id}').value.trim();
+                    if (!text) {{
+                        updateStatus_{widget_id}('No JSON to load! Paste GeoJSON into the textarea first.', '#dc3545');
+                        return;
+                    }}
+
+                    var data = JSON.parse(text);
+
+                    // Validate GeoJSON format
+                    if (!data || data.type !== 'Polygon' || !data.coordinates || !data.coordinates[0]) {{
+                        updateStatus_{widget_id}('Invalid GeoJSON Polygon format! Must be: {{"type":"Polygon","coordinates":[[[lng,lat],...]]}}', '#dc3545');
+                        return;
+                    }}
+
+                    // Clear existing points and load new ones
+                    points_{widget_id} = [];
+                    var coords = data.coordinates[0];
+                    for (var i = 0; i < coords.length - 1; i++) {{
+                        points_{widget_id}.push([coords[i][1], coords[i][0]]);
+                    }}
+
+                    // Update history and redraw
+                    history_{widget_id} = [];
+                    historyIndex_{widget_id} = -1;
+                    saveToHistory_{widget_id}();
+                    drawPolygon_{widget_id}();
+                    updateUI_{widget_id}();
+
+                    // Zoom to fit the new boundary
+                    if (polygon_{widget_id}) {{
+                        map_{widget_id}.fitBounds(polygon_{widget_id}.getBounds(), {{padding: [50, 50]}});
+                    }}
+
+                    updateStatus_{widget_id}('✅ GeoJSON loaded successfully! ' + points_{widget_id}.length + ' points loaded onto map.', '#28a745');
+                }} catch(error) {{
+                    updateStatus_{widget_id}('❌ Invalid JSON format! Error: ' + error.message, '#dc3545');
+                    console.error('GeoJSON load error:', error);
                 }}
             }};
         }})();

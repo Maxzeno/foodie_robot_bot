@@ -22,6 +22,7 @@ class Restaurant(BaseModel):
     email = models.CharField(max_length=250, blank=True, null=True)
     website = models.URLField(max_length=250, blank=True, null=True)
     social = models.URLField(max_length=250, blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
 
     # Business hours
     open_time = models.TimeField(

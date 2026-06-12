@@ -1,19 +1,49 @@
 """
 Admin configuration for Restaurant model.
 """
+from django import forms
 from django.contrib import admin
 from django.db.models import Count
 from django.utils.html import format_html
 
-from api.models.restaurant import Restaurant
+from api.models.restaurant import Restaurant, DayOfWeekChoices
 from api.admin.base import (
     GeoJSONFieldMixin,
     render_point_map_preview,
 )
 
 
+class RestaurantAdminForm(forms.ModelForm):
+    """Custom form for Restaurant admin with improved available_days UI."""
+
+    available_days = forms.MultipleChoiceField(
+        choices=DayOfWeekChoices.choices,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        help_text="Select the days when the restaurant is open (leave empty for all days)"
+    )
+
+    class Meta:
+        model = Restaurant
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pre-populate checkboxes with existing data
+        if self.instance and self.instance.pk:
+            if isinstance(self.instance.available_days, list):
+                self.initial['available_days'] = self.instance.available_days
+
+    def clean_available_days(self):
+        """Convert the selected checkboxes back to a list for JSON storage."""
+        selected_days = self.cleaned_data.get('available_days', [])
+        # Return as a list (will be stored as JSON)
+        return list(selected_days) if selected_days else []
+
+
 @admin.register(Restaurant)
 class RestaurantAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
+    form = RestaurantAdminForm
     list_display = ['name', 'phone', 'address', 'has_location', 'hours_display', 'inactive_badge', 'meal_count']
     list_filter = ['inactive', 'created_at']
     search_fields = ['name', 'phone', 'address', 'email']
@@ -24,7 +54,7 @@ class RestaurantAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('name', 'phone', 'address')
+            'fields': ('name', 'phone', 'address', 'note')
         }),
         ('Location (GeoJSON Point)', {
             'fields': ('point', 'point_preview'),
@@ -36,7 +66,7 @@ class RestaurantAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
         }),
         ('Business Hours', {
             'fields': ('open_time', 'close_time', 'available_days'),
-            'description': 'available_days: ["monday", "tuesday", ...] or empty for all days'
+            'description': 'Select the days when the restaurant is open. Leave unchecked for all days.'
         }),
         ('Status', {
             'fields': ('inactive',),
