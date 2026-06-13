@@ -35,36 +35,6 @@ def get_no_recommendation_message(filter_stats: Dict, currency_symbol: str = "â‚
             "Consider updating your budget in your profile."
         )
 
-    if primary_reason == 'health_conditions':
-        health_conditions = filter_stats.get('user_health_conditions', [])
-        if health_conditions:
-            conditions_str = ", ".join(health_conditions[:3])
-            if len(health_conditions) > 3:
-                conditions_str += f" and {len(health_conditions) - 3} more"
-            return (
-                f"Your health restrictions ({conditions_str}) filtered out all available meals. "
-                "We're working with restaurants to add more options for your dietary needs."
-            )
-        return (
-            "Your health restrictions filtered out all available meals. "
-            "We're working with restaurants to add more options for your dietary needs."
-        )
-
-    if primary_reason == 'allergies':
-        allergies = filter_stats.get('user_allergies', [])
-        if allergies:
-            allergies_str = ", ".join(allergies[:3])
-            if len(allergies) > 3:
-                allergies_str += f" and {len(allergies) - 3} more"
-            return (
-                f"Your allergy restrictions ({allergies_str}) filtered out all available meals. "
-                "We're working with restaurants to add more allergen-free options."
-            )
-        return (
-            "Your allergy restrictions filtered out all available meals. "
-            "We're working with restaurants to add more allergen-free options."
-        )
-
     if primary_reason == 'restaurant_hours':
         return (
             "No restaurants are currently open in your area right now. "
@@ -100,7 +70,7 @@ def should_show_profile_update_flow(primary_reason: str) -> bool:
     """
     Determine if the profile update flow should be shown based on the reason.
 
-    Profile update can help with: budget, health_conditions, allergies, hated meals.
+    Profile update can help with: budget, hated meals.
     Profile update won't help with: no_meals_in_city, restaurant_hours, meal_hours, stock.
 
     Args:
@@ -109,7 +79,7 @@ def should_show_profile_update_flow(primary_reason: str) -> bool:
     Returns:
         bool: True if profile update flow should be shown
     """
-    profile_fixable_reasons = {'budget', 'health_conditions', 'allergies', 'hated'}
+    profile_fixable_reasons = {'budget', 'hated'}
     return primary_reason in profile_fixable_reasons
 
 
@@ -126,8 +96,6 @@ def get_no_recommendation_message_short(primary_reason: str) -> str:
     reason_descriptions = {
         'no_meals_in_city': 'No meals available in city',
         'budget': 'Budget too restrictive',
-        'health_conditions': 'Health conditions filtered all meals',
-        'allergies': 'Allergies filtered all meals',
         'restaurant_hours': 'No restaurants open',
         'meal_hours': 'No meals available at this time',
         'hated': 'Too many meals disliked',

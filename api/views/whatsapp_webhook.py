@@ -1,4 +1,5 @@
 import uuid
+from api.models.meal import Meal
 from api.models.message import CurrentIntentChoices, Message, RoleChoices
 import json
 from ninja import Router
@@ -9,6 +10,7 @@ from django.db import transaction
 from django.conf import settings
 
 from api.services.ai.orchestrator import FoodBotAIHandler
+from api.services.recommendation.meal_recommendation import MealRecommendationService
 from api.utils.nfm_reply import nfm_reply_hander
 from api.utils.text_extract import extract_user_code
 from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
@@ -216,26 +218,28 @@ def whatsapp_test_template(request):
     return {"detail": "Done"}
 
 # # TODO: to be removed in production
-# @csrf_exempt
-# @router.get("/test-temp-recommendation")
-# def text_temp_recommendation(request):
-#     user = User.objects.filter(phone="2349077745730").first()
-#     print("User:", user)
-#     service = MealRecommendationService()
+@csrf_exempt
+@router.get("/test-temp-recommendation")
+def text_temp_recommendation(request):
+    user = User.objects.filter(phone="2349077745730").first()
+    print("User:", user)
+    service = MealRecommendationService()
+    # service = HybridMealRecommendationService()
 
-#     # recommend by LLM
-#     recommended_meal_ids = service.get_recommendations(
-#         user=user,
-#         num_recommendations_per_period=2,
-#     )
 
-#     res = {}
-#     for k, v in recommended_meal_ids.items():
-#         meals = Meal.objects.filter(id__in=v).values('id', 'name')
-#         print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
-#         res[k] = list(meals)
-#     print("Recommended Meal IDs:", recommended_meal_ids)
-#     return res
+    # recommend by LLM
+    recommended_meal_ids = service.get_recommendations(
+        user=user,
+        num_recommendations_per_period=2,
+    )
+
+    res = {}
+    for k, v in recommended_meal_ids.items():
+        meals = Meal.objects.filter(id__in=v).values('id', 'name')
+        print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))
+        res[k] = list(meals)
+    print("Recommended Meal IDs:", recommended_meal_ids)
+    return res
 
 # # TODO: to be removed in production
 # @csrf_exempt

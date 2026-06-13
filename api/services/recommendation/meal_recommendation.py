@@ -7,7 +7,6 @@ This service provides personalized meal recommendations using a three-layer appr
 Layer 1: Hard Constraint Filtering (Availability)
     - Filters out hated meals and unavailable meals
     - Ensures only available meals from active restaurants are considered
-    - Note: Allergies, health conditions, and preferred cuisine filtering removed for simplicity
 
 Layer 2: Smart Scoring System (Personalization)
     - Scores eligible meals based on multiple weighted factors
@@ -161,13 +160,20 @@ class MealRecommendationService:
         logger.info(f"Eligible meals after filtering: {len(available_meals)}")
 
         if not available_meals:
-            logger.warning(f"No eligible meals found for user. Reason: {filter_stats.get('primary_reason', 'unknown')}")
-            return {
-                "morning": [],
-                "afternoon": [],
-                "evening": [],
-                "no_results_reason": filter_stats
-            }
+            # Try fallback with minimal filtering - we want users to always get recommendations
+            logger.info(f"No meals after strict filtering. Trying fallback for user {user.id}")
+            available_meals = self._get_fallback_meals(user, list(all_exclusions))
+
+            if not available_meals:
+                logger.warning(f"No eligible meals found for user even with fallback. Reason: {filter_stats.get('primary_reason', 'unknown')}")
+                return {
+                    "morning": [],
+                    "afternoon": [],
+                    "evening": [],
+                    "no_results_reason": filter_stats
+                }
+
+            logger.info(f"Fallback found {len(available_meals)} meals")
 
         # === LAYER 2: SMART SCORING SYSTEM ===
         # Gather user data for scoring
@@ -252,8 +258,6 @@ class MealRecommendationService:
         2. Availability filters (stock, time, restaurant status)
         3. Exclusion lists (today's meals, custom exclusions)
 
-        Note: Allergies and health conditions filtering removed for simplicity.
-
         Args:
             user: User instance
             exclude_meal_ids: Meal IDs to exclude
@@ -289,9 +293,6 @@ class MealRecommendationService:
         ).select_related('restaurant', 'city', 'city__currency')
 
         # === SAFETY FILTERS ===
-
-        # Note: Allergies and health conditions filtering removed for simplicity
-        # These may be re-added as the product matures
 
         # Exclude hated meals (user preference)
         hated_meal_ids = list(
@@ -428,6 +429,56 @@ class MealRecommendationService:
 
         return 'unknown'
 
+    def _get_fallback_meals(
+        self,
+        user,
+        exclude_meal_ids: Optional[List[int]] = None
+    ) -> List[Meal]:
+        """
+        Fallback query with minimal filtering to ensure users always get recommendations.
+
+        Only applies essential filters:
+        - Available meals in user's city
+        - Active restaurants
+        - Excludes already recommended meals today
+
+        Relaxes:
+        - Budget constraints
+        - Restaurant/meal hours
+        - Stock limits
+        - Hated meals (if user has hated too many)
+
+        Returns:
+            List of Meal objects
+        """
+        queryset = Meal.objects.filter(
+            available=True,
+            city=user.city,
+            restaurant__inactive=False
+        ).select_related('restaurant', 'city', 'city__currency')
+
+        # Only apply exclusions for today's already recommended meals
+        if exclude_meal_ids:
+            queryset = queryset.exclude(id__in=exclude_meal_ids)
+
+        # Annotate with popularity for scoring
+        queryset = queryset.annotate(
+            total_order_count=Count('orders', distinct=True),
+            total_like_count=Count(
+                'meal_preferences',
+                filter=Q(meal_preferences__preference='like'),
+                distinct=True
+            )
+        )
+
+        queryset = queryset.prefetch_related(
+            'fitness_goals',
+            'cuisine',
+            'meal_preferences',
+        )
+
+        return list(queryset[:self.MAX_CANDIDATE_MEALS])
+
     # ============================================================================
     # LAYER 2: SMART SCORING SYSTEM
     # ============================================================================
@@ -500,7 +551,7 @@ class MealRecommendationService:
         score += self._score_user_history(meal, user_data)
 
         # === PREFERENCE ALIGNMENT ===
-        score += self._score_preferences(meal, user, user_data)
+        score += self._score_preferences(meal, user)
 
         # === SOCIAL SIGNALS ===
         score += self._score_social_signals(meal, user, user_data)
@@ -543,10 +594,9 @@ class MealRecommendationService:
 
         return score
 
-    def _score_preferences(self, meal: Meal, user, user_data: Dict) -> float:
+    def _score_preferences(self, meal: Meal, user) -> float:
         """
         Score based on user's stated preferences and constraints.
-        Note: Preferred cuisine matching removed for simplicity.
         """
         score = 0.0
 

@@ -13,7 +13,6 @@ Architecture:
 │  - Hated meals                                                   │
 │  - Availability, stock, restaurant status                       │
 │  - Budget limits                                                 │
-│  - Note: Allergies/health conditions removed for simplicity     │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -159,12 +158,26 @@ class HybridMealRecommendationService:
         if exclude_meal_ids:
             all_exclusions.update(exclude_meal_ids)
 
-        available_meals = self._get_eligible_meals(user, list(all_exclusions))
+        available_meals, filter_stats = self._get_eligible_meals(
+            user, list(all_exclusions), track_filter_reasons=True
+        )
         logger.info(f"Eligible meals after filtering: {len(available_meals)}")
 
         if not available_meals:
-            logger.warning("No eligible meals found")
-            return {"morning": [], "afternoon": [], "evening": []}
+            # Try fallback with minimal filtering - we want users to always get recommendations
+            logger.info(f"No meals after strict filtering. Trying fallback for user {user.id}")
+            available_meals = self._get_fallback_meals(user, list(all_exclusions))
+
+            if not available_meals:
+                logger.warning(f"No eligible meals found for user even with fallback. Reason: {filter_stats.get('primary_reason', 'unknown')}")
+                return {
+                    "morning": [],
+                    "afternoon": [],
+                    "evening": [],
+                    "no_results_reason": filter_stats
+                }
+
+            logger.info(f"Fallback found {len(available_meals)} meals")
 
         # === PREPARE SCORING CONTEXT ===
         # Build user taste profile (cached)
@@ -244,11 +257,41 @@ class HybridMealRecommendationService:
             ).values_list('meal_id', flat=True).distinct()
         )
 
-    def _get_eligible_meals(self, user, exclude_meal_ids: Optional[List[int]] = None) -> List[Meal]:
+    def _get_eligible_meals(
+        self,
+        user,
+        exclude_meal_ids: Optional[List[int]] = None,
+        track_filter_reasons: bool = False
+    ) -> Tuple[List[Meal], Dict]:
         """
         Apply hard constraints to filter eligible meals.
-        Note: Allergies and health conditions filtering removed for simplicity.
+
+        Args:
+            user: User instance
+            exclude_meal_ids: Meal IDs to exclude
+            track_filter_reasons: If True, tracks filter statistics
+
+        Returns:
+            Tuple of (List[Meal], Dict) where Dict contains filter stats
         """
+        filter_stats = {
+            'total_meals_in_city': 0,
+            'filtered_by_unavailable': 0,
+            'filtered_by_inactive_restaurant': 0,
+            'filtered_by_hated': 0,
+            'filtered_by_stock': 0,
+            'filtered_by_restaurant_hours': 0,
+            'filtered_by_meal_hours': 0,
+            'filtered_by_budget': 0,
+            'filtered_by_exclusions': 0,
+            'remaining_after_filters': 0,
+            'user_budget': float(user.average_meal_budget) if user.average_meal_budget else None,
+        }
+
+        # Get total meals in city for context
+        if track_filter_reasons:
+            filter_stats['total_meals_in_city'] = Meal.objects.filter(city=user.city).count()
+
         queryset = Meal.objects.filter(
             available=True,
             city=user.city,
@@ -256,25 +299,30 @@ class HybridMealRecommendationService:
         ).select_related('restaurant', 'city', 'city__currency')
 
         # === SAFETY FILTERS ===
-        # Note: Allergies and health conditions filtering removed for simplicity
-        # These may be re-added as the product matures
-
         hated_meal_ids = list(
             user.meal_preferences.filter(preference='hate').values_list('meal_id', flat=True)
         )
         if hated_meal_ids:
+            if track_filter_reasons:
+                filter_stats['filtered_by_hated'] = queryset.filter(id__in=hated_meal_ids).count()
             queryset = queryset.exclude(id__in=hated_meal_ids)
 
         # === AVAILABILITY FILTERS ===
+        if track_filter_reasons:
+            before_stock = queryset.count()
         queryset = queryset.filter(
             Q(daily_stock_limit__isnull=True) |
             Q(remaining_stock__isnull=True) |
             Q(remaining_stock__gt=0)
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_stock'] = before_stock - queryset.count()
 
         current_time = user.get_local_time().time()
         current_day = user.get_local_time().strftime('%A').lower()
 
+        if track_filter_reasons:
+            before_restaurant_hours = queryset.count()
         queryset = queryset.filter(
             Q(restaurant__available_days=[]) |
             Q(restaurant__available_days__contains=[current_day])
@@ -282,22 +330,98 @@ class HybridMealRecommendationService:
             restaurant__open_time__lte=current_time,
             restaurant__close_time__gte=current_time
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_restaurant_hours'] = before_restaurant_hours - queryset.count()
 
+        if track_filter_reasons:
+            before_meal_hours = queryset.count()
         queryset = queryset.filter(
             Q(available_from_time__isnull=True) | Q(available_from_time__lte=current_time)
         ).filter(
             Q(available_to_time__isnull=True) | Q(available_to_time__gte=current_time)
         )
+        if track_filter_reasons:
+            filter_stats['filtered_by_meal_hours'] = before_meal_hours - queryset.count()
 
         # Budget filter (soft - allow 20% over)
         if user.average_meal_budget and user.average_meal_budget > 0:
             max_price = float(user.average_meal_budget) * 1.2
+            if track_filter_reasons:
+                before_budget = queryset.count()
             queryset = queryset.filter(price__lte=max_price)
+            if track_filter_reasons:
+                filter_stats['filtered_by_budget'] = before_budget - queryset.count()
+
+        if exclude_meal_ids:
+            if track_filter_reasons:
+                filter_stats['filtered_by_exclusions'] = queryset.filter(id__in=exclude_meal_ids).count()
+            queryset = queryset.exclude(id__in=exclude_meal_ids)
+
+        # Annotate with popularity
+        queryset = queryset.annotate(
+            total_order_count=Count('orders', distinct=True),
+            total_like_count=Count(
+                'meal_preferences',
+                filter=Q(meal_preferences__preference='like'),
+                distinct=True
+            )
+        )
+
+        queryset = queryset.prefetch_related(
+            'fitness_goals', 'cuisine', 'meal_preferences'
+        )
+
+        result = list(queryset[:self.MAX_CANDIDATE_MEALS])
+
+        if track_filter_reasons:
+            filter_stats['remaining_after_filters'] = len(result)
+            if len(result) == 0:
+                filter_stats['primary_reason'] = self._determine_primary_filter_reason(filter_stats)
+
+        return result, filter_stats
+
+    def _determine_primary_filter_reason(self, filter_stats: Dict) -> str:
+        """Determine the primary reason why no meals are available."""
+        if filter_stats['total_meals_in_city'] == 0:
+            return 'no_meals_in_city'
+
+        filter_counts = [
+            ('budget', filter_stats.get('filtered_by_budget', 0)),
+            ('restaurant_hours', filter_stats.get('filtered_by_restaurant_hours', 0)),
+            ('meal_hours', filter_stats.get('filtered_by_meal_hours', 0)),
+            ('hated', filter_stats.get('filtered_by_hated', 0)),
+            ('stock', filter_stats.get('filtered_by_stock', 0)),
+        ]
+
+        filter_counts.sort(key=lambda x: x[1], reverse=True)
+
+        if filter_counts[0][1] > 0:
+            return filter_counts[0][0]
+
+        return 'unknown'
+
+    def _get_fallback_meals(
+        self,
+        user,
+        exclude_meal_ids: Optional[List[int]] = None
+    ) -> List[Meal]:
+        """
+        Fallback query with minimal filtering to ensure users always get recommendations.
+
+        Only applies essential filters:
+        - Available meals in user's city
+        - Active restaurants
+        - Excludes already recommended meals today
+        """
+        queryset = Meal.objects.filter(
+            available=True,
+            city=user.city,
+            restaurant__inactive=False
+        ).select_related('restaurant', 'city', 'city__currency')
 
         if exclude_meal_ids:
             queryset = queryset.exclude(id__in=exclude_meal_ids)
 
-        # Annotate with popularity
         queryset = queryset.annotate(
             total_order_count=Count('orders', distinct=True),
             total_like_count=Count(
