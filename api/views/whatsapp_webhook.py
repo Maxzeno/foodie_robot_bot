@@ -155,7 +155,7 @@ def whatsapp_webhook(request):
                 user.referred_by = referrer
                 user.save()
 
-        message = "Welcome to Foodie Robot! I'm here to help you with personalized meal recommendations. To get started, could you please fill out your user profile?"
+        message = "Welcome to Foodie Robot!\n\nFill out your food profile so I can recommend meals just for you."
         Message.bot_message_flow(
             message,
             user=user,
@@ -234,6 +234,7 @@ def text_temp_recommendation(request):
     )
 
     res = {}
+    recommended_meal_ids.pop('no_results_reason', None)
     for k, v in recommended_meal_ids.items():
         meals = Meal.objects.filter(id__in=v).values('id', 'name')
         print(f"Recommended Meals: {k} -", json.dumps(list(meals), indent=2))

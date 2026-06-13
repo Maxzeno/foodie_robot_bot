@@ -5,7 +5,7 @@ def recommend_product_payload(recomendation_id, body, image_url=None):
                 "text": body
             },
             "footer": {
-                "text": "Order now or share your feedback below"
+                "text": "Tap below to order or let us know what you think!"
             },
             "action": {
                 "buttons": [
@@ -13,27 +13,27 @@ def recommend_product_payload(recomendation_id, body, image_url=None):
                         "type": "reply",
                         "reply": {
                             "id": f"order-now--{recomendation_id}",
-                            "title": "Order now"
+                            "title": "Order Now"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
                             "id": f"i-love-this-meal--{recomendation_id}",
-                            "title": "I love this meal"
+                            "title": "Love it"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
                             "id": f"i-hate-this-meal--{recomendation_id}",
-                            "title": "I hate this meal"
+                            "title": "Not for me"
                         }
                     }
                 ]
             }
         }
-    
+
     if image_url:
         resp["header"] = {
             "type": "image",
@@ -41,5 +41,4 @@ def recommend_product_payload(recomendation_id, body, image_url=None):
                 "link": image_url
             }
         }
-    print(resp)
     return resp

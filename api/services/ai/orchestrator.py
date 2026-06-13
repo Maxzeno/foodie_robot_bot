@@ -59,8 +59,8 @@ class FoodBotAIHandler:
             "show_balance_withdraw": tool_handlers.show_balance_withdraw,
             "withdrawal_history": tool_handlers.withdrawal_history,
 
-            # nutrition tracking
-            "get_calorie_stats": tool_handlers.get_calorie_stats,
+            # progress stats
+            "get_progress_stats": tool_handlers.get_progress_stats,
         }
 
     def get_conversation_history(self) -> List[Dict]:

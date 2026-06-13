@@ -11,9 +11,10 @@ from api.models.special_occasion import SpecialOccasion
 @admin.register(Recommendation)
 class RecommendationAdmin(admin.ModelAdmin):
     list_display = [
-        'user_link', 'meal_name', 'time_of_day', 'choice_option',
+        'id', 'user_link', 'meal_name', 'time_of_day', 'choice_option',
         'day', 'sent_badge', 'accepted_badge', 'created_at'
     ]
+    list_display_links = ['id', 'meal_name']  # Click ID or Meal to go to detail page
     list_filter = ['time_of_day', 'choice_option', 'sent_to_user', 'accepted', 'day', 'created_at']
     search_fields = ['user__phone', 'user__code', 'meal__name']
     raw_id_fields = ['user', 'meal']

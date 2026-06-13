@@ -1,7 +1,8 @@
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Sum, Q, F
+from django.db.models import Sum, Q, F, Count
 import pytz
+import calendar
 
 from api.models.order import Order
 from api.models.user import User
@@ -29,6 +30,127 @@ def _get_period_start(user: User, period: str):
     else:  # Default to "day"
         # Start of today
         return local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _get_month_boundaries_utc(user: User):
+    """Get the start and end of current month in UTC."""
+    local_now = user.get_local_time()
+    month_start = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Get last day of month
+    last_day = calendar.monthrange(local_now.year, local_now.month)[1]
+    month_end = local_now.replace(day=last_day, hour=23, minute=59, second=59, microsecond=999999)
+
+    return month_start.astimezone(pytz.UTC), month_end.astimezone(pytz.UTC)
+
+
+def _get_monthly_leaderboard(user: User, limit: int = 3):
+    """
+    Get the monthly leaderboard based on paid order count.
+    Returns top users and current user's rank.
+    """
+    month_start_utc, month_end_utc = _get_month_boundaries_utc(user)
+
+    # Get users with their order counts for this month, filtered by user's city
+    leaderboard_query = User.objects.filter(
+        orders__paid=True,
+        orders__created_at__gte=month_start_utc,
+        orders__created_at__lte=month_end_utc,
+    )
+
+    # Filter by city if user has one
+    if user.city:
+        leaderboard_query = leaderboard_query.filter(city=user.city)
+
+    leaderboard = leaderboard_query.annotate(
+        order_count=Count('orders', filter=Q(
+            orders__paid=True,
+            orders__created_at__gte=month_start_utc,
+            orders__created_at__lte=month_end_utc,
+        ))
+    ).filter(order_count__gt=0).order_by('-order_count')[:limit]
+
+    # Get current user's rank
+    user_order_count = Order.objects.filter(
+        user=user,
+        paid=True,
+        created_at__gte=month_start_utc,
+        created_at__lte=month_end_utc,
+    ).count()
+
+    # Count users with more orders than current user
+    users_ahead = User.objects.filter(
+        orders__paid=True,
+        orders__created_at__gte=month_start_utc,
+        orders__created_at__lte=month_end_utc,
+    )
+    if user.city:
+        users_ahead = users_ahead.filter(city=user.city)
+
+    users_ahead = users_ahead.annotate(
+        order_count=Count('orders', filter=Q(
+            orders__paid=True,
+            orders__created_at__gte=month_start_utc,
+            orders__created_at__lte=month_end_utc,
+        ))
+    ).filter(order_count__gt=user_order_count).count()
+
+    user_rank = users_ahead + 1 if user_order_count > 0 else None
+
+    return list(leaderboard), user_rank, user_order_count
+
+
+def _get_user_display_name(user: User) -> str:
+    """Get a display name for leaderboard (anonymized for privacy)."""
+    if user.username:
+        return user.username
+    return f"Foodie #{user.code[-4:]}"
+
+
+def _format_leaderboard_section(leaderboard: list, user_rank: int, user_order_count: int, user: User) -> str:
+    """Format the leaderboard section of the message with engaging visuals."""
+    local_now = user.get_local_time()
+    month_name = local_now.strftime("%B")
+
+    lines = []
+    lines.append(f"*{month_name} Top Foodies*")
+    lines.append("")
+
+    if not leaderboard:
+        lines.append("No one on the board yet!")
+        lines.append("Be the first to claim the crown!")
+        return "\n".join(lines)
+
+    # Rank decorations
+    rank_icons = ["1.", "2.", "3."]
+
+    for idx, leader in enumerate(leaderboard):
+        icon = rank_icons[idx] if idx < 3 else f"{idx + 1}."
+        name = _get_user_display_name(leader)
+        orders = leader.order_count
+        order_text = "order" if orders == 1 else "orders"
+
+        # Highlight current user
+        if leader.id == user.id:
+            lines.append(f"{icon} *{name}* ({orders} {order_text}) <- You")
+        else:
+            lines.append(f"{icon} {name} ({orders} {order_text})")
+
+    # Show user's position if not in top 3
+    if user_rank and user_rank > 3:
+        gap = user_rank - 3
+        lines.append("")
+        lines.append(f"---")
+        lines.append(f"{user_rank}. You ({user_order_count} orders)")
+        if gap <= 5:
+            orders_needed = leaderboard[-1].order_count - user_order_count + 1 if leaderboard else 1
+            if orders_needed > 0:
+                lines.append(f"   {orders_needed} more to reach top 3!")
+    elif user_rank is None or user_order_count == 0:
+        lines.append("")
+        lines.append("You're not on the board yet!")
+
+    return "\n".join(lines)
 
 
 def _get_calorie_target(fitness_goal_name: str) -> int:
@@ -71,33 +193,23 @@ def _get_progress_bar(current: float, target: float, width: int = 10) -> str:
     return "▓" * filled + "░" * empty
 
 
-def get_calorie_stats(user: User, period: str = "day") -> bool:
+def get_progress_stats(user: User) -> bool:
     """
-    Show user's calorie consumption stats for a given period.
-    Compares against fitness goal recommendations.
+    Show user's daily progress stats including calories, streak, and leaderboard.
+    Designed to encourage daily check-ins with engaging, gamified content.
 
     Args:
         user: The user requesting stats
-        period: One of "day", "week", "month", "year"
 
     Returns:
         bool: True if successful, False otherwise
     """
     try:
-        # Validate and normalize period
-        valid_periods = ["day", "week", "month", "year"]
-        if period not in valid_periods:
-            period = "day"
-
-        # Calculate period boundaries
-        start_local = _get_period_start(user, period)
+        # Always use today's data to encourage daily check-ins
+        start_local = _get_period_start(user, "day")
         start_utc = start_local.astimezone(pytz.UTC)
 
-        # Calculate number of days for averaging
-        now_local = user.get_local_time()
-        period_days = (now_local.date() - start_local.date()).days + 1
-
-        # Query paid orders with calorie data
+        # Query today's paid orders with calorie data
         orders = Order.objects.filter(
             user=user,
             paid=True,
@@ -105,155 +217,105 @@ def get_calorie_stats(user: User, period: str = "day") -> bool:
             meal__calories__isnull=False
         ).select_related('meal')
 
-        # Calculate total calories (meal calories × quantity)
+        # Calculate total calories
         total_calories = sum(
             float(order.meal.calories) * order.quantity
             for order in orders
         )
-
         order_count = orders.count()
 
-        # Get fitness goal info
-        if user.fitness_goals:
-            goal_name = user.fitness_goals.name
-            goal_display = user.fitness_goals.get_name_display()
-        else:
-            goal_name = "maintenance"  # Default
-            goal_display = "Not set (using Maintenance)"
+        # Get user's streak and day info
+        day_number = user.get_recommendation_day_number()
+        streak = user.get_recommendation_streak()
 
+        # Get leaderboard data
+        leaderboard, user_rank, user_monthly_orders = _get_monthly_leaderboard(user)
+
+        # Get fitness goal info
+        goal_name = user.fitness_goals.name if user.fitness_goals else "maintenance"
         daily_target = _get_calorie_target(goal_name)
 
-        # Period display names
-        period_labels = {
-            "day": "Today",
-            "week": "This Week",
-            "month": "This Month",
-            "year": "This Year"
-        }
-        period_label = period_labels.get(period, "Today")
+        # Build the message
+        lines = []
 
-        # Handle no tracked meals
+        # Header
+        lines.append("*Your Progress*")
+        lines.append("")
+
+        # Day & Streak section - make it prominent
+        if streak >= 7:
+            lines.append(f"*Day {day_number}* | {streak}-day streak!")
+            lines.append("You're unstoppable!")
+        elif streak >= 3:
+            lines.append(f"*Day {day_number}* | {streak}-day streak")
+            lines.append("Keep the momentum going!")
+        elif streak > 1:
+            lines.append(f"*Day {day_number}* | {streak}-day streak")
+        else:
+            lines.append(f"*Day {day_number}*")
+            if day_number == 1:
+                lines.append("Welcome! Your journey starts now.")
+
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Today's Calories Section
+        lines.append("*Today's Calories*")
+        lines.append("")
+
         if order_count == 0:
-            message = f"""📊 *Nutrition Stats - {period_label}*
-
-No meals tracked yet for this period.
-
-Start ordering meals and we'll automatically track your nutrition progress! 🍽️
-
-━━━━━━━━━━━━━━━━━━━━
-💡 Fitness Goal: {goal_display}
-🎯 Daily Target: {daily_target:,.0f} kcal
-
-_Ask for "this week" or "this month" to see more._
-"""
-            Message.bot_message(message.strip(), user=user)
-            return True
-
-        # Calculate status
-        status, emoji, difference = _calculate_status(
-            total_calories,
-            daily_target,
-            period_days
-        )
-
-        # Calculate percentage
-        avg_calories = total_calories / period_days if period_days > 1 else total_calories
-        percentage = (avg_calories / daily_target) * 100 if daily_target > 0 else 0
-
-        # Build status headline
-        if status == "on track":
-            headline = f"✅ *You're on track!* ({goal_display})"
-        elif difference < -200:
-            headline = f"⚠️ *Below target* ({goal_display})"
+            lines.append("No meals yet today")
+            lines.append(f"Target: {daily_target:,.0f} kcal")
+            lines.append("")
+            lines.append("Order your first meal to start tracking!")
         else:
-            headline = f"⚠️ *Above target* ({goal_display})"
-
-        message = f"{headline}\n\n"
-        message += "━━━━━━━━━━━━━━━━━━━━\n"
-
-        # Period-specific formatting
-        if period == "day":
-            message += "*TODAY'S CALORIES*\n"
-            message += f"{total_calories:,.0f} / {daily_target:,.0f} kcal ({percentage:.0f}%)\n"
-            message += f"{_get_progress_bar(total_calories, daily_target)}\n\n"
-
-            # Show remaining or overage
+            percentage = (total_calories / daily_target) * 100 if daily_target > 0 else 0
             remaining = daily_target - total_calories
+
+            lines.append(f"{total_calories:,.0f} / {daily_target:,.0f} kcal")
+            lines.append(f"{_get_progress_bar(total_calories, daily_target)} {percentage:.0f}%")
+            lines.append("")
+
             if remaining > 0:
-                message += f"✨ *{remaining:,.0f} kcal remaining*\n\n"
+                lines.append(f"{remaining:,.0f} kcal left for today")
             else:
-                message += f"⚠️ *{abs(remaining):,.0f} kcal over target*\n\n"
+                lines.append(f"{abs(remaining):,.0f} kcal over - go light!")
 
+            lines.append(f"{order_count} meal{'s' if order_count != 1 else ''} tracked")
+
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Leaderboard Section
+        leaderboard_text = _format_leaderboard_section(leaderboard, user_rank, user_monthly_orders, user)
+        lines.append(leaderboard_text)
+
+        # Call to action based on position
+        lines.append("")
+        if user_rank == 1:
+            lines.append("You're leading the pack! Stay on top!")
+        elif user_rank and user_rank <= 3:
+            lines.append("So close to #1 - one more order could do it!")
+        elif user_monthly_orders > 0:
+            lines.append("Order more to climb the leaderboard!")
         else:
-            # Multi-day periods
-            period_upper = period_label.upper()
-            message += f"*{period_upper}'S CALORIES*\n"
-            message += f"{total_calories:,.0f} kcal total\n"
-            message += f"{avg_calories:,.0f} kcal daily average\n\n"
-            message += f"Target: {daily_target:,.0f} kcal/day ({percentage:.0f}%)\n"
-            message += f"{_get_progress_bar(avg_calories, daily_target)}\n\n"
+            lines.append("Make your first order to get on the board!")
 
-        message += "━━━━━━━━━━━━━━━━━━━━\n"
-        message += f"🍽️ {order_count} meal{'s' if order_count != 1 else ''} tracked\n\n"
-
-        # Add contextual encouragement
-        if difference < -200:
-            if period == "day":
-                message += "💡 Consider adding a nutritious meal to meet your energy needs!"
-            else:
-                message += f"💡 You're averaging {abs(difference):.0f} kcal below target. Consider adding more nutritious meals."
-        elif difference > 200:
-            if period == "day":
-                message += "💡 Maybe opt for lighter options if you plan to eat more today."
-            else:
-                message += f"💡 You're averaging {difference:.0f} kcal over target. Try lighter options to stay on track."
-        else:
-            motivations = [
-                "Great job! Keep it up! 🎉",
-                "You're crushing it! 💪",
-                "Perfect balance! Keep going! 🌟",
-                "Excellent work! Stay consistent! ✨"
-            ]
-            # Use order count to pick a consistent message per user session
-            message += motivations[order_count % len(motivations)]
-
-        # Add discovery tip (softer format)
-        period_to_exclude = {
-            "day": "daily",
-            "week": "weekly",
-            "month": "monthly",
-            "year": "yearly"
-        }
-
-        current_period_ly = period_to_exclude.get(period)
-        all_period_options = ["daily", "weekly", "monthly", "yearly"]
-        other_periods = [p for p in all_period_options if p != current_period_ly]
-
-        if len(other_periods) > 0:
-            period_hints = {
-                "daily": "today",
-                "weekly": "this week",
-                "monthly": "this month",
-                "yearly": "this year"
-            }
-            available = [period_hints.get(p, p) for p in other_periods]
-
-            if len(available) == 2:
-                hint = f"'{available[0]}' or '{available[1]}'"
-            elif len(available) == 3:
-                hint = f"'{available[0]}', '{available[1]}', or '{available[2]}'"
-            else:
-                hint = f"'{available[0]}'"
-
-            message += f"\n\n_Ask for {hint} to see more._"
-
-        Message.bot_message(message.strip(), user=user)
+        Message.bot_message("\n".join(lines), user=user)
         return True
 
     except Exception as e:
-        print(f"Error getting calorie stats: {e}")
+        print(f"Error getting progress stats: {e}")
         Message.bot_message(
-            "Sorry, I couldn't retrieve your nutrition stats right now. Please try again.",
+            "Sorry, couldn't load your stats. Try again!",
             user=user
         )
         return False
+
+
+# Keep old function name as alias for backwards compatibility
+def get_calorie_stats(user: User, period: str = "day") -> bool:
+    """Backwards compatible alias for get_progress_stats."""
+    return get_progress_stats(user)

@@ -79,9 +79,9 @@ def show_menu_options_payload(text):
                     "title": "Others",
                     "rows": [
                         {
-                            "id": "calorie-stats",
-                            "title": "Calorie Stats",
-                            "description": "View your calorie statistics"
+                            "id": "progress-stats",
+                            "title": "My Progress/Leaderboard",
+                            "description": "View your Progress/Leaderboard"
                         },
                         # {
                         #     "id": "meal-liked-disliked",

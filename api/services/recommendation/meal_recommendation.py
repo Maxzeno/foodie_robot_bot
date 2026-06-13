@@ -224,7 +224,7 @@ class MealRecommendationService:
             recommendations = self._apply_epsilon_greedy_exploration(
                 recommendations, available_meals, epsilon
             )
-
+        print("Final Recommendations with Exploration:", recommendations)
         return recommendations
 
     # ============================================================================

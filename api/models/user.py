@@ -118,10 +118,77 @@ class User(AbstractUser, BaseModel):
     def get_time_period(self):
         local_time = self.get_local_time()
         hour = local_time.hour
-        
+
         if 6 <= hour < 12:
             return 'morning'
         elif 12 <= hour < 17:
             return 'afternoon'
         else:
             return 'evening'
+
+    def get_recommendation_day_number(self) -> int:
+        """
+        Calculate which day of recommendations this is for the user.
+        Returns the number of unique days the user has received recommendations + 1 for today.
+        """
+        from api.models.recommendation import Recommendation
+
+        today = self.get_local_time().date()
+
+        # Count unique days with recommendations (excluding today)
+        past_days = Recommendation.objects.filter(
+            user=self,
+            sent_to_user=True,
+            day__lt=today
+        ).values('day').distinct().count()
+
+        return past_days + 1
+
+    def get_recommendation_streak(self) -> int:
+        """
+        Calculate the user's current recommendation engagement streak.
+        A streak is maintained when user receives recommendations on consecutive days.
+        """
+        from api.models.recommendation import Recommendation
+        from datetime import timedelta
+
+        today = self.get_local_time().date()
+
+        # Get all unique days with recommendations, ordered descending
+        recommendation_days = list(
+            Recommendation.objects.filter(
+                user=self,
+                sent_to_user=True
+            ).values_list('day', flat=True).distinct().order_by('-day')
+        )
+
+        if not recommendation_days:
+            return 1  # First day
+
+        streak = 1
+        # Start from today or most recent day
+        current_day = today
+
+        # Check if today has a recommendation
+        if recommendation_days and recommendation_days[0] == today:
+            current_day = today
+        elif recommendation_days:
+            # If no recommendation today, check if yesterday had one
+            yesterday = today - timedelta(days=1)
+            if recommendation_days[0] != yesterday:
+                return 1  # Streak broken
+            current_day = yesterday
+            streak = 1
+
+        # Count consecutive days going backwards
+        for rec_day in recommendation_days:
+            if rec_day == current_day:
+                continue
+            expected_prev = current_day - timedelta(days=1)
+            if rec_day == expected_prev:
+                streak += 1
+                current_day = rec_day
+            elif rec_day < expected_prev:
+                break
+
+        return streak

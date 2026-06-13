@@ -200,11 +200,23 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
     """Helper function to send a recommendation message to a user."""
     from api.models.message import Message
     from api.utils.whatsapp_payload_helper.recommend_product import recommend_product_payload
+    from api.services.ai.tool_handlers.meal import format_engaging_recommendation_message
 
     try:
-        # Format message text
-        position_text = 'first' if index == 0 else 'second'
-        text = f"Your {position_text} {time_period} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
+        # Get currency symbol
+        currency_symbol = "₦"
+        if user.city and user.city.currency:
+            currency_symbol = user.city.currency.symbol
+
+        # Format engaging message text
+        choice_option = 'first' if index == 0 else 'second'
+        text = format_engaging_recommendation_message(
+            user=user,
+            meal=meal,
+            choice_option=choice_option,
+            time_of_day=time_period,
+            currency_symbol=currency_symbol
+        )
 
         # Get image URL
         image_url = meal.image_url.url if meal.image_url else None

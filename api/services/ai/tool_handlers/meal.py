@@ -13,6 +13,69 @@ from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_p
 from django.db import transaction
 
 
+def format_engaging_recommendation_message(
+    user: User,
+    meal: Meal,
+    choice_option: str,
+    time_of_day: str,
+    currency_symbol: str = "₦"
+) -> str:
+    """
+    Format an engaging, addictive recommendation message for the user.
+    Includes day count, streak info, and personalized messaging.
+    """
+    day_number = user.get_recommendation_day_number()
+    streak = user.get_recommendation_streak()
+
+    # Time of day greeting variations
+    time_greetings = {
+        'morning': ['Rise & dine', 'Good morning', 'Morning fuel'],
+        'afternoon': ['Midday treat', 'Lunch time', 'Afternoon delight'],
+        'evening': ['Evening feast', 'Dinner time', 'Tonight\'s pick']
+    }
+
+    # Get greeting based on time
+    import random
+    greeting = random.choice(time_greetings.get(time_of_day, ['Your pick']))
+
+    # Choice ordinal
+    choice_text = "1st" if choice_option.lower() == 'first' else "2nd"
+
+    # Build the message
+    lines = []
+
+    # Day header with milestone celebrations
+    if day_number == 1:
+        lines.append(f"*Day {day_number}* - Welcome to your food journey!")
+    elif day_number == 7:
+        lines.append(f"*Day {day_number}* - One week of great meals!")
+    elif day_number == 30:
+        lines.append(f"*Day {day_number}* - A month of delicious discoveries!")
+    elif day_number == 100:
+        lines.append(f"*Day {day_number}* - 100 days! You're a foodie legend!")
+    elif day_number % 10 == 0:
+        lines.append(f"*Day {day_number}* - Keep the streak going!")
+    else:
+        lines.append(f"*Day {day_number}*")
+
+    # Streak bonus message (if streak > 1)
+    if streak > 1:
+        if streak >= 7:
+            lines.append(f"*{streak}-day streak* - You're on fire!")
+        else:
+            lines.append(f"*{streak}-day streak*")
+
+    lines.append("")  # Empty line for spacing
+
+    # Main recommendation
+    lines.append(f"{greeting}! Here's your {choice_text} pick:")
+    lines.append("")
+    lines.append(f"*{meal.name}*")
+    lines.append(f"*{currency_symbol}{meal.price:,.0f}*")
+
+    return "\n".join(lines)
+
+
 def build_meal_recommendation(user: User) -> bool:
     """
     Build and send meal recommendations to the user.
@@ -65,6 +128,11 @@ def build_meal_recommendation(user: User) -> bool:
                 )
             return False
 
+        # Get currency symbol for message formatting
+        currency_symbol = "₦"
+        if user.city and user.city.currency:
+            currency_symbol = user.city.currency.symbol
+
         messages_sent = 0
         for period, recommended_meals_list in recommended_meal_map.items():
             # Skip the no_results_reason key (it's not a time period)
@@ -73,9 +141,7 @@ def build_meal_recommendation(user: User) -> bool:
 
             recommended_meals = Meal.objects.filter(id__in=recommended_meals_list)
             for index, meal in enumerate(recommended_meals):
-                text = f"Your {'first' if index == 0 else 'second'} {user.get_time_period()} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
-                image_url = meal.image_url.url if meal.image_url else None
-                meal_id = str(meal.id)
+                choice_option = 'first' if index == 0 else 'second'
 
                 recomendation_obj = Recommendation.objects.create(
                     user=user,
@@ -86,7 +152,18 @@ def build_meal_recommendation(user: User) -> bool:
                     day=user.get_local_time()
                 )
 
+                image_url = meal.image_url.url if meal.image_url else None
+                meal_id = str(meal.id)
+
                 if user.get_time_period() == period:
+                    # Use engaging message format
+                    text = format_engaging_recommendation_message(
+                        user=user,
+                        meal=meal,
+                        choice_option=choice_option,
+                        time_of_day=period,
+                        currency_symbol=currency_symbol
+                    )
                     payload = recommend_product_payload(recomendation_obj.id, text, image_url)
 
                     Message.bot_message_action_reply(text, user,
@@ -121,9 +198,21 @@ def meal_recommendations(
         found_recommendations = list(found_recommendations)[::-1]
 
         if found_recommendations:
+            # Get currency symbol for message formatting
+            currency_symbol = "₦"
+            if user.city and user.city.currency:
+                currency_symbol = user.city.currency.symbol
+
             for recom in found_recommendations:
                 meal = recom.meal
-                text = f"Your {recom.choice_option.lower()} {time_of_day} meal recommendation, {meal.name}, Meal Cost {meal.price:,.2f}"
+                # Use engaging message format
+                text = format_engaging_recommendation_message(
+                    user=user,
+                    meal=meal,
+                    choice_option=recom.choice_option.lower(),
+                    time_of_day=time_of_day,
+                    currency_symbol=currency_symbol
+                )
                 image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
 

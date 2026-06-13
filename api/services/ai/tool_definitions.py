@@ -209,16 +209,11 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "get_calorie_stats",
-                "description": "Show calorie tracking stats for a time period. Use when user asks about calories progress, how they're doing with their diet.",
+                "name": "get_progress_stats",
+                "description": "Show user's daily progress including calories, streak, and monthly leaderboard ranking. Use when user asks about their progress, stats, how they're doing, leaderboard, ranking, or streak.",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "period": {
-                            "type": "string",
-                            "enum": ["day", "week", "month", "year"],
-                        }
-                    },
+                    "properties": {},
                     "required": []
                 }
             }
