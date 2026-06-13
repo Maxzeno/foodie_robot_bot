@@ -25,6 +25,30 @@ class MealAdminForm(forms.ModelForm):
         label="Times of Day"
     )
 
+    available_from_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'type': 'time',
+                'class': 'vTimeField',
+                'style': 'width: 150px; font-size: 14px;'
+            }
+        ),
+        required=False,
+        help_text="Time when this meal becomes available (24-hour format, e.g., 06:00 for breakfast)"
+    )
+
+    available_to_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'type': 'time',
+                'class': 'vTimeField',
+                'style': 'width: 150px; font-size: 14px;'
+            }
+        ),
+        required=False,
+        help_text="Time when this meal stops being available (24-hour format, e.g., 11:00 for breakfast)"
+    )
+
     class Meta:
         model = Meal
         fields = '__all__'
@@ -59,7 +83,7 @@ class MealAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('code', 'name', 'restaurant', 'city', 'description', 'price', 'available', 'image_url', 'image_preview_large')
+            'fields': ('code', 'name', 'restaurant', 'city', 'note', 'description', 'price', 'available', 'image_url', 'image_preview_large')
         }),
         ('Availability', {
             'fields': ('times_of_day_choices', 'available_from_time', 'available_to_time'),
@@ -93,7 +117,7 @@ class MealAdmin(admin.ModelAdmin):
                 '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"/>',
                 obj.image_url.url
             )
-        return '-'
+        return '[No image]'
     image_preview.short_description = 'Image'
 
     def image_preview_large(self, obj):

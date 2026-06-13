@@ -14,13 +14,35 @@ from api.admin.base import (
 
 
 class RestaurantAdminForm(forms.ModelForm):
-    """Custom form for Restaurant admin with improved available_days UI."""
+    """Custom form for Restaurant admin with improved UI for time and day fields."""
 
     available_days = forms.MultipleChoiceField(
         choices=DayOfWeekChoices.choices,
         widget=forms.CheckboxSelectMultiple,
         required=False,
         help_text="Select the days when the restaurant is open (leave empty for all days)"
+    )
+
+    open_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'type': 'time',
+                'class': 'vTimeField',
+                'style': 'width: 150px; font-size: 14px;'
+            }
+        ),
+        help_text="Restaurant opening time (24-hour format)"
+    )
+
+    close_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'type': 'time',
+                'class': 'vTimeField',
+                'style': 'width: 150px; font-size: 14px;'
+            }
+        ),
+        help_text="Restaurant closing time (24-hour format)"
     )
 
     class Meta:

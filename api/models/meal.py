@@ -150,7 +150,8 @@ class Meal(BaseModel):
     name = models.CharField(max_length=250)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name='meals')
 
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2)
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='meals')
