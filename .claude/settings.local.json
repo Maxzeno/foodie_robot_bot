@@ -81,7 +81,9 @@
       "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" -m py_compile api/admin/restaurant.py)",
       "Bash(\"C:\\Users\\user\\code\\foodie_robot_backend\\env\\Scripts\\python.exe\" -m py_compile api/services/recommendation/meal_recommendation.py api/services/recommendation/hybrid_recommendation.py api/utils/whatsapp_payload_helper/no_recommendation.py api/tasks/recommend_meal.py)",
       "Bash(source env/bin/activate)",
-      "Bash(env/bin/python:*)"
+      "Bash(env/bin/python:*)",
+      "Bash(env/bin/pip:*)",
+      "Bash(open:*)"
     ],
     "deny": [],
     "ask": []

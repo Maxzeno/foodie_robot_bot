@@ -7,8 +7,15 @@ from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_p
 
 
 def update_user_profile(
-    user: User, fitness_goal: str, meal_budget: float=None) -> bool:
+    user: User, fitness_goal: str, meal_budget: float=None, referral_code: str=None) -> bool:
     is_new = user.city is None
+
+    if not user.fitness_goals and referral_code and not user.referred_by:
+        referral_code = referral_code.lstrip("#")
+        referrer = User.objects.filter(code=referral_code.lower()).first()
+        if referrer and referrer != user:
+            user.referred_by = referrer
+            user.save()
 
     try:
         fitness_goal_obj = FitnessGoal.objects.filter(id=fitness_goal).first()

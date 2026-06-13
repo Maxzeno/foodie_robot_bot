@@ -11,13 +11,18 @@ def show_menu_options_payload(text):
             "button": "Quick Options",
             "sections": [
                 {
-                    "title": "Meal recommendation",
+                    "title": "Primary Actions",
                     "rows": [
                         {
                             "id": "meal-recommendations",
                             "title": "Get Meal Recommendations",
                             "description": "Get personalized meal suggestions"
-                        }
+                        },
+                        {
+                            "id": "progress-stats",
+                            "title": "My Progress/Leaderboard",
+                            "description": "View your Progress/Leaderboard"
+                        },
                     ]
                 },
                 {
@@ -78,11 +83,6 @@ def show_menu_options_payload(text):
                 {
                     "title": "Others",
                     "rows": [
-                        {
-                            "id": "progress-stats",
-                            "title": "My Progress/Leaderboard",
-                            "description": "View your Progress/Leaderboard"
-                        },
                         # {
                         #     "id": "meal-liked-disliked",
                         #     "title": "Liked/disliked meals",
