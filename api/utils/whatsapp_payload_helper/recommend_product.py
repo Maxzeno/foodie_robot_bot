@@ -1,4 +1,5 @@
 def recommend_product_payload(recomendation_id, body, image_url=None):
+    print("Generating recommend product payload...", image_url)
     resp = {
             "type": "button",
             "body": {

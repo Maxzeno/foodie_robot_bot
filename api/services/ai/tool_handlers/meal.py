@@ -20,10 +20,6 @@ def format_engaging_recommendation_message(
     time_of_day: str,
     currency_symbol: str = "₦"
 ) -> str:
-    """
-    Format an engaging, addictive recommendation message for the user.
-    Includes day count, streak info, and personalized messaging.
-    """
     day_number = user.get_recommendation_day_number()
     streak = user.get_recommendation_streak()
 

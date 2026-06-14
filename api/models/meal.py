@@ -1,10 +1,225 @@
+import io
+import os
+
 from django.db import models
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from PIL import Image as PILImage
+
 from api.models.base import BaseModel
 from api.models.location import City
 from cloudinary.models import CloudinaryField
 
 from api.models.restaurant import Restaurant
 from api.utils.generate import generate_unique_code
+
+
+# Path to logo for branding meal images
+LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'utils', 'assets', 'logo.png')
+
+
+def _get_font(size: int, bold: bool = False):
+    """Get font with fallback to default."""
+    try:
+        font_paths = [
+            # macOS fonts
+            "/System/Library/Fonts/SFNSDisplay.ttf" if bold else "/System/Library/Fonts/SFNSText.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+            # Linux fonts
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            # Windows fonts
+            "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+        ]
+        for path in font_paths:
+            try:
+                from PIL import ImageFont
+                return ImageFont.truetype(path, size)
+            except (OSError, IOError):
+                continue
+        from PIL import ImageFont
+        return ImageFont.load_default()
+    except Exception:
+        from PIL import ImageFont
+        return ImageFont.load_default()
+
+
+def add_logo_to_image(image_file):
+    """Add FoodieRobot logo with background and catchy phrase to meal image."""
+    if not image_file:
+        return image_file
+
+    try:
+        from PIL import ImageDraw
+
+        # Get filename
+        filename = getattr(image_file, 'name', 'meal.jpg')
+
+        # Open the image
+        img = PILImage.open(image_file)
+
+        # Convert to RGBA for transparency support
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        # Create drawing context
+        draw = ImageDraw.Draw(img)
+
+        # Open and resize logo (bigger - 25% of image width)
+        logo = PILImage.open(LOGO_PATH)
+        logo_width = int(img.width * 0.28)
+        logo_ratio = logo.width / logo.height
+        logo_height = int(logo_width / logo_ratio)
+        logo = logo.resize((logo_width, logo_height), PILImage.Resampling.LANCZOS)
+
+        # Position: top-right corner
+        padding = int(img.width * 0.03)
+        logo_x = img.width - logo_width - padding
+        logo_y = padding
+
+        # Draw rounded rectangle background behind logo (white with slight transparency)
+        bg_padding = int(img.width * 0.02)
+        bg_x1 = logo_x - bg_padding
+        bg_y1 = logo_y - bg_padding
+        bg_x2 = logo_x + logo_width + bg_padding
+        bg_y2 = logo_y + logo_height + bg_padding
+
+        # Create semi-transparent white background
+        overlay = PILImage.new('RGBA', img.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rounded_rectangle(
+            (bg_x1, bg_y1, bg_x2, bg_y2),
+            radius=int(img.width * 0.02),
+            fill=(255, 255, 255, 230)
+        )
+        img = PILImage.alpha_composite(img, overlay)
+
+        # Paste logo with transparency
+        if logo.mode == 'RGBA':
+            img.paste(logo, (logo_x, logo_y), logo)
+        else:
+            img.paste(logo, (logo_x, logo_y))
+
+        # Add catchy phrase at bottom with gradient background
+        phrase = "Today's pick!"
+        font_size = int(img.width * 0.055)
+        font = _get_font(font_size, bold=True)
+
+        # Calculate text dimensions
+        draw = ImageDraw.Draw(img)
+        bbox = draw.textbbox((0, 0), phrase, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        # Banner at bottom
+        banner_height = text_height + int(img.height * 0.04)
+        banner_y = img.height - banner_height
+
+        # Create gradient banner overlay
+        banner_overlay = PILImage.new('RGBA', img.size, (0, 0, 0, 0))
+        banner_draw = ImageDraw.Draw(banner_overlay)
+
+        # Draw gradient (darker at bottom)
+        for i in range(banner_height):
+            opacity = int(200 * (i / banner_height))
+            banner_draw.rectangle(
+                [(0, banner_y + i), (img.width, banner_y + i + 1)],
+                fill=(0, 0, 0, opacity)
+            )
+
+        img = PILImage.alpha_composite(img, banner_overlay)
+
+        # Draw text centered on banner
+        draw = ImageDraw.Draw(img)
+        text_x = (img.width - text_width) // 2
+        text_y = banner_y + (banner_height - text_height) // 2
+
+        # Text shadow
+        draw.text((text_x + 2, text_y + 2), phrase, font=font, fill=(0, 0, 0, 180))
+        # Main text (white)
+        draw.text((text_x, text_y), phrase, font=font, fill=(255, 255, 255, 255))
+
+        # Convert back to RGB for JPEG output
+        if img.mode == 'RGBA':
+            background = PILImage.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            img = background
+
+        # Save to memory
+        output = io.BytesIO()
+        img.save(output, format='JPEG', quality=90, optimize=True)
+        output.seek(0)
+
+        # Ensure filename ends with .jpg
+        if not filename.lower().endswith(('.jpg', '.jpeg')):
+            filename = filename.rsplit('.', 1)[0] + '.jpg'
+
+        return InMemoryUploadedFile(
+            file=output,
+            field_name='image_url',
+            name=filename,
+            content_type='image/jpeg',
+            size=output.getbuffer().nbytes,
+            charset=None
+        )
+
+    except FileNotFoundError:
+        print(f"Logo not found at {LOGO_PATH}, skipping logo overlay")
+        return image_file
+    except Exception as e:
+        print(f"Error adding logo to image: {e}")
+        return image_file
+
+
+def process_meal_image(image_file):
+    """Process meal image: convert WebP to JPG and add logo."""
+    if not image_file:
+        return image_file
+
+    try:
+        filename = getattr(image_file, 'name', '')
+        content_type = getattr(image_file, 'content_type', '')
+
+        # Check if WebP - convert first
+        is_webp = (
+            filename.lower().endswith('.webp') or
+            content_type == 'image/webp'
+        )
+
+        if is_webp:
+            # Open WebP and convert to RGB
+            img = PILImage.open(image_file)
+
+            if img.mode in ('RGBA', 'LA', 'P'):
+                background = PILImage.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Save as JPEG to memory
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=90, optimize=True)
+            output.seek(0)
+
+            new_filename = filename.rsplit('.', 1)[0] + '.jpg'
+
+            image_file = InMemoryUploadedFile(
+                file=output,
+                field_name='image_url',
+                name=new_filename,
+                content_type='image/jpeg',
+                size=output.getbuffer().nbytes,
+                charset=None
+            )
+
+        # Now add logo to the image
+        return add_logo_to_image(image_file)
+
+    except Exception as e:
+        print(f"Error processing meal image: {e}")
+        return image_file
 
 
 class TimeOfDayChoices(models.TextChoices):
@@ -296,5 +511,14 @@ class Meal(BaseModel):
         # Initialize remaining_stock to daily_stock_limit if set
         if self.daily_stock_limit is not None and self.remaining_stock is None:
             self.remaining_stock = self.daily_stock_limit
+
+        # Process meal image: convert WebP to JPG and add logo
+        if self.image_url:
+            # New file upload - has 'read' method and 'name' attribute
+            if hasattr(self.image_url, 'read') and hasattr(self.image_url, 'name'):
+                self.image_url = process_meal_image(self.image_url)
+            # Existing file being updated - CloudinaryResource with file attribute
+            elif hasattr(self.image_url, 'file') and hasattr(self.image_url.file, 'read'):
+                self.image_url = process_meal_image(self.image_url.file)
 
         super().save(*args, **kwargs)

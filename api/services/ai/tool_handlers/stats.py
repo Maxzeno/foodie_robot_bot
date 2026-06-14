@@ -169,7 +169,6 @@ def get_progress_stats(user: User) -> bool:
             user_rank=user_rank,
             user_orders=user_monthly_orders,
             month_name=month_name,
-            brand_name="Foodie Robot"
         )
 
         # Upload to Cloudinary
