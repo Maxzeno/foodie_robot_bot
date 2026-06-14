@@ -11,6 +11,9 @@ import requests
 from django.conf import settings
 import math
 from api.utils.distance import cal_delivery_fee
+from django.db import transaction
+from django.utils import timezone
+import pytz
 
 
 def get_point_coordinates(point) -> Tuple[Optional[float], Optional[float]]:
@@ -21,6 +24,40 @@ def get_point_coordinates(point) -> Tuple[Optional[float], Optional[float]]:
     if point and isinstance(point, dict) and "coordinates" in point:
         return point["coordinates"][0], point["coordinates"][1]
     return None, None
+
+
+def reset_stock_if_new_day(meal: Meal) -> Meal:
+    """
+    Reset meal stock if it's a new day in the meal's city timezone.
+    This implements lazy daily reset - stock resets on first order of each day.
+
+    Args:
+        meal: Meal instance (must be locked with select_for_update)
+
+    Returns:
+        Updated meal instance
+    """
+    # Only process if meal has a stock limit
+    if meal.daily_stock_limit is None:
+        return meal
+
+    # Get current date in the meal's city timezone
+    try:
+        meal_city_tz = pytz.timezone(meal.city.timezone)
+    except (AttributeError, pytz.UnknownTimeZoneError):
+        # Fallback to UTC if timezone not set or invalid
+        meal_city_tz = pytz.UTC
+
+    today_in_city = timezone.now().astimezone(meal_city_tz).date()
+
+    # Check if we need to reset for a new day
+    if meal.last_stock_reset_date != today_in_city:
+        # Reset stock to daily limit
+        meal.remaining_stock = meal.daily_stock_limit
+        meal.last_stock_reset_date = today_in_city
+        meal.save(update_fields=['remaining_stock', 'last_stock_reset_date'])
+
+    return meal
 
 # Format status message
 ORDER_STATUS_EMOJI = {
@@ -177,12 +214,56 @@ def place_order(
             )
             return False
         
-        # Validate meal
+        # Validate meal availability with comprehensive checks
         try:
-            meal = Meal.objects.get(id=meal_id, available=True)
+            meal = Meal.objects.select_related('restaurant', 'city').get(id=meal_id)
         except Meal.DoesNotExist:
             Message.bot_message(
+                "Sorry, this meal does not exist. Please choose another meal.",
+                user=user
+            )
+            return False
+
+        # Check if meal is marked as available
+        if not meal.available:
+            Message.bot_message(
                 "Sorry, this meal is not available at the moment. Please choose another meal.",
+                user=user
+            )
+            return False
+
+        # Check if restaurant is active
+        if meal.restaurant.inactive:
+            Message.bot_message(
+                f"Sorry, {meal.restaurant.name} is currently inactive. Please try another restaurant.",
+                user=user
+            )
+            return False
+
+        # Check if restaurant is open now (using user's local time)
+        user_local_time = user.get_local_time()
+        current_time = user_local_time.time()
+        current_day = user_local_time.strftime('%A').lower()
+
+        if not meal.restaurant.is_open_now(current_time=current_time, current_day=current_day):
+            Message.bot_message(
+                f"Sorry, {meal.restaurant.name} is currently closed. Please try again during operating hours ({meal.restaurant.open_time.strftime('%I:%M %p')} - {meal.restaurant.close_time.strftime('%I:%M %p')}).",
+                user=user
+            )
+            return False
+
+        # Check if meal is available at current time
+        if not meal.is_available_at_time(check_time=current_time):
+            Message.bot_message(
+                f"Sorry, {meal.name} is not available at this time. Please check back during the meal's availability hours.",
+                user=user
+            )
+            return False
+
+        # Check if meal has stock available
+        if not meal.has_stock():
+            Message.bot_message(
+                f"Sorry, {meal.name} is sold out for today. Please try another meal or come back tomorrow.",
                 user=user
             )
             return False
@@ -248,25 +329,49 @@ def place_order(
         delivery_fee = delivery_fee * math.ceil(number_of_plates/5)
         total_price = meal_price + delivery_fee
 
-        # Create order
-        order = Order.objects.create(
-            user=user,
-            meal=meal,
-            quantity=number_of_plates,
-            status=OrderStatus.PENDING,
-            note=special_instructions or "",
-            rider_note=rider_instructions or "",
-            currency=user.city.currency,
-            meal_price=meal_price,
-            delivery_fee=delivery_fee,
-            total_price=total_price,
-            amount_paid=Decimal('0.00'),
-            paid=False,
-            dropoff_street_address=delivery_address.street_address,
-            dropoff_point=delivery_address.point,
-            pickup_street_address=meal.restaurant.street_address if hasattr(meal.restaurant, 'street_address') else None,
-            pickup_point=meal.restaurant.point if hasattr(meal.restaurant, 'point') else None,
-        )
+        # Create order and decrement stock atomically
+        with transaction.atomic():
+            # Lock the meal row for update to prevent race conditions
+            meal = Meal.objects.select_for_update().get(id=meal_id)
+
+            # Reset stock if it's a new day in the meal's city timezone
+            meal = reset_stock_if_new_day(meal)
+
+            # Double-check stock availability within the transaction
+            if meal.daily_stock_limit is not None:
+                if meal.remaining_stock is None:
+                    meal.remaining_stock = meal.daily_stock_limit
+
+                if meal.remaining_stock < number_of_plates:
+                    Message.bot_message(
+                        f"Sorry, only {meal.remaining_stock} plate(s) of {meal.name} remaining. Please reduce your order quantity.",
+                        user=user
+                    )
+                    return False
+
+                # Decrement stock
+                meal.remaining_stock -= number_of_plates
+                meal.save(update_fields=['remaining_stock'])
+
+            # Create order
+            order = Order.objects.create(
+                user=user,
+                meal=meal,
+                quantity=number_of_plates,
+                status=OrderStatus.PENDING,
+                note=special_instructions or "",
+                rider_note=rider_instructions or "",
+                currency=user.city.currency,
+                meal_price=meal_price,
+                delivery_fee=delivery_fee,
+                total_price=total_price,
+                amount_paid=Decimal('0.00'),
+                paid=False,
+                dropoff_street_address=delivery_address.street_address,
+                dropoff_point=delivery_address.point,
+                pickup_street_address=meal.restaurant.street_address if hasattr(meal.restaurant, 'street_address') else None,
+                pickup_point=meal.restaurant.point if hasattr(meal.restaurant, 'point') else None,
+            )
 
         payment_url = payment_link(order)
         if not payment_url:
@@ -309,53 +414,6 @@ def place_order(
         print(f"Error placing order: {e}")
         Message.bot_message(
             "Sorry, something went wrong while placing your order. Please try again.",
-            user=user
-        )
-        return False
-
-
-def get_order_status(user: User, order_id: Optional[int] = None) -> bool:
-    try:
-        if order_id:
-            try:
-                order = Order.objects.get(id=order_id, user=user)
-            except Order.DoesNotExist:
-                Message.bot_message(
-                    f"Order #{order_id} not found. Please check the order number and try again.",
-                    user=user
-                )
-                return False
-        else:
-            # Get latest order
-            order = Order.objects.filter(user=user).order_by('-created_at').first()
-            if not order:
-                Message.bot_message(
-                    "You haven't placed any orders yet. Browse our meals and place your first order!",
-                    user=user
-                )
-                return False
-
-        currency_symbol = order.currency.symbol
-        payment_status = "Paid" if order.paid else "Pending"
-
-        message = f"""
-Order #{order.code}
-🍽️ {order.meal.name}
-🔢 Quantity: {order.quantity} plate(s)
-💰 Total: {currency_symbol}{order.total_price:,.2f}
-{ORDER_STATUS_EMOJI.get(order.status, '📋')} Status: {"Your order will be processed after payment" if not order.paid else ORDER_STATUS_MESSAGE.get(order.status, 'Processing your order')}
-💳 Payment: {payment_status}
-
-""".strip()
-
-        Message.bot_message(message, user=user)
-
-        return True
-
-    except Exception as e:
-        print(f"Error getting order status: {e}")
-        Message.bot_message(
-            "Sorry, something went wrong while retrieving your order status. Please try again.",
             user=user
         )
         return False

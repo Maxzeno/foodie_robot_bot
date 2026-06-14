@@ -1,8 +1,29 @@
-i get evening recommedations at 12 pm lately what could be the issue?
-Please find the issue and tell me don't update yet
+use this code and prompt i did some research and this is okay for me
 
-The tie breaker is not working i said it should favour who was already on the leaderboard eg if person A has 2 orders and is topping if person B get another order making it 2 it should be the second person on the leaderboard because the person A was already their
+import openai
+import base64
 
-now i feel it favours the current user 
+openai.api_key = "YOUR_API_KEY"
 
-please check the issue is and fix it
+# Open the original image
+with open("food_input.jpg", "rb") as f:
+    image_bytes = f.read()
+
+response = openai.images.edit(
+    model="gpt-image-1.5",
+    image=image_bytes,
+    prompt=(
+        "Enhance this food photo: improve clarity, lighting, "
+        "natural color, subtle sharpness, reduce noise, and keep "
+        "the photo realistic and very similar to the original."
+    ),
+    size="1024x1024"
+)
+
+# Save the result
+edited_b64 = response["data"][0]["b64_json"]
+edited_bytes = base64.b64decode(edited_b64)
+with open("food_enhanced.jpg", "wb") as out:
+    out.write(edited_bytes)
+
+print("Enhanced image saved as food_enhanced.jpg")

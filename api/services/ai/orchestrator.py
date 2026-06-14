@@ -44,7 +44,6 @@ class FoodBotAIHandler:
             "get_current_location": tool_handlers.get_current_location,
 
             "place_order_form": tool_handlers.place_order_form,
-            "get_order_status": tool_handlers.get_order_status,
             "get_order_history": tool_handlers.get_order_history,
 
             "get_update_user_profile_form": tool_handlers.get_update_user_profile_form,

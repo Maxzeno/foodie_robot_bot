@@ -76,20 +76,6 @@ def get_tool_definitions():
         {
             "type": "function",
             "function": {
-                "name": "get_order_status",
-                "description": "Get order status - this including the payment status (latest if no ID)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "order_id": {"type": "integer"}
-                    },
-                    "required": []
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "get_order_history",
                 "description": "Get order history",
                 "parameters": {

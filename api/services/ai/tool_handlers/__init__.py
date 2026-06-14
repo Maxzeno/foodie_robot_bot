@@ -2,7 +2,7 @@ from .meal import meal_recommendations, get_nutritional_info
 from .preference import save_health_conditions, save_allergies, save_cuisine_preferences, save_fitness_goal
 from .location import save_delivery_location, request_delivery_location, get_current_location
 from .meal_like_or_hate import like_or_hate_meal
-from .order import place_order, get_order_status, get_order_history, place_order_form
+from .order import place_order, get_order_history, place_order_form
 from .meal_search import search_meals, get_meal_details
 from .user_profile import get_update_user_profile_form, get_user_meal_preferences, update_user_profile
 from .support import contact_support

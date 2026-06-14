@@ -91,7 +91,11 @@
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_tiebreaker.py)",
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_timezone_issue.py)",
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_tiebreaker_v2.py)",
-      "Bash(.py$ \")"
+      "Bash(.py$ \")",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/tasks/reset_meal_stock.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/tasks/__init__.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" manage.py makemigrations api --name add_meal_stock_reset_date)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/models/meal.py api/services/ai/tool_handlers/order.py api/tasks/__init__.py)"
     ],
     "deny": [],
     "ask": []

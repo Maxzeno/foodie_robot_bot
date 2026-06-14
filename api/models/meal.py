@@ -171,7 +171,14 @@ def add_logo_to_image(image_file):
 
 
 def process_meal_image(image_file):
-    """Process meal image: convert WebP to JPG and add logo."""
+    """
+    Process meal image: enhance with AI, convert WebP to JPG, and add logo.
+
+    Processing order:
+    1. Convert WebP to JPG if needed
+    2. Enhance with AI to make more appealing (realistic)
+    3. Add FoodieRobot logo
+    """
     if not image_file:
         return image_file
 
@@ -214,7 +221,6 @@ def process_meal_image(image_file):
                 charset=None
             )
 
-        # Now add logo to the image
         return add_logo_to_image(image_file)
 
     except Exception as e:
@@ -402,7 +408,12 @@ class Meal(BaseModel):
     remaining_stock = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Current remaining stock for today. Auto-resets daily via cron job."
+        help_text="Current remaining stock for today. Auto-resets daily when first order is placed."
+    )
+    last_stock_reset_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date when stock was reset. Used for lazy daily reset based on city timezone."
     )
 
     # Nutritional info
