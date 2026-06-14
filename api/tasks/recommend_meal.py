@@ -2,6 +2,7 @@ import logging
 from django.conf import settings
 from huey import crontab
 from huey.contrib.djhuey import periodic_task, task
+from django import db
 
 from api.models.meal import Meal, TimeOfDayChoices
 from api.models.recommendation import Recommendation, ChoiceOption
@@ -24,7 +25,10 @@ def send_meal_recommendations_task():
     Task to send meal recommendations to active users.
     Can be triggered manually or scheduled via periodic task.
     """
-    
+    # Close stale database connections before starting
+    # This prevents "connection already closed" errors in long-running workers
+    db.close_old_connections()
+
     now = timezone.now()
     twenty_four_hours_ago = now - timedelta(hours=24)
 

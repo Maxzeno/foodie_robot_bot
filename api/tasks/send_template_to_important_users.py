@@ -1,5 +1,6 @@
 import logging
 from huey.contrib.djhuey import task
+from django import db
 
 from django.utils import timezone
 from datetime import timedelta
@@ -244,6 +245,9 @@ def send_template_to_important_users_task(template_name: str, language_code: str
     Huey task wrapper for send_template_to_important_users.
     Use this for async/background execution.
     """
+    # Close stale database connections before starting
+    db.close_old_connections()
+
     return send_template_to_important_users(template_name, language_code, limit)
 
 

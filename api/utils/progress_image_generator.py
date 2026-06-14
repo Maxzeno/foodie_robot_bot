@@ -618,16 +618,6 @@ def generate_progress_image(
 
 
 def upload_progress_image(image_bytes: bytes, user_code: str) -> Optional[str]:
-    """
-    Upload progress image to Cloudinary.
-
-    Args:
-        image_bytes: PNG image data
-        user_code: User's code for unique naming
-
-    Returns:
-        str: Cloudinary URL or None if upload failed
-    """
     try:
         filename = f"progress_{user_code}_{uuid.uuid4().hex[:8]}"
 

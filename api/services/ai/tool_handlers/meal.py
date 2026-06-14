@@ -29,14 +29,13 @@ def format_engaging_recommendation_message(
 
     # Time of day greeting variations
     time_greetings = {
-        'morning': ['Rise & dine', 'Good morning', 'Morning fuel'],
-        'afternoon': ['Midday treat', 'Lunch time', 'Afternoon delight'],
-        'evening': ['Evening feast', 'Dinner time', 'Tonight\'s pick']
+        'morning': 'Breakfast time',
+        'afternoon': 'Lunch time',
+        'evening': 'Dinner time'
     }
 
     # Get greeting based on time
-    import random
-    greeting = random.choice(time_greetings.get(time_of_day, ['Your pick']))
+    greeting = time_greetings.get(time_of_day, 'Your pick')
 
     # Choice ordinal
     choice_text = "1st" if choice_option.lower() == 'first' else "2nd"

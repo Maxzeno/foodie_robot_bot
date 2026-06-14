@@ -292,7 +292,7 @@ def place_order(
 
 📍 Delivery to:
 • Address: {delivery_address.street_address or 'Last set address'}
-• View current delivery address: https://www.google.com/maps?q={addr_lat},{addr_lng} (You can update the delivery address if this isn't your desired location.)
+• View current delivery address: https://www.google.com/maps?q={addr_lat},{addr_lng} (Update your delivery address if this isn't your desired address before you pay.)
 
 💳 Please proceed to payment to confirm your order.
 """.strip()

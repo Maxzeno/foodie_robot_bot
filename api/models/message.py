@@ -28,7 +28,7 @@ class Message(BaseModel):
     # llm_content = models.TextField(null=True, blank=True) # smarter (usually shorter and has key info) content if set used inplace of the actually content when passed into the llm messages
 
     resp = models.JSONField(null=True, blank=True)
-    preview_media = models.FileField(null=True, blank=True)
+    preview_media = models.URLField(max_length=1024, null=True, blank=True)
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name='messages')
     current_intent = models.CharField(max_length=100, choices=CurrentIntentChoices.choices, null=True, blank=True)
     reply_to = models.ForeignKey(
@@ -67,7 +67,7 @@ class Message(BaseModel):
         return message
     
     @staticmethod
-    def bot_message_image(content: str, user, current_intent: str, preview_media: str):
+    def bot_message_image(content: str, user, preview_media: str, current_intent: str=CurrentIntentChoices.NO_INTENT):
         payload = {
             "caption": content,
             "link": preview_media,

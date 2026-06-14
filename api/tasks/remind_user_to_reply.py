@@ -1,6 +1,7 @@
 import logging
 from huey import crontab
 from huey.contrib.djhuey import periodic_task, task
+from django import db
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,9 @@ def remind_users_to_reply_task():
     Task to remind users who haven't replied in 23-24 hours.
     Can be triggered manually or scheduled via periodic task.
     """
+    # Close stale database connections before starting
+    db.close_old_connections()
+
     from django.utils import timezone
     from datetime import timedelta
     from api.models.user import User
