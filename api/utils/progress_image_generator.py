@@ -189,6 +189,7 @@ def generate_progress_image(
     user_rank: Optional[int],
     user_orders: int,
     month_name: str,
+    city_name: str,
 ) -> bytes:
     """
     Generate a beautiful, shareable progress image.
@@ -365,7 +366,7 @@ def generate_progress_image(
     # Section title
     draw.text(
         (IMAGE_WIDTH // 2, y_cursor + 28),
-        f"{month_name.upper()} LEADERBOARD",
+        f"{month_name.upper()} LEADERBOARD ({city_name})",
         font=font_section,
         fill=COLORS['text_light'],
         anchor="mt"

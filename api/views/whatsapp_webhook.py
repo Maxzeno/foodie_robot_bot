@@ -53,7 +53,7 @@ def whatsapp_webhook(request):
         
         try:
             username = change["contacts"][0]['profile']['name']
-        except:
+        except (KeyError, IndexError, TypeError):
             username = None
 
         msg_type = message['type']

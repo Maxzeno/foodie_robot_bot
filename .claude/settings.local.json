@@ -83,7 +83,15 @@
       "Bash(source env/bin/activate)",
       "Bash(env/bin/python:*)",
       "Bash(env/bin/pip:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/services/ai/tool_handlers/stats.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_leaderboard.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_leaderboard_detailed.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_user_city.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_tiebreaker.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_timezone_issue.py)",
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" test_tiebreaker_v2.py)",
+      "Bash(.py$ \")"
     ],
     "deny": [],
     "ask": []

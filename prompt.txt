@@ -1,12 +1,8 @@
-make this more graphically pleasing in django admin under meals
-times_of_day: ["morning", "afternoon", "evening"]
+i get evening recommedations at 12 pm lately what could be the issue?
+Please find the issue and tell me don't update yet
 
+The tie breaker is not working i said it should favour who was already on the leaderboard eg if person A has 2 orders and is topping if person B get another order making it 2 it should be the second person on the leaderboard because the person A was already their
 
-> this doesn't show \
-\
+now i feel it favours the current user 
 
-
-
-make the order pickup and dropoff location in admin model to have links to google maps and also make them editable in the admin (the coordinates) follow the design for other coordinates fields
-
-is it also possible to make the route to be a google map link rather than the map that shows on the admin
+please check the issue is and fix it

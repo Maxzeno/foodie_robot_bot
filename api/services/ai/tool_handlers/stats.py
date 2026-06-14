@@ -1,6 +1,5 @@
 from datetime import timedelta
-from django.utils import timezone
-from django.db.models import Sum, Q, F, Count
+from django.db.models import Q, Count, Max
 import pytz
 import calendar
 
@@ -52,51 +51,61 @@ def _get_monthly_leaderboard(user: User, limit: int = 3):
     """
     month_start_utc, month_end_utc = _get_month_boundaries_utc(user)
 
-    # Get users with their order counts for this month, filtered by user's city
-    leaderboard_query = User.objects.filter(
-        orders__paid=True,
-        orders__created_at__gte=month_start_utc,
-        orders__created_at__lte=month_end_utc,
-    )
+    # Start with all users (or users in the city)
+    leaderboard_query = User.objects.all()
 
     # Filter by city if user has one
     if user.city:
         leaderboard_query = leaderboard_query.filter(city=user.city)
 
+    # Annotate with order counts and latest order timestamp
+    # Tiebreaker: users who achieved that count first (earlier latest order) rank higher
     leaderboard = leaderboard_query.annotate(
         order_count=Count('orders', filter=Q(
             orders__paid=True,
             orders__created_at__gte=month_start_utc,
             orders__created_at__lte=month_end_utc,
-        ))
-    ).filter(order_count__gt=0).order_by('-order_count')[:limit]
-
-    # Get current user's rank
-    user_order_count = Order.objects.filter(
-        user=user,
-        paid=True,
-        created_at__gte=month_start_utc,
-        created_at__lte=month_end_utc,
-    ).count()
-
-    # Count users with more orders than current user
-    users_ahead = User.objects.filter(
-        orders__paid=True,
-        orders__created_at__gte=month_start_utc,
-        orders__created_at__lte=month_end_utc,
-    )
-    if user.city:
-        users_ahead = users_ahead.filter(city=user.city)
-
-    users_ahead = users_ahead.annotate(
-        order_count=Count('orders', filter=Q(
+        )),
+        latest_order_time=Max('orders__created_at', filter=Q(
             orders__paid=True,
             orders__created_at__gte=month_start_utc,
             orders__created_at__lte=month_end_utc,
         ))
-    ).filter(order_count__gt=user_order_count).count()
+    ).filter(order_count__gt=0).order_by('-order_count', 'latest_order_time')[:limit]
 
-    user_rank = users_ahead + 1 if user_order_count > 0 else None
+    # Get current user's order count and latest order time
+    user_orders = Order.objects.filter(
+        user=user,
+        paid=True,
+        created_at__gte=month_start_utc,
+        created_at__lte=month_end_utc,
+    )
+    user_order_count = user_orders.count()
+    user_latest_order_time = user_orders.aggregate(Max('created_at'))['created_at__max']
+
+    # Count users with more orders than current user
+    # For ties, users who achieved that count first (earlier latest order) rank higher
+    users_ahead = User.objects.all()
+    if user.city:
+        users_ahead = users_ahead.filter(city=user.city)
+
+    users_ahead_count = users_ahead.annotate(
+        order_count=Count('orders', filter=Q(
+            orders__paid=True,
+            orders__created_at__gte=month_start_utc,
+            orders__created_at__lte=month_end_utc,
+        )),
+        latest_order_time=Max('orders__created_at', filter=Q(
+            orders__paid=True,
+            orders__created_at__gte=month_start_utc,
+            orders__created_at__lte=month_end_utc,
+        ))
+    ).filter(
+        Q(order_count__gt=user_order_count) |  # Users with more orders
+        Q(order_count=user_order_count, latest_order_time__lt=user_latest_order_time)  # Same orders but achieved it earlier
+    ).count()
+
+    user_rank = users_ahead_count + 1 if user_order_count > 0 else None
 
     return list(leaderboard), user_rank, user_order_count
 
@@ -159,6 +168,8 @@ def get_progress_stats(user: User) -> bool:
                 'is_user': leader.id == user.id
             })
 
+        city_name = user.city.name if user.city else "Non-specified"
+        
         # Generate the shareable image
         image_bytes = generate_progress_image(
             day_number=day_number,
@@ -169,6 +180,7 @@ def get_progress_stats(user: User) -> bool:
             user_rank=user_rank,
             user_orders=user_monthly_orders,
             month_name=month_name,
+            city_name=city_name,
         )
 
         # Upload to Cloudinary

@@ -13,6 +13,7 @@ from api.models.order import Order
 
 from api.models.settings import AppSettings
 from api.models.user_balance import UserBalance
+import urllib.parse
 
 router = Router(tags=["Webhook"])
 
@@ -83,6 +84,10 @@ def payment_webhook(request):
             print(f"Order {order_id} not found")
             return HttpResponse("Order not found", status=404)
         
+        if order.paid:
+            print(f"Order {order_id} is already marked as paid")
+            return HttpResponse("Order already paid", status=200)
+        
         if currency == None or order.currency.code.lower() != currency.lower():
             return HttpResponse("Currency mismatch", status=400)
 
@@ -130,7 +135,7 @@ def payment_webhook(request):
         order.amount_paid = request_amount
         order.paid = True
         order.save()
-        
+                
         # check if first order paid for and if referred, give referral bonus
         if order.user and order.user.referred_by and order.user.orders.filter(paid=True).count() == 1:
             setting = AppSettings.get_settings()
@@ -147,8 +152,11 @@ def payment_webhook(request):
             )
 
             if city.referral_bonus > 0:
-                link = f"https://wa.me/{setting.whatsapp_phone_number}?text=Hi, i was referred by #{referrer.code}"
+                text = f"Hi, I was referred by #{referrer.code}"
+                encoded_text = urllib.parse.quote(text)
 
+                link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"
+        
                 Message.bot_message(
                     f"🎉 You've earned a referral bonus of {city.currency.symbol}{city.referral_bonus} ({city.currency.code}) for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
                     user=referrer
