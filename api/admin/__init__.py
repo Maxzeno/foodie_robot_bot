@@ -23,7 +23,7 @@ from api.admin.order import OrderAdmin
 from api.admin.message import MessageAdmin
 from api.admin.meal import MealAdmin, MealEmbeddingAdmin
 from api.admin.restaurant import RestaurantAdmin
-from api.admin.location import CountryAdmin, StateAdmin, CityAdmin, DeliveryAddressAdmin
+from api.admin.location import CountryAdmin, StateAdmin, CityAdmin, DeliveryAddressAdmin, NonReachedAreaAdmin
 from api.admin.recommendation import RecommendationAdmin, SpecialOccasionAdmin
 from api.admin.review import ReviewAdmin
 from api.admin.finance import ReferralEarningAdmin, UserBalanceAdmin, WithdrawalAdmin
@@ -45,6 +45,7 @@ __all__ = [
     'StateAdmin',
     'CityAdmin',
     'DeliveryAddressAdmin',
+    'NonReachedAreaAdmin',
     'RecommendationAdmin',
     'SpecialOccasionAdmin',
     'ReviewAdmin',

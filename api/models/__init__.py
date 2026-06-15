@@ -14,3 +14,4 @@ from api.models.settings import *
 from api.models.user_balance import *
 from api.models.special_occasion import *
 from api.models.meal_embedding import *
+from api.models.address import *

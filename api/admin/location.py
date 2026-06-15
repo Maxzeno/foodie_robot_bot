@@ -6,7 +6,7 @@ from django.db.models import Count
 from django.utils.html import format_html
 
 from api.models.location import Country, State, City
-from api.models.address import DeliveryAddress
+from api.models.address import DeliveryAddress, NonReachedArea
 from api.admin.base import (
     GeoJSONFieldMixin,
     GeoJSONPointWidget,
@@ -165,4 +165,58 @@ class DeliveryAddressAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
 
     def point_preview(self, obj):
         return render_point_map_preview(obj.point, 'delivery_address', height=300)
+    point_preview.short_description = 'Map Preview'
+
+
+@admin.register(NonReachedArea)
+class NonReachedAreaAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
+    list_display = ['user', 'name', 'street_address', 'has_location', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__phone', 'user__code', 'street_address', 'name']
+    raw_id_fields = ['user']
+    readonly_fields = ['point_preview', 'created_at', 'updated_at']
+
+    geojson_point_fields = ['point']
+
+    fieldsets = (
+        ('User', {
+            'fields': ('user',)
+        }),
+        ('Address Info', {
+            'fields': ('name', 'street_address')
+        }),
+        ('Location (GeoJSON Point)', {
+            'fields': ('point', 'point_preview'),
+            'description': 'Set the location as a GeoJSON Point: {"type": "Point", "coordinates": [longitude, latitude]}'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_location(self, obj):
+        try:
+            if obj.point:
+                coords = obj.point.get('coordinates', [])
+                if len(coords) >= 2:
+                    lng_str = f"{coords[0]:.4f}"
+                    lat_str = f"{coords[1]:.4f}"
+                    return format_html(
+                        '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                        'border-radius: 3px; font-size: 11px;" title="{}, {}">'
+                        '{}, {}</span>',
+                        coords[0], coords[1], lng_str, lat_str
+                    )
+        except:
+            pass
+
+        return format_html(
+            '<span style="background: #6c757d; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">NOT SET</span>'
+        )
+    has_location.short_description = 'Location'
+
+    def point_preview(self, obj):
+        return render_point_map_preview(obj.point, 'non_reached_area', height=300)
     point_preview.short_description = 'Map Preview'

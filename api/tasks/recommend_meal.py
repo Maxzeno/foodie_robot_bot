@@ -50,6 +50,7 @@ def send_meal_recommendations_task():
             "users_sent": 0,
             "users_skipped_no_city": 0,
             "users_skipped_already_sent": 0,
+            "users_skipped_night_time": 0,
             "users_no_meals_available": 0,
             "users_failed": 0,
             "total_messages_sent": 0
@@ -63,6 +64,7 @@ def send_meal_recommendations_task():
     users_skipped_already_sent = 0
     users_no_meals_available = 0
     users_failed = 0
+    users_skipped_night_time = 0
     total_messages_sent = 0
 
     # Process each user
@@ -70,7 +72,20 @@ def send_meal_recommendations_task():
         try:
             # Get user's current time period
             time_period = user.get_time_period()
-            today = user.get_local_time().date()
+            local_time = user.get_local_time()
+            today = local_time.date()
+            hour = local_time.hour
+
+            # Skip users during night time - no recommendations sent at night
+            if time_period == 'night':
+                users_skipped_night_time += 1
+                continue
+
+            # Skip morning recommendations before 8am
+            # (Morning period starts at 6am for manual requests, but auto-send starts at 8am)
+            if time_period == 'morning' and hour < 8:
+                users_skipped_night_time += 1
+                continue
 
             # Check if user has city set
             if not user.city:
@@ -111,6 +126,7 @@ def send_meal_recommendations_task():
         "users_sent": users_sent,
         "users_skipped_no_city": users_skipped_no_city,
         "users_skipped_already_sent": users_skipped_already_sent,
+        "users_skipped_night_time": users_skipped_night_time,
         "users_no_meals_available": users_no_meals_available,
         "users_failed": users_failed,
         "total_messages_sent": total_messages_sent

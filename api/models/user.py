@@ -119,13 +119,15 @@ class User(AbstractUser, BaseModel):
         local_time = self.get_local_time()
         hour = local_time.hour
 
-        if 8 <= hour < 12:
+        if 6 <= hour < 12:
             return 'morning'
         elif 12 <= hour < 17:
             return 'afternoon'
-        else:
+        elif 17 <= hour < 19:
             return 'evening'
-
+        else:
+            return 'night'
+        
     def get_recommendation_day_number(self) -> int:
         """
         Calculate which day of recommendations this is for the user.

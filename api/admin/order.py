@@ -18,10 +18,10 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     list_filter = ['status', 'paid', 'ordered_via', 'currency', 'created_at']
     search_fields = ['code', 'user__phone', 'user__code', 'meal__name', 'rider_phone', 'rider_name']
     readonly_fields = [
-        'code', 'pickup_point_preview', 'dropoff_point_preview',
+        'code', 'order_summary_message', 'pickup_point_preview', 'dropoff_point_preview',
         'route_preview', 'created_at', 'updated_at'
     ]
-    raw_id_fields = ['user', 'meal']
+    # raw_id_fields = ['user', 'meal']
     ordering = ['-created_at']
     list_per_page = 50
     date_hierarchy = 'created_at'
@@ -29,6 +29,10 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     geojson_point_fields = ['pickup_point', 'dropoff_point']
 
     fieldsets = (
+        ('Order Summary', {
+            'fields': ('order_summary_message',),
+            'description': 'Quick order overview with locations and pricing'
+        }),
         ('Order Info', {
             'fields': ('code', 'user', 'meal', 'quantity', 'status', 'ordered_via')
         }),
@@ -152,6 +156,82 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     def dropoff_point_preview(self, obj):
         return self._render_point_with_gmaps(obj.dropoff_point, 'DROPOFF', '#dc3545')
     dropoff_point_preview.short_description = 'Dropoff Location'
+
+    def order_summary_message(self, obj: Order):
+        """Generate a formatted message with order details for easy sharing."""
+        pickup_lng, pickup_lat = self._get_coords(obj.pickup_point)
+        dropoff_lng, dropoff_lat = self._get_coords(obj.dropoff_point)
+
+        # Build the message lines
+        message_lines = []
+        message_lines.append(f"Hi we have a delivery (buy \"{obj.meal.name}\" at {obj.meal.restaurant.name}) \n")
+
+        # Pickup line
+        if pickup_lat is not None and pickup_lng is not None:
+            pickup_gmaps = f"https://www.google.com/maps?q={pickup_lat},{pickup_lng}"
+            pickup_address = obj.pickup_street_address or "Address not set"
+            message_lines.append(f"Pickup meal at {obj.meal.restaurant.name} ({pickup_address} - {pickup_gmaps}) \n")
+        else:
+            message_lines.append(f"Pickup meal at {obj.meal.restaurant.name} ({obj.pickup_street_address or 'Address not set'}) \n")
+
+        # Dropoff line
+        if dropoff_lat is not None and dropoff_lng is not None:
+            dropoff_gmaps = f"https://www.google.com/maps?q={dropoff_lat},{dropoff_lng}"
+            dropoff_address = obj.dropoff_street_address or "Address not set"
+            message_lines.append(f"Deliver to our client ({dropoff_address} - {dropoff_gmaps}) \n")
+        else:
+            message_lines.append(f"Deliver to our client ({obj.dropoff_street_address or 'Address not set'}) \n")
+
+        # Cost line
+        message_lines.append(f"How much will this cost?")
+
+        # Join lines
+        message_text = "\n".join(message_lines)
+
+        if obj.paid == False:
+            message_text = "Payment pending."
+
+        elif obj.status != OrderStatus.PENDING:
+            message_text = f"Order {obj.status}."
+
+        # Create HTML display with copy functionality
+        message_id = f"order-message-{obj.id or 'new'}"
+        return format_html('''
+            <div style="margin: 10px 0;">
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #333; font-size: 16px; font-weight: 600;">Order Summary Message</h3>
+                        <button type="button" onclick="copyOrderMessage('{}', this)"
+                                style="padding: 6px 14px; background: #28a745; color: white; border: none;
+                                       border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500;"
+                                onmouseover="this.style.background='#218838'"
+                                onmouseout="this.style.background='#28a745'">
+                            Copy Message
+                        </button>
+                    </div>
+                    <pre id="{}" style="background: white; padding: 15px; border-radius: 6px;
+                              border: 1px solid #dee2e6; font-family: 'Segoe UI', Arial, sans-serif;
+                              font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;
+                              word-wrap: break-word; color: #333;">{}</pre>
+                </div>
+            </div>
+            <script>
+                function copyOrderMessage(elementId, button) {{
+                    const element = document.getElementById(elementId);
+                    const text = element.textContent;
+                    navigator.clipboard.writeText(text).then(() => {{
+                        const originalText = button.textContent;
+                        button.textContent = 'Copied!';
+                        setTimeout(() => {{
+                            button.textContent = originalText;
+                        }}, 2000);
+                    }}).catch(err => {{
+                        alert('Failed to copy: ' + err);
+                    }});
+                }}
+            </script>
+        ''', message_id, message_id, message_text)
+    order_summary_message.short_description = 'Order Summary Message'
 
     def route_preview(self, obj):
         """Render Google Maps directions link for the route."""

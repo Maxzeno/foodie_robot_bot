@@ -1,29 +1,7 @@
-use this code and prompt i did some research and this is okay for me
+I want you to implement a feature in the admin for the order model when an order is created i want you to combine some information into one eg.
 
-import openai
-import base64
+Hi we have have an order (Errand)
+Pickup meal at Ntach (Addresss) <link to google maps>
+Dropoff with our client (Address) <link to google maps>
 
-openai.api_key = "YOUR_API_KEY"
-
-# Open the original image
-with open("food_input.jpg", "rb") as f:
-    image_bytes = f.read()
-
-response = openai.images.edit(
-    model="gpt-image-1.5",
-    image=image_bytes,
-    prompt=(
-        "Enhance this food photo: improve clarity, lighting, "
-        "natural color, subtle sharpness, reduce noise, and keep "
-        "the photo realistic and very similar to the original."
-    ),
-    size="1024x1024"
-)
-
-# Save the result
-edited_b64 = response["data"][0]["b64_json"]
-edited_bytes = base64.b64decode(edited_b64)
-with open("food_enhanced.jpg", "wb") as out:
-    out.write(edited_bytes)
-
-print("Enhanced image saved as food_enhanced.jpg")
+How much will this cost?

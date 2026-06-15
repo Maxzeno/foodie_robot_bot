@@ -183,6 +183,15 @@ def meal_recommendations(
         bool: True if recommendations were sent, False otherwise
     """
     time_of_day = user.get_time_period()
+
+    # Check if it's night time - no recommendations during night
+    if time_of_day == 'night':
+        Message.bot_message(
+            content="It's currently night time. Meal recommendations are not available during this period. Please check back in the morning for breakfast recommendations!",
+            user=user,
+        )
+        return False
+
     try:
         # Check for existing recommendations first
         found_recommendations = Recommendation.objects.filter(

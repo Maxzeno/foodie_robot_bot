@@ -95,7 +95,10 @@
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/tasks/reset_meal_stock.py)",
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/tasks/__init__.py)",
       "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" manage.py makemigrations api --name add_meal_stock_reset_date)",
-      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/models/meal.py api/services/ai/tool_handlers/order.py api/tasks/__init__.py)"
+      "Bash(\"C:\\\\Users\\\\user\\\\code\\\\foodie_robot_backend\\\\env\\\\Scripts\\\\python.exe\" -m py_compile api/models/meal.py api/services/ai/tool_handlers/order.py api/tasks/__init__.py)",
+      "Bash(python manage.py check:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(python manage.py migrate:*)"
     ],
     "deny": [],
     "ask": []

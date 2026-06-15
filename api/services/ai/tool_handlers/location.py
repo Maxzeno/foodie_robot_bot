@@ -4,7 +4,7 @@ from api.models.message import Message
 from api.models.order import Order
 from api.models.user import User
 from api.models.location import City
-from api.models.address import DeliveryAddress
+from api.models.address import DeliveryAddress, NonReachedArea
 from api.services.ai.tool_handlers.meal import build_meal_recommendation
 from api.services.ai.tool_handlers.order import place_order
 from datetime import timedelta
@@ -22,20 +22,27 @@ def save_delivery_location(
         # Detect city from coordinates
         city = City.get_city_by_coordinates(longitude, latitude)
 
+        # Create or update delivery address using GeoJSON format
+        point_geojson = {
+            "type": "Point",
+            "coordinates": [longitude, latitude]
+        }
+        
         if not city:
             Message.bot_message_request_location("The delivery location is not in our currently supported cities. Please click the button below if you want to try a different delivery location.", user=user)
+
+            NonReachedArea.objects.create(
+                user=user,
+                point=point_geojson,
+                name=name,
+                street_address=address,
+            )
             return False
 
         # Update user's city
         old_city = user.city
         user.city = city
         user.save()
-
-        # Create or update delivery address using GeoJSON format
-        point_geojson = {
-            "type": "Point",
-            "coordinates": [longitude, latitude]
-        }
 
         # Create new default address
         DeliveryAddress.objects.create(
