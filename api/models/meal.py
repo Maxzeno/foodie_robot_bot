@@ -523,13 +523,7 @@ class Meal(BaseModel):
         if self.daily_stock_limit is not None and self.remaining_stock is None:
             self.remaining_stock = self.daily_stock_limit
 
-        # Process meal image: convert WebP to JPG and add logo
-        if self.image_url:
-            # New file upload - has 'read' method and 'name' attribute
-            if hasattr(self.image_url, 'read') and hasattr(self.image_url, 'name'):
-                self.image_url = process_meal_image(self.image_url)
-            # Existing file being updated - CloudinaryResource with file attribute
-            elif hasattr(self.image_url, 'file') and hasattr(self.image_url.file, 'read'):
-                self.image_url = process_meal_image(self.image_url.file)
+        # Note: Image processing (adding logo/text) is now handled asynchronously
+        # by the process_meal_image_task after the meal is saved
 
         super().save(*args, **kwargs)

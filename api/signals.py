@@ -5,15 +5,14 @@ This module contains signal handlers for various model events.
 """
 
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.db import transaction
 from api.models.order import Order, OrderStatus
 from api.models.review import Review
 from api.models.message import Message
-from api.models.meal import Meal, FitnessGoal, HealthCondition, Allergy, PreferredCuisine
+from api.models.meal import Meal
 from django.utils import timezone
-from api.services.ai.meal_analyzer import MealAnalyzer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,132 +61,59 @@ def update_delivered_at_timestamp(sender, instance, created, **kwargs):
         Order.objects.filter(id=instance.id).update(delivered_at=timezone.now())
 
 
+@receiver(pre_save, sender=Meal)
+def track_meal_image_change(sender, instance: Meal, **kwargs):
+    """
+    Track the old image URL before save to detect if image was changed.
+    """
+    if instance.pk:
+        try:
+            old_instance = Meal.objects.get(pk=instance.pk)
+            instance._old_image_url = old_instance.image_url
+        except Meal.DoesNotExist:
+            instance._old_image_url = None
+    else:
+        instance._old_image_url = None
+
+
 @receiver(post_save, sender=Meal)
-def analyze_meal_with_ai(sender, instance: Meal, created, **kwargs):
-    if not created:
-        return
+def process_meal_after_save(sender, instance: Meal, created, **kwargs):
+    """
+    Signal to queue asynchronous tasks for meal processing after save.
 
-    if not instance.name or not instance.image_url:
-        logger.info(f"Skipping AI analysis for meal {instance.id}: missing name or image")
-        return
+    Tasks queued:
+    1. Image processing (add logo and text overlay) - runs on creation OR when image is updated
+    2. AI analysis (nutritional info and categorization) - runs ONLY on creation
+    """
+    # Determine if image was changed
+    old_image_url = getattr(instance, '_old_image_url', None)
+    image_changed = False
 
-    try:
-        logger.info(f"Starting AI analysis for meal: {instance.name} (ID: {instance.id})")
+    if created:
+        # New meal - image is new if it exists
+        image_changed = bool(instance.image_url)
+    else:
+        # Existing meal - check if image URL changed
+        # Compare the actual image references (both public_id and URL)
+        old_public_id = getattr(old_image_url, 'public_id', None) if old_image_url else None
+        new_public_id = getattr(instance.image_url, 'public_id', None) if instance.image_url else None
 
-        # Fetch available options from database
-        fitness_goals = list(FitnessGoal.objects.values_list('name', flat=True))
-        health_conditions = list(HealthCondition.objects.values_list('name', flat=True))
-        allergies = list(Allergy.objects.values_list('name', flat=True))
-        cuisines = list(PreferredCuisine.objects.values_list('name', flat=True))
+        image_changed = old_public_id != new_public_id
 
-        logger.info(
-            f"Fetched database options - "
-            f"Fitness Goals: {len(fitness_goals)}, "
-            f"Health Conditions: {len(health_conditions)}, "
-            f"Allergies: {len(allergies)}, "
-            f"Cuisines: {len(cuisines)}"
-        )
+    # Queue tasks using transaction.on_commit to ensure they only run if the save succeeds
+    def queue_meal_processing_tasks():
+        from api.tasks.process_meal_image import process_meal_image_task
+        from api.tasks.analyze_meal_with_ai import analyze_meal_with_ai_task
 
-        # Initialize meal analyzer with model that supports structured outputs
-        analyzer = MealAnalyzer(model="gpt-4o")
+        # Queue image processing task if image was added or updated
+        if image_changed and instance.image_url:
+            logger.info(f"Queuing image processing task for meal {instance.id}: {instance.name}")
+            process_meal_image_task(instance.id)
 
-        # Get Cloudinary URL - at this point the image is already uploaded
-        image_url = str(instance.image_url.url) if hasattr(instance.image_url, 'url') else str(instance.image_url)
+        # Queue AI analysis task ONLY on creation (not on updates)
+        if created and instance.name and instance.image_url:
+            logger.info(f"Queuing AI analysis task for meal {instance.id}: {instance.name}")
+            analyze_meal_with_ai_task(instance.id)
 
-        # Analyze the meal with database values
-        analysis = analyzer.analyze_from_cloudinary_url(
-            meal_name=instance.name,
-            cloudinary_url=image_url,
-            fitness_goals=fitness_goals,
-            health_conditions=health_conditions,
-            allergies=allergies,
-            cuisines=cuisines
-        )
-        
-        if not analysis:
-            logger.warning(f"AI analysis returned None for meal: {instance.name} (ID: {instance.id})")
-            return
-
-        # Update the meal with analysis results
-        # We use update() to avoid triggering the signal again
-        update_fields = {}
-
-        # Apply nutritional values
-        if analysis.calories is not None:
-            update_fields['calories'] = analysis.calories
-        if analysis.protein is not None:
-            update_fields['protein'] = analysis.protein
-        if analysis.carbs is not None:
-            update_fields['carbs'] = analysis.carbs
-        if analysis.fats is not None:
-            update_fields['fats'] = analysis.fats
-        if analysis.fiber is not None:
-            update_fields['fiber'] = analysis.fiber
-        if analysis.sugar is not None:
-            update_fields['sugar'] = analysis.sugar
-        if analysis.sodium is not None:
-            update_fields['sodium'] = analysis.sodium
-        if analysis.cholesterol is not None:
-            update_fields['cholesterol'] = analysis.cholesterol
-        if analysis.serving_amount_g is not None:
-            update_fields['serving_amount_g'] = analysis.serving_amount_g
-
-        # Apply times_of_day
-        if analysis.times_of_day:
-            update_fields['times_of_day'] = analysis.times_of_day
-
-        # Update scalar fields
-        if update_fields:
-            Meal.objects.filter(pk=instance.pk).update(**update_fields)
-            logger.info(f"Updated nutritional fields for meal {instance.id}: {list(update_fields.keys())}")
-
-        # Apply ManyToMany fields AFTER transaction commits
-        # This is critical because ManyToMany changes in signals can be rolled back
-        def set_many_to_many_fields():
-            meal_instance = Meal.objects.get(pk=instance.pk)
-
-            if analysis.fitness_goals:
-                fitness_goal_objects = FitnessGoal.objects.filter(name__in=analysis.fitness_goals)
-                if fitness_goal_objects.exists():
-                    meal_instance.fitness_goals.set(fitness_goal_objects)
-                    logger.info(f"Set fitness goals for meal {meal_instance.id}: {list(fitness_goal_objects.values_list('name', flat=True))}")
-                else:
-                    logger.warning(f"No matching FitnessGoal objects found for: {analysis.fitness_goals}")
-
-            if analysis.restricted_health_conditions:
-                health_condition_objects = HealthCondition.objects.filter(name__in=analysis.restricted_health_conditions)
-                if health_condition_objects.exists():
-                    meal_instance.restricted_health_conditions.set(health_condition_objects)
-                    logger.info(f"Set health conditions for meal {meal_instance.id}: {list(health_condition_objects.values_list('name', flat=True))}")
-                else:
-                    logger.warning(f"No matching HealthCondition objects found for: {analysis.restricted_health_conditions}")
-
-            if analysis.restricted_allergies:
-                allergy_objects = Allergy.objects.filter(name__in=analysis.restricted_allergies)
-                if allergy_objects.exists():
-                    meal_instance.restricted_allergies.set(allergy_objects)
-                    logger.info(f"Set allergies for meal {meal_instance.id}: {list(allergy_objects.values_list('name', flat=True))}")
-                else:
-                    logger.warning(f"No matching Allergy objects found for: {analysis.restricted_allergies}")
-
-            if analysis.cuisine:
-                cuisine_objects = PreferredCuisine.objects.filter(name__in=analysis.cuisine)
-                if cuisine_objects.exists():
-                    meal_instance.cuisine.set(cuisine_objects)
-                    logger.info(f"Set cuisines for meal {meal_instance.id}: {list(cuisine_objects.values_list('name', flat=True))}")
-                else:
-                    logger.warning(f"No matching PreferredCuisine objects found for: {analysis.cuisine}")
-
-        # Execute ManyToMany updates after the transaction commits
-        transaction.on_commit(set_many_to_many_fields)
-
-        # Log success with confidence level
-        confidence = getattr(analysis, 'confidence', 'unknown')
-        reasoning = getattr(analysis, 'reasoning', 'No reasoning provided')
-        logger.info(
-            f"AI analysis completed for meal {instance.id} (confidence: {confidence}). "
-            f"Reasoning: {reasoning}"
-        )
-
-    except Exception as e:
-        logger.error(f"Error in AI analysis for meal {instance.id}: {str(e)}", exc_info=True)
+    # Execute tasks after transaction commits to ensure meal is saved
+    transaction.on_commit(queue_meal_processing_tasks)

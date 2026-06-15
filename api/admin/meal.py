@@ -83,15 +83,11 @@ class MealAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('code', 'name', 'restaurant', 'city', 'note', 'description', 'price', 'available', 'image_url', 'image_preview_large')
+            'fields': ('code', 'name', 'restaurant', 'city', 'note', 'description', 'price', 'available', 'daily_stock_limit', 'remaining_stock', 'image_url', 'image_preview_large')
         }),
         ('Availability', {
             'fields': ('times_of_day_choices', 'available_from_time', 'available_to_time'),
             'classes': ('collapse',),
-        }),
-        ('Stock', {
-            'fields': ('daily_stock_limit', 'remaining_stock'),
-            'classes': ('collapse',)
         }),
         ('Nutrition', {
             'fields': ('calories', 'protein', 'carbs', 'fats', 'fiber', 'sugar', 'sodium', 'cholesterol', 'serving_amount_g'),
