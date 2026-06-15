@@ -94,11 +94,20 @@ def process_meal_after_save(sender, instance: Meal, created, **kwargs):
         image_changed = bool(instance.image_url)
     else:
         # Existing meal - check if image URL changed
-        # Compare the actual image references (both public_id and URL)
-        old_public_id = getattr(old_image_url, 'public_id', None) if old_image_url else None
-        new_public_id = getattr(instance.image_url, 'public_id', None) if instance.image_url else None
+        # CloudinaryField can store either a CloudinaryResource object (with public_id) or a string
+        def get_image_identifier(img):
+            if not img:
+                return None
+            # If it's a CloudinaryResource, get public_id
+            if hasattr(img, 'public_id'):
+                return img.public_id
+            # Otherwise treat as string (the public_id itself)
+            return str(img) if img else None
 
-        image_changed = old_public_id != new_public_id
+        old_id = get_image_identifier(old_image_url)
+        new_id = get_image_identifier(instance.image_url)
+
+        image_changed = old_id != new_id
 
     # Queue tasks using transaction.on_commit to ensure they only run if the save succeeds
     def queue_meal_processing_tasks():
@@ -107,6 +116,7 @@ def process_meal_after_save(sender, instance: Meal, created, **kwargs):
 
         # Queue image processing task if image was added or updated
         if image_changed and instance.image_url:
+            print(f"Queuing image processing task for meal {instance.id}: {instance.name}")
             logger.info(f"Queuing image processing task for meal {instance.id}: {instance.name}")
             process_meal_image_task(instance.id)
 

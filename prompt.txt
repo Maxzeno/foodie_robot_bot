@@ -1,7 +1,4 @@
-I want you to implement a feature in the admin for the order model when an order is created i want you to combine some information into one eg.
+Implement a model in admin i can use to send message to all users in a city or all user then another to to send message to single users but check and only send message to the users currently active (in 24 hours free service window)
 
-Hi we have have an order (Errand)
-Pickup meal at Ntach (Addresss) <link to google maps>
-Dropoff with our client (Address) <link to google maps>
-
-How much will this cost?
+----------------
+fix issue with image processing

@@ -408,7 +408,7 @@ class Meal(BaseModel):
     remaining_stock = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Current remaining stock for today. Auto-resets daily when first order is placed."
+        help_text="Current remaining stock for today."
     )
     last_stock_reset_date = models.DateField(
         null=True,

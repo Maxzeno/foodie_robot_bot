@@ -15,6 +15,7 @@ This package organizes admin classes into separate modules for better maintainab
 - finance.py: ReferralEarning, UserBalance, Withdrawal admin
 - preferences.py: HealthCondition, Allergy, FitnessGoal, PreferredCuisine, MealPreference admin
 - settings.py: AppSettings, Currency admin
+- admin_message.py: BroadcastMessage, SingleUserMessage admin for sending messages to users
 """
 
 # Import all admin classes to register them
@@ -32,6 +33,7 @@ from api.admin.preferences import (
     PreferredCuisineAdmin, MealPreferenceAdmin
 )
 from api.admin.settings import AppSettingsAdmin, CurrencyAdmin
+from api.admin.admin_message import BroadcastMessageAdmin, SingleUserMessageAdmin
 
 # Export all admin classes
 __all__ = [
@@ -59,4 +61,6 @@ __all__ = [
     'MealPreferenceAdmin',
     'AppSettingsAdmin',
     'CurrencyAdmin',
+    'BroadcastMessageAdmin',
+    'SingleUserMessageAdmin',
 ]

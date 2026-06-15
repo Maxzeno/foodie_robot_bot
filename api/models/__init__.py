@@ -15,3 +15,4 @@ from api.models.user_balance import *
 from api.models.special_occasion import *
 from api.models.meal_embedding import *
 from api.models.address import *
+from api.models.admin_message import *

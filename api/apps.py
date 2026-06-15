@@ -7,8 +7,9 @@ class ApiConfig(AppConfig):
 
     def ready(self):
         """
-        Import signal handlers when Django starts.
-        This ensures all signals are registered and active.
+        Import signal handlers and tasks when Django starts.
+        This ensures all signals are registered and tasks are registered with Huey.
         """
         import api.signals  # noqa: F401
+        import api.tasks  # noqa: F401 - Register Huey tasks
 

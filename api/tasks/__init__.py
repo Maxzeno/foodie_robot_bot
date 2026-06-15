@@ -8,6 +8,10 @@ from api.tasks.send_template_to_important_users import (
 )
 from api.tasks.process_meal_image import process_meal_image_task
 from api.tasks.analyze_meal_with_ai import analyze_meal_with_ai_task
+from api.tasks.send_admin_message import (
+    send_broadcast_message_task,
+    send_single_user_message_task
+)
 
 __all__ = [
     'remind_users_to_reply_task',
@@ -17,4 +21,6 @@ __all__ = [
     'get_important_users_preview',
     'process_meal_image_task',
     'analyze_meal_with_ai_task',
+    'send_broadcast_message_task',
+    'send_single_user_message_task',
 ]
