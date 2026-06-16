@@ -12,6 +12,29 @@ from cloudinary.uploader import upload, destroy
 logger = logging.getLogger(__name__)
 
 
+def get_image_public_id(img):
+    """Extract public_id from CloudinaryField value.
+
+    Handles both CloudinaryResource objects and string representations.
+    String format: image/upload/v1234567890/public_id.jpg
+    """
+    if not img:
+        return None
+    if hasattr(img, 'public_id'):
+        return img.public_id
+    # For string values, extract just the public_id part
+    img_str = str(img)
+    # Remove 'image/upload/vXXX/' prefix if present
+    if 'image/upload/' in img_str:
+        # Format: image/upload/v1234567890/public_id.jpg
+        parts = img_str.split('/')
+        if len(parts) >= 4:
+            # Get everything after version, remove extension
+            public_id_with_ext = '/'.join(parts[3:])
+            return public_id_with_ext.rsplit('.', 1)[0]
+    return img_str
+
+
 def get_http_session():
     """Create a requests session with retry logic."""
     session = requests.Session()
@@ -50,12 +73,15 @@ def process_meal_image_task(meal_id):
             print(f"Meal {meal_id} has no image to process")
             return
 
-        # Get the public_id
-        old_public_id = meal.image_url.public_id if hasattr(meal.image_url, 'public_id') else str(meal.image_url)
+        # Get the public_id using the helper function that handles both
+        # CloudinaryResource objects and string representations
+        old_public_id = get_image_public_id(meal.image_url)
 
         if not old_public_id:
             print(f"Could not extract public_id from meal {meal_id} image")
             return
+
+        print(f"Extracted public_id: {old_public_id} from image_url: {meal.image_url}")
 
         print(f"Processing image for meal {meal_id}: {meal.name} (public_id: {old_public_id})")
 
@@ -65,7 +91,7 @@ def process_meal_image_task(meal_id):
 
         # Download the image with retry logic
         session = get_http_session()
-        response = session.get(image_url, timeout=60)
+        response = session.get(image_url, timeout=120)
         response.raise_for_status()
         print(f"Downloaded {len(response.content)} bytes")
 

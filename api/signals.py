@@ -5,13 +5,11 @@ This module contains signal handlers for various model events.
 """
 
 from django.conf import settings
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db import transaction
 from api.models.order import Order, OrderStatus
 from api.models.review import Review
 from api.models.message import Message
-from api.models.meal import Meal
 from django.utils import timezone
 import logging
 
@@ -59,71 +57,3 @@ def update_delivered_at_timestamp(sender, instance, created, **kwargs):
 
     if instance.delivered_at is None:
         Order.objects.filter(id=instance.id).update(delivered_at=timezone.now())
-
-
-@receiver(pre_save, sender=Meal)
-def track_meal_image_change(sender, instance: Meal, **kwargs):
-    """
-    Track the old image URL before save to detect if image was changed.
-    """
-    if instance.pk:
-        try:
-            old_instance = Meal.objects.get(pk=instance.pk)
-            instance._old_image_url = old_instance.image_url
-        except Meal.DoesNotExist:
-            instance._old_image_url = None
-    else:
-        instance._old_image_url = None
-
-
-@receiver(post_save, sender=Meal)
-def process_meal_after_save(sender, instance: Meal, created, **kwargs):
-    """
-    Signal to queue asynchronous tasks for meal processing after save.
-
-    Tasks queued:
-    1. Image processing (add logo and text overlay) - runs on creation OR when image is updated
-    2. AI analysis (nutritional info and categorization) - runs ONLY on creation
-    """
-    # Determine if image was changed
-    old_image_url = getattr(instance, '_old_image_url', None)
-    image_changed = False
-
-    if created:
-        # New meal - image is new if it exists
-        image_changed = bool(instance.image_url)
-    else:
-        # Existing meal - check if image URL changed
-        # CloudinaryField can store either a CloudinaryResource object (with public_id) or a string
-        def get_image_identifier(img):
-            if not img:
-                return None
-            # If it's a CloudinaryResource, get public_id
-            if hasattr(img, 'public_id'):
-                return img.public_id
-            # Otherwise treat as string (the public_id itself)
-            return str(img) if img else None
-
-        old_id = get_image_identifier(old_image_url)
-        new_id = get_image_identifier(instance.image_url)
-
-        image_changed = old_id != new_id
-
-    # Queue tasks using transaction.on_commit to ensure they only run if the save succeeds
-    def queue_meal_processing_tasks():
-        from api.tasks.process_meal_image import process_meal_image_task
-        from api.tasks.analyze_meal_with_ai import analyze_meal_with_ai_task
-
-        # Queue image processing task if image was added or updated
-        if image_changed and instance.image_url:
-            print(f"Queuing image processing task for meal {instance.id}: {instance.name}")
-            logger.info(f"Queuing image processing task for meal {instance.id}: {instance.name}")
-            process_meal_image_task(instance.id)
-
-        # Queue AI analysis task ONLY on creation (not on updates)
-        if created and instance.name and instance.image_url:
-            logger.info(f"Queuing AI analysis task for meal {instance.id}: {instance.name}")
-            analyze_meal_with_ai_task(instance.id)
-
-    # Execute tasks after transaction commits to ensure meal is saved
-    transaction.on_commit(queue_meal_processing_tasks)

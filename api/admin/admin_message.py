@@ -91,7 +91,17 @@ class BroadcastMessageAdmin(admin.ModelAdmin):
         if is_new and obj.status == MessageStatusChoices.PENDING:
             # Queue the task to send the broadcast
             from api.tasks.send_admin_message import send_broadcast_message_task
-            transaction.on_commit(lambda: send_broadcast_message_task(obj.id))
+            from django.conf import settings
+
+            def queue_task():
+                try:
+                    send_broadcast_message_task(obj.id)
+                except Exception as e:
+                    # Handle Redis connection errors (e.g., SSL issues on localhost)
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to queue broadcast task: {e}")
+
+            transaction.on_commit(queue_task)
             self.message_user(
                 request,
                 f"Broadcast message queued for sending to eligible users in selected cities."
@@ -168,7 +178,6 @@ class SingleUserMessageAdmin(admin.ModelAdmin):
 
         from api.models.message import Message, RoleChoices
         from django.utils import timezone
-        from datetime import timedelta
 
         last_message = Message.objects.filter(
             user=obj.user,
@@ -223,7 +232,16 @@ class SingleUserMessageAdmin(admin.ModelAdmin):
 
             # Queue the task to send the message
             from api.tasks.send_admin_message import send_single_user_message_task
-            transaction.on_commit(lambda: send_single_user_message_task(obj.id))
+
+            def queue_task():
+                try:
+                    send_single_user_message_task(obj.id)
+                except Exception as e:
+                    # Handle Redis connection errors (e.g., SSL issues on localhost)
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to queue single message task: {e}")
+
+            transaction.on_commit(queue_task)
             self.message_user(
                 request,
                 f"Message queued for sending to user {obj.user.code}."

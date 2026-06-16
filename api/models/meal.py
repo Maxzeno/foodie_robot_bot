@@ -516,6 +516,12 @@ class Meal(BaseModel):
         return True
 
     def save(self, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        print(f"[Meal.save] CALLED for meal: {self.name}, pk: {self.pk}")
+        logger.info(f"[Meal.save] CALLED for meal: {self.name}, pk: {self.pk}")
+
         if not self.code:
             self.code = unique_meal_code()
 
@@ -523,7 +529,32 @@ class Meal(BaseModel):
         if self.daily_stock_limit is not None and self.remaining_stock is None:
             self.remaining_stock = self.daily_stock_limit
 
-        # Note: Image processing (adding logo/text) is now handled asynchronously
-        # by the process_meal_image_task after the meal is saved
+        # Process image if it's a new upload (file-like object)
+        # CloudinaryField stores processed images as strings/CloudinaryResource,
+        # so we only process when we receive a fresh file upload
+        if self.image_url:
+            img_type = type(self.image_url).__name__
+            has_read = hasattr(self.image_url, 'read')
+            has_file = hasattr(self.image_url, 'file')
+
+            print(f"[Meal.save] image_url type: {img_type}, has_read: {has_read}, has_file: {has_file}")
+            logger.info(f"[Meal.save] image_url type: {img_type}, has_read: {has_read}, has_file: {has_file}")
+
+            # Check if it's a file upload
+            is_file_upload = has_read or has_file or isinstance(self.image_url, InMemoryUploadedFile)
+
+            if is_file_upload:
+                print(f"[Meal.save] Processing image for meal: {self.name}")
+                logger.info(f"[Meal.save] Processing image for meal: {self.name}")
+                self.image_url = process_meal_image(self.image_url)
+                print(f"[Meal.save] Processed! New type: {type(self.image_url).__name__}")
+                logger.info(f"[Meal.save] Processed! New type: {type(self.image_url).__name__}")
+            else:
+                print(f"[Meal.save] Skipping - not a file upload")
+                logger.info(f"[Meal.save] Skipping - not a file upload")
+        else:
+            print(f"[Meal.save] No image_url")
+            logger.info(f"[Meal.save] No image_url")
 
         super().save(*args, **kwargs)
+        print(f"[Meal.save] DONE for meal: {self.name}")
