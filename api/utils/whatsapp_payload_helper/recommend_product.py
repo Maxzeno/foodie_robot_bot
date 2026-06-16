@@ -1,5 +1,8 @@
-def recommend_product_payload(recomendation_id, body, image_url=None):
-    print("Generating recommend product payload...", image_url)
+from api.models.meal import Meal
+
+
+def recommend_product_payload(body: str, meal: Meal):
+    print("Generating recommend product payload...")
     resp = {
             "type": "button",
             "body": {
@@ -13,33 +16,34 @@ def recommend_product_payload(recomendation_id, body, image_url=None):
                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"order-now--{recomendation_id}",
+                            "id": "order-now",
                             "title": "Order Now"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"i-love-this-meal--{recomendation_id}",
+                            "id": "i-love-this-meal",
                             "title": "Love it"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
-                            "id": f"i-hate-this-meal--{recomendation_id}",
+                            "id": "i-hate-this-meal",
                             "title": "Not for me"
                         }
                     }
                 ]
             }
         }
-
-    if image_url:
+    
+    get_branded_image_url = meal.get_branded_image_url
+    if get_branded_image_url:
         resp["header"] = {
             "type": "image",
             "image": {
-                "link": image_url
+                "link": get_branded_image_url
             }
         }
     return resp

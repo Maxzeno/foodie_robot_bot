@@ -238,11 +238,9 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
             currency_symbol=currency_symbol
         )
 
-        # Get image URL
-        image_url = meal.image_url.url if meal.image_url else None
 
         # Create WhatsApp payload with action buttons
-        payload = recommend_product_payload(recommendation_obj.id, text, image_url)
+        payload = recommend_product_payload(text, meal)
 
         # Send message
         Message.bot_message_action_reply(

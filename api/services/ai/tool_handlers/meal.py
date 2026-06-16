@@ -147,7 +147,6 @@ def build_meal_recommendation(user: User) -> bool:
                     day=user.get_local_time()
                 )
 
-                image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
 
                 if user.get_time_period() == period:
@@ -159,7 +158,7 @@ def build_meal_recommendation(user: User) -> bool:
                         time_of_day=period,
                         currency_symbol=currency_symbol
                     )
-                    payload = recommend_product_payload(recomendation_obj.id, text, image_url)
+                    payload = recommend_product_payload(text, meal)
 
                     Message.bot_message_action_reply(text, user,
                         payload=payload,
@@ -217,10 +216,9 @@ def meal_recommendations(
                     time_of_day=time_of_day,
                     currency_symbol=currency_symbol
                 )
-                image_url = meal.image_url.url if meal.image_url else None
                 meal_id = str(meal.id)
 
-                payload = recommend_product_payload(recom.id, text, image_url)
+                payload = recommend_product_payload(text, meal)
 
                 Message.bot_message_action_reply(text, user,
                     payload=payload,
@@ -244,7 +242,7 @@ def meal_recommendations(
         return build_meal_recommendation(user=user)
 
     except Exception as e:
-        Message.bot_message("Error generating meal recommendations", user=user)
+        Message.bot_message(f"Error generating meal recommendations", user=user)
         return False
 
 

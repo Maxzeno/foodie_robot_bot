@@ -11,9 +11,6 @@ from api.models.order import Order, OrderStatus
 from api.models.review import Review
 from api.models.message import Message
 from django.utils import timezone
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Order)

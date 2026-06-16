@@ -58,6 +58,34 @@ class MealAdminForm(forms.ModelForm):
         if self.instance and self.instance.pk and self.instance.times_of_day:
             self.fields['times_of_day_choices'].initial = self.instance.times_of_day
 
+    def clean_image_url(self):
+        """Validate that uploaded image is JPG or PNG only."""
+        image = self.cleaned_data.get('image_url')
+
+        if image and hasattr(image, 'read'):
+            filename = getattr(image, 'name', '').lower()
+            content_type = getattr(image, 'content_type', '').lower()
+
+            # Allowed formats
+            allowed_extensions = ('.jpg', '.jpeg', '.png')
+            allowed_content_types = ('image/jpeg', 'image/png')
+
+            # Check file extension
+            has_valid_extension = any(filename.endswith(ext) for ext in allowed_extensions)
+            has_valid_content_type = content_type in allowed_content_types
+
+            if not has_valid_extension and not has_valid_content_type:
+                # Provide specific error for WebP
+                if filename.endswith('.webp') or content_type == 'image/webp':
+                    raise forms.ValidationError(
+                        "WebP format is not supported. Please upload a JPG or PNG image."
+                    )
+                raise forms.ValidationError(
+                    "Only JPG and PNG images are supported. Please upload a valid image file."
+                )
+
+        return image
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.times_of_day = self.cleaned_data.get('times_of_day_choices', [])
