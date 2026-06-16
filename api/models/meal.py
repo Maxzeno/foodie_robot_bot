@@ -1,6 +1,6 @@
 from django.db import models
 from cloudinary.utils import cloudinary_url
-
+from cloudinary import api
 from api.models.base import BaseModel
 from api.models.location import City
 from api.models.restaurant import Restaurant
@@ -311,10 +311,27 @@ class Meal(BaseModel):
             return None
         
         try:
-            path = self.image_url.name
+            print("Generating branded image URL for meal:", self.image_url.url)
             
-            public_id = path.split("/")[-1].split(".")[0]
+            path = self.image_url.name
+
+            print("Image path:", path)
+            
+            # public_id = path.split("/")[-1].split(".")[0]
+            public_id = path
             print(f"Using public_id for branding: {public_id}")
+
+            width = self.image_url.width
+            height = self.image_url.height
+            print(f"Original image dimensions: {width}x{height}")
+
+            # Calculate sizes based on image dimensions
+            logo_width = int(width * 0.30)  # 30% of image width
+            font_size = int(height * 0.10)  # 10% of image height
+            y_offset = int(height * 0.03)   # 3% of image height
+            x_offset = int(width * 0.02)    # 2% of image width
+            
+            print(f"Calculated - Logo: {logo_width}px, Font: {font_size}px")
 
             branded_url, _ = cloudinary_url(
                 public_id,
@@ -323,21 +340,21 @@ class Meal(BaseModel):
                     {
                         'overlay': 'foodie_robot_brand:logo_kqqyoa',
                         'gravity': 'north_east',
-                        'x': 20,
-                        'y': 20,
-                        'width': 150,
+                        'x': x_offset,
+                        'y': y_offset,
+                        'width': logo_width,
                         'opacity': 90
                     },
                     # Text overlay "Today's pick" at the bottom
                     {
                         'overlay': {
                             'font_family': 'Arial',
-                            'font_size': 48,
+                            'font_size': font_size,
                             'font_weight': 'bold',
                             'text': "Today's pick"
                         },
                         'gravity': 'south',
-                        'y': 30,
+                        'y': y_offset,
                         'color': 'white',
                         'effect': 'shadow:40'
                     }
@@ -346,5 +363,5 @@ class Meal(BaseModel):
             print(f"Generated branded URL: {branded_url}")
             return branded_url
         except Exception as e:
+            print("get_branded_image_url error:", e)
             return None
-

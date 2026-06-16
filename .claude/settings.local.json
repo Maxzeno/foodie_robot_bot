@@ -101,7 +101,8 @@
       "Bash(python manage.py migrate:*)",
       "Bash(python manage.py shell:*)",
       "Bash(HUEY_IMMEDIATE=True python manage.py shell:*)",
-      "Bash(python manage.py test:*)"
+      "Bash(python manage.py test:*)",
+      "Bash(pip show:*)"
     ],
     "deny": [],
     "ask": []

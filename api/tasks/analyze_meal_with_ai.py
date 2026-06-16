@@ -1,6 +1,8 @@
 import logging
 from django import db
 from huey.contrib.djhuey import task
+from cloudinary.utils import cloudinary_url
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +47,19 @@ def analyze_meal_with_ai_task(meal_id):
         # Initialize meal analyzer with model that supports structured outputs
         analyzer = MealAnalyzer(model="gpt-4o")
 
-        # Get Cloudinary URL
-        image_url = str(meal.image_url.url) if hasattr(meal.image_url, 'url') else str(meal.image_url)
+        # # Get full Cloudinary URL from the stored path
+        # image_path = meal.image_url.name
+        # # Extract public_id (filename without extension)
+        # public_id = image_path.split("/")[-1].split(".")[0] if "/" in image_path else image_path.split(".")[0]
+        # image_url, _ = cloudinary_url(public_id)
+
+        print(meal.image_url.name)
+        print(meal.image_url.url)
+        # print(meal.image_url.path)
+
+        image_url = f"https://res.cloudinary.com/{settings.CLOUDINARY_CLOUD_NAME}/{meal.image_url.name}"
+
+        print(f"Using Cloudinary URL for analysis: {image_url}")
 
         # Analyze the meal with database values
         analysis = analyzer.analyze_from_cloudinary_url(
