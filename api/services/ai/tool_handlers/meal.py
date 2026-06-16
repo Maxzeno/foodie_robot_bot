@@ -207,6 +207,9 @@ def meal_recommendations(
                 currency_symbol = user.city.currency.symbol
 
             for recom in found_recommendations:
+                recom.sent_to_user = True
+                recom.save()
+                
                 meal = recom.meal
                 # Use engaging message format
                 text = format_engaging_recommendation_message(

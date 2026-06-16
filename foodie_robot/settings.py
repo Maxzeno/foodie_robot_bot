@@ -275,10 +275,10 @@ HUEY = RedisHuey(
 
 # Jazzmin Admin Configuration
 JAZZMIN_SETTINGS = {
-    "site_title": "Foodie Robot Admin",
-    "site_header": "Foodie Robot",
-    "site_brand": "Foodie Robot",
-    "welcome_sign": "Welcome to Foodie Robot Admin",
+    "site_title": "FoodieRobot Admin",
+    "site_header": "FoodieRobot",
+    "site_brand": "FoodieRobot",
+    "welcome_sign": "Welcome to FoodieRobot Admin",
     "show_sidebar": True,
     "navigation_expanded": True,
     "icons": {

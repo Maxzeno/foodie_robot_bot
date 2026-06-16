@@ -89,7 +89,7 @@ def _get_monthly_leaderboard(user: User, limit: int = 3):
     if user.city:
         users_ahead = users_ahead.filter(city=user.city)
 
-    users_ahead_count = users_ahead.annotate(
+    users_ahead_query = users_ahead.annotate(
         order_count=Count('orders', filter=Q(
             orders__paid=True,
             orders__created_at__gte=month_start_utc,
@@ -100,10 +100,17 @@ def _get_monthly_leaderboard(user: User, limit: int = 3):
             orders__created_at__gte=month_start_utc,
             orders__created_at__lte=month_end_utc,
         ))
-    ).filter(
-        Q(order_count__gt=user_order_count) |  # Users with more orders
-        Q(order_count=user_order_count, latest_order_time__lt=user_latest_order_time)  # Same orders but achieved it earlier
-    ).count()
+    )
+
+    # Build filter: users with more orders, or same orders but achieved earlier
+    if user_latest_order_time is not None:
+        users_ahead_count = users_ahead_query.filter(
+            Q(order_count__gt=user_order_count) |
+            Q(order_count=user_order_count, latest_order_time__lt=user_latest_order_time)
+        ).count()
+    else:
+        # User has no orders, so anyone with orders is ahead
+        users_ahead_count = users_ahead_query.filter(order_count__gt=0).count()
 
     user_rank = users_ahead_count + 1 if user_order_count > 0 else None
 
@@ -146,7 +153,6 @@ def get_progress_stats(user: User) -> bool:
             float(order.meal.calories) * order.quantity
             for order in orders
         ))
-        order_count = orders.count()
 
         # Get user's streak and day info
         day_number = user.get_recommendation_day_number()

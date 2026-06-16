@@ -53,11 +53,11 @@ def save_delivery_location(
             is_default=False
         )
         if is_new:
-            show_menu_options(user, f"Your delivery location has been set successfully. It falls under {city.name}. \n\nYou can also explore our Quick Actions menu to see more things you can do, such as checking your calorie stats, referring a friend (and earning rewards), and more.")
+            show_menu_options(user, f"Your delivery location has been set successfully. It falls under *{city.name}*. \n\nYou can also explore the *Quick Actions* menu to see what else you can do—like checking your progress or leaderboard, referring a friend (and earning money), and more.")
         elif old_city and (old_city.currency == user.city.currency):
-            Message.bot_message(f"Your delivery location has been updated successfully. It falls under {city.name}", user=user)
+            Message.bot_message(f"Your delivery location has been updated successfully. It falls under *{city.name}*", user=user)
         else:
-            Message.bot_message(f"Your delivery location has been updated successfully. It falls under {city.name}. \n\nPlease review your average meal budget since your current location uses a different currency from your last location.", user=user)
+            Message.bot_message(f"Your delivery location has been updated successfully. It falls under *{city.name}*. \n\nPlease review your average meal budget since your current location uses a different currency from your last location.", user=user)
 
     except Exception as e:
         print("Error in save_delivery_location:", e)

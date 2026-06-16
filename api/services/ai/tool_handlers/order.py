@@ -261,7 +261,7 @@ def place_order(
             return False
 
         # Check if meal has stock available
-        if not meal.has_stock():
+        if not meal.has_stock_available():
             Message.bot_message(
                 f"Sorry, {meal.name} is sold out for today. Please try another meal or come back tomorrow.",
                 user=user

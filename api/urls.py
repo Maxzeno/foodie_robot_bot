@@ -4,8 +4,8 @@ from api.views.payment_webhook import router as payment_webhook_router
 from ninja import NinjaAPI, Swagger
 
 api = NinjaAPI(
-    title="Foodie Robot",
-    description="Foodie Robot Backend API",
+    title="FoodieRobot",
+    description="FoodieRobot Backend API",
     # throttle=[
     #     AnonRateThrottle('10/s'),
     #     AuthRateThrottle('100/s'),

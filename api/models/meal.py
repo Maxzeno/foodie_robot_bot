@@ -326,10 +326,10 @@ class Meal(BaseModel):
             print(f"Original image dimensions: {width}x{height}")
 
             # Calculate sizes based on image dimensions
-            logo_width = int(width * 0.30)  # 30% of image width
-            font_size = int(height * 0.10)  # 10% of image height
-            y_offset = int(height * 0.03)   # 3% of image height
-            x_offset = int(width * 0.02)    # 2% of image width
+            logo_width = int(width * 0.40)
+            font_size = int(height * 0.08)
+            y_offset = int(height * 0.03)
+            x_offset = int(width * 0.02)
             
             print(f"Calculated - Logo: {logo_width}px, Font: {font_size}px")
 
@@ -343,7 +343,7 @@ class Meal(BaseModel):
                         'x': x_offset,
                         'y': y_offset,
                         'width': logo_width,
-                        'opacity': 90
+                        'opacity': 100
                     },
                     # Text overlay "Today's pick" at the bottom
                     {
@@ -355,8 +355,7 @@ class Meal(BaseModel):
                         },
                         'gravity': 'south',
                         'y': y_offset,
-                        'color': 'white',
-                        'effect': 'shadow:40'
+                        'color': 'white'
                     }
                 ]
             )

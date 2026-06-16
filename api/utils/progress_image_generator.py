@@ -8,6 +8,7 @@ import uuid
 from PIL import Image, ImageDraw, ImageFont
 from typing import Optional, List, Tuple
 import cloudinary.uploader
+import random
 
 
 # Brand colors - FoodieRobot yellow/gold theme (refined)
@@ -141,13 +142,12 @@ def _draw_logo(img: Image.Image, x: int, y: int, width: int):
 
 def _draw_decorative_dots(draw: ImageDraw.ImageDraw, width: int, height: int):
     """Draw subtle decorative dots."""
-    import random
     random.seed(42)
 
     dot_colors = [COLORS['primary_light'], COLORS['accent_light'], '#FFE4B5']
     positions = [
         (60, 80), (width - 80, 120), (100, height - 150),
-        (width - 60, height - 130), (width // 2 - 180, 160),
+        (width - 60, height - 130), (width - 200, 30),
         (width // 2 + 200, 140), (70, height // 2 - 100),
         (width - 70, height // 2 + 80),
     ]

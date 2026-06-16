@@ -165,7 +165,7 @@ def payment_webhook(request):
         print(f"Order {order_id} confirmed. Request amount: {request_amount}")
         
         Message.bot_message(
-            f"✅ Your payment for order #{order.code} has been received and your order is confirmed! Thank you for choosing Foodie Robot. 🍽️🚀",
+            f"✅ Your payment for order #{order.code} has been received and your order is confirmed! Thank you for choosing FoodieRobot. 🍽️🚀",
             user=order.user
         )
         return HttpResponse("Payment confirmed", status=200)

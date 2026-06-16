@@ -3,6 +3,7 @@ Admin configuration for Meal and MealEmbedding models.
 """
 from django import forms
 from django.contrib import admin
+from django.core.files.uploadedfile import UploadedFile
 from django.db.models import Count
 from django.utils.html import format_html
 
@@ -59,10 +60,11 @@ class MealAdminForm(forms.ModelForm):
             self.fields['times_of_day_choices'].initial = self.instance.times_of_day
 
     def clean_image_url(self):
-        """Validate that uploaded image is JPG or PNG only."""
+        """Validate that uploaded image is JPG or PNG only (new uploads only)."""
         image = self.cleaned_data.get('image_url')
 
-        if image and hasattr(image, 'read'):
+        # Only validate NEW uploads, not existing images
+        if image and isinstance(image, UploadedFile):
             filename = getattr(image, 'name', '').lower()
             content_type = getattr(image, 'content_type', '').lower()
 
