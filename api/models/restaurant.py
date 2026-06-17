@@ -45,6 +45,11 @@ class Restaurant(BaseModel):
         help_text="Set to True to disable this restaurant and all its meals"
     )
 
+    inactive_but_still_recommend = models.BooleanField(
+        default=False,
+        help_text="Set to True to disable this restaurant and all its meals"
+    )
+
     def __str__(self):
         return f"{self.name} - {self.phone} - {self.address} - {self.website} - {self.social}"
 

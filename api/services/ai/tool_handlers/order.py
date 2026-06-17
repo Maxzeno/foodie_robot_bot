@@ -113,10 +113,54 @@ def place_order_form(
 
     # Validate meal
     try:
-        meal = Meal.objects.get(id=meal_id, available=True)
+        meal = Meal.objects.select_related('restaurant', 'city').get(id=meal_id)
     except Meal.DoesNotExist:
         Message.bot_message(
+            "Sorry, this meal does not exist. Please choose another meal.",
+            user=user
+        )
+        return False
+
+    # Check if meal is marked as available
+    if not meal.available:
+        Message.bot_message(
             "Sorry, this meal is not available at the moment. Please choose another meal.",
+            user=user
+        )
+        return False
+
+    # Check if restaurant is active
+    if meal.restaurant.inactive or meal.restaurant.inactive_but_still_recommend:
+        Message.bot_message(
+            f"Sorry, {meal.restaurant.name} is currently inactive. Please try another restaurant.",
+            user=user
+        )
+        return False
+
+    # Check if restaurant is open now
+    user_local_time = user.get_local_time()
+    current_time = user_local_time.time()
+    current_day = user_local_time.strftime('%A').lower()
+
+    if not meal.restaurant.is_open_now(current_time=current_time, current_day=current_day):
+        Message.bot_message(
+            f"Sorry, {meal.name} is not available at this time. Please check back later.",
+            user=user
+        )
+        return False
+
+    # Check if meal is available at current time
+    if not meal.is_available_at_time(check_time=current_time):
+        Message.bot_message(
+            f"Sorry, {meal.name} is not available at this time. Please check back later.",
+            user=user
+        )
+        return False
+
+    # Check if meal has stock available
+    if not meal.has_stock_available():
+        Message.bot_message(
+            f"Sorry, {meal.name} is sold out for today. Please try another meal or come back tomorrow.",
             user=user
         )
         return False
@@ -247,7 +291,7 @@ def place_order(
 
         if not meal.restaurant.is_open_now(current_time=current_time, current_day=current_day):
             Message.bot_message(
-                f"Sorry, {meal.restaurant.name} is currently closed. Please try again during operating hours ({meal.restaurant.open_time.strftime('%I:%M %p')} - {meal.restaurant.close_time.strftime('%I:%M %p')}).",
+                f"Sorry, {meal.name} is not available at this time. Please check back later.",
                 user=user
             )
             return False
@@ -255,7 +299,7 @@ def place_order(
         # Check if meal is available at current time
         if not meal.is_available_at_time(check_time=current_time):
             Message.bot_message(
-                f"Sorry, {meal.name} is not available at this time. Please check back during the meal's availability hours.",
+                f"Sorry, {meal.name} is not available at this time. Please check back later.",
                 user=user
             )
             return False
@@ -369,7 +413,7 @@ def place_order(
                 paid=False,
                 dropoff_street_address=delivery_address.street_address,
                 dropoff_point=delivery_address.point,
-                pickup_street_address=meal.restaurant.street_address if hasattr(meal.restaurant, 'street_address') else None,
+                pickup_street_address=meal.restaurant.address if hasattr(meal.restaurant, 'address') else None,
                 pickup_point=meal.restaurant.point if hasattr(meal.restaurant, 'point') else None,
             )
 

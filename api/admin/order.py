@@ -1,12 +1,28 @@
 """
 Admin configuration for Order model.
 """
+import math
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
 
 from api.models.order import Order, OrderStatus
 from api.admin.base import GeoJSONFieldMixin
+
+
+def _haversine_distance(lat1, lon1, lat2, lon2):
+    """Calculate distance between two coordinates in kilometers using Haversine formula."""
+    R = 6371  # Earth's radius in km
+
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    delta_lat = math.radians(lat2 - lat1)
+    delta_lon = math.radians(lon2 - lon1)
+
+    a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
 
 
 @admin.register(Order)
@@ -18,7 +34,7 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     list_filter = ['status', 'paid', 'ordered_via', 'currency', 'created_at']
     search_fields = ['code', 'user__phone', 'user__code', 'meal__name', 'rider_phone', 'rider_name']
     readonly_fields = [
-        'code', 'order_summary_message', 'pickup_point_preview', 'dropoff_point_preview',
+        'code', 'order_summary_message', 'delivery_distance', 'pickup_point_preview', 'dropoff_point_preview',
         'route_preview', 'created_at', 'updated_at'
     ]
     # raw_id_fields = ['user', 'meal']
@@ -48,7 +64,7 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
             'description': 'Customer delivery location'
         }),
         ('Route Overview', {
-            'fields': ('route_preview',),
+            'fields': ('delivery_distance', 'route_preview'),
             'classes': ('collapse',),
             'description': 'Map showing both pickup and dropoff locations'
         }),
@@ -156,6 +172,35 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     def dropoff_point_preview(self, obj):
         return self._render_point_with_gmaps(obj.dropoff_point, 'DROPOFF', '#dc3545')
     dropoff_point_preview.short_description = 'Dropoff Location'
+
+    def delivery_distance(self, obj):
+        """Calculate and display the distance from pickup to dropoff in km."""
+        pickup_lng, pickup_lat = self._get_coords(obj.pickup_point)
+        dropoff_lng, dropoff_lat = self._get_coords(obj.dropoff_point)
+
+        if pickup_lat is None or dropoff_lat is None:
+            return format_html(
+                '<span style="color: #6c757d;">Cannot calculate - missing location(s)</span>'
+            )
+
+        try:
+            distance = _haversine_distance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
+            distance_str = f"{distance:.2f}"
+
+            return format_html(
+                '<div style="background: #e3f2fd; padding: 12px 16px; border-radius: 8px; '
+                'border: 1px solid #90caf9; display: inline-block;">'
+                '<span style="color: #1565c0; font-weight: bold; font-size: 18px;">{} km</span>'
+                '<span style="color: #64b5f6; margin-left: 8px; font-size: 13px;">(straight line)</span>'
+                '</div>',
+                distance_str
+            )
+        except Exception as e:
+            return format_html(
+                '<span style="color: #dc3545;">Error calculating distance: {}</span>',
+                str(e)
+            )
+    delivery_distance.short_description = 'Delivery Distance'
 
     def order_summary_message(self, obj: Order):
         """Generate a formatted message with order details for easy sharing."""
