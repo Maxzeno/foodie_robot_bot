@@ -14,6 +14,8 @@ from api.models.review import Review
 from api.models.message import Message
 from django.utils import timezone
 
+from api.services.ai.tool_handlers.stats import get_progress_stats
+
 
 @receiver(post_save, sender=Meal)
 def analyze_new_meal_with_ai(sender, instance, created, **kwargs):
@@ -75,6 +77,8 @@ def send_review_request_on_order_received(sender, instance, created, **kwargs):
                     "order_id": instance.id,
                 },
             )
+
+            get_progress_stats(instance.user)
         except Exception as e:
             print(f"Error sending review request for order {instance.id}: {str(e)}")
 

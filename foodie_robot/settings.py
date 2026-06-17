@@ -29,6 +29,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 TRY_LOCAL_DB = config('TRY_LOCAL_DB', default=False, cast=bool)
 TRY_LOCAL_SETTING = config('TRY_LOCAL_SETTING', default=False, cast=bool)
 
+MAPBOX_TOKEN = config('MAPBOX_TOKEN')
+
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.0.214', '192.168.0.188', '.ngrok-free.app']
 _ALLOWED_HOST = config('ALLOWED_HOST', '')
 ALLOWED_HOSTS.extend(_ALLOWED_HOST.split())

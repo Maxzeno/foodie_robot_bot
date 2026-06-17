@@ -219,6 +219,10 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
         else:
             message_lines.append(f"Pickup meal at {obj.meal.restaurant.name} ({obj.pickup_street_address or 'Address not set'}) \n")
 
+        # Note for vendor (if set)
+        if obj.note and obj.note.strip():
+            message_lines.append(f"Note for vendor: {obj.note.strip()} \n")
+
         # Dropoff line
         if dropoff_lat is not None and dropoff_lng is not None:
             dropoff_gmaps = f"https://www.google.com/maps?q={dropoff_lat},{dropoff_lng}"
@@ -226,6 +230,14 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
             message_lines.append(f"Deliver to our client ({dropoff_address} - {dropoff_gmaps}) \n")
         else:
             message_lines.append(f"Deliver to our client ({obj.dropoff_street_address or 'Address not set'}) \n")
+
+        # Client phone number
+        client_phone = obj.user.phone or "Not available"
+        message_lines.append(f"Client phone: {client_phone} \n")
+
+        # Rider note (if set)
+        if obj.rider_note and obj.rider_note.strip():
+            message_lines.append(f"Rider instructions: {obj.rider_note.strip()} \n")
 
         # Cost line
         message_lines.append(f"How much will this cost?")

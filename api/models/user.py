@@ -59,6 +59,14 @@ class User(AbstractUser, BaseModel):
         blank=True,
         related_name="referrals"
     )
+    referral_message_sent = models.BooleanField(
+        default=False,
+        help_text="Whether the user has been sent the referral invitation message"
+    )
+    registration_reminder_sent = models.BooleanField(
+        default=False,
+        help_text="Whether the user has been sent the registration completion reminder"
+    )
 
     def set_password(self, raw_password, user=None):
         if not user or user and user.password != self.password:

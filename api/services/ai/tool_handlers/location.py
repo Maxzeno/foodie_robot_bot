@@ -9,6 +9,7 @@ from api.services.ai.tool_handlers.meal import build_meal_recommendation
 from api.services.ai.tool_handlers.order import place_order
 from datetime import timedelta
 from api.services.ai.tool_handlers.menu_options import show_menu_options
+from api.utils.map_utils import get_place_name
 
 def save_delivery_location(
     user: User,
@@ -45,6 +46,14 @@ def save_delivery_location(
         user.save()
 
         # Create new default address
+        if not address or not name:
+            address_data: dict = get_place_name(latitude, longitude)
+            if address_data is None:
+                address_data = {}
+                
+            address = address or address_data.get("full_address")
+            name = name or address_data.get("name")
+
         DeliveryAddress.objects.create(
             user=user,
             point=point_geojson,
