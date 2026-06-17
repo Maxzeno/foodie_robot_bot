@@ -13,7 +13,7 @@ from api.models.message import RoleChoices
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = [
-        'code', 'phone', 'city', 'gender', 'order_count',
+        'code', 'phone', 'city', 'order_count',
         'message_count', 'is_active_badge', 'is_blocked_badge', 'created_at'
     ]
     list_filter = ['city', 'gender', 'is_active', 'is_blocked', 'created_at']

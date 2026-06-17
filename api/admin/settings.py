@@ -11,22 +11,18 @@ from api.models.currency import Currency
 
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
-    list_display = ['id', 'minimum_withdrawal_display', 'whatsapp_phone_number', 'updated_at']
+    list_display = ['id', 'whatsapp_phone_number', 'updated_at']
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         ('General', {
-            'fields': ('minimum_withdrawal', 'whatsapp_phone_number', 'whatsapp_support_phone_number')
+            'fields': ('whatsapp_phone_number', 'whatsapp_support_phone_number')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
-
-    def minimum_withdrawal_display(self, obj):
-        return f"{obj.minimum_withdrawal:,.2f}"
-    minimum_withdrawal_display.short_description = 'Min Withdrawal'
 
     def has_add_permission(self, request):
         # Only allow one AppSettings instance

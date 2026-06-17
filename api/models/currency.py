@@ -18,6 +18,9 @@ class Currency(BaseModel):
     )
     active = models.BooleanField(default=True)
 
+    # minimum_withdrawal = models.DecimalField(max_digits=12, decimal_places=2) TODO: might be added and implemented later
+
+
     def __str__(self):
         return f"{self.code} ({self.symbol})"
 

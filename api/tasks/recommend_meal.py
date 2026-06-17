@@ -250,7 +250,7 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
             metadata={
                 "meal_id": str(meal.id),
                 "recommendation_id": recommendation_obj.id,
-                "description": "Users can order, like or hate meal"
+                "description": "Users can order, like or dislike meal"
             }
         )
 

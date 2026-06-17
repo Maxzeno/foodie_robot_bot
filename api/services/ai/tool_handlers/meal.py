@@ -165,7 +165,7 @@ def build_meal_recommendation(user: User) -> bool:
                         metadata={
                             "meal_id": meal_id,
                             "recomendation_id": recomendation_obj.id,
-                            "description": "Users can order, like or hate meal"
+                            "description": "Users can order, like or dislike meal"
                             }
                     )
                     messages_sent += 1
@@ -228,7 +228,7 @@ def meal_recommendations(
                     metadata={
                         "meal_id": meal_id,
                         "recomendation_id": recom.id,
-                        "description": "Users can order, like or hate meal"
+                        "description": "Users can order, like or dislike meal"
                         }
                 )
             return True
