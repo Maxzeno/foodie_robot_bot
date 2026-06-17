@@ -31,7 +31,7 @@ def recommend_product_payload(body: str, meal: Meal):
                         "type": "reply",
                         "reply": {
                             "id": "i-hate-this-meal",
-                            "title": "Didn’t like it"
+                            "title": "Not for me"
                         }
                     }
                 ]

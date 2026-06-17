@@ -44,7 +44,7 @@ def update_user_profile(
         user.save()
         
         if is_new:
-            Message.bot_message_request_location("Your profile has been created successfully! \n\nPlease send us your delivery location so we can start recommending meals in your area.", user=user)
+            Message.bot_message_request_location("Your profile has been created successfully! 🎉 \n\nPlease share your delivery location so we can start recommending meals from top restaurants near you.", user=user)
         else:
             Message.bot_message(
                 "Your profile has been updated successfully!",

@@ -1,0 +1,327 @@
+================================================================================
+FOODIE ROBOT BACKEND - IMPLEMENTATION ANALYSIS
+================================================================================
+Generated: 2025-12-31
+Comparing notes.txt requirements against current codebase implementation
+
+================================================================================
+IMPLEMENTED FEATURES
+================================================================================
+
+[x] Currency Support
+    Status: IMPLEMENTED
+    Location: api/models/currency.py, api/models/city.py
+    Details: Multi-currency support exists with Currency model. Cities have
+    default_currency field. However, USD as global default is not explicitly
+    enforced - each city sets its own default currency.
+
+[x] User Group Filtering for Recommendations
+    Status: IMPLEMENTED
+    Location: api/services/recommendation/scorer.py
+    Details: The recommendation system filters by:
+    - fitness_goals (Weight Loss, Muscle Gain, Maintenance)
+    - health_conditions (Diabetes, Hypertension, etc.)
+    - allergies (Peanuts, Seafood, Dairy, Gluten, etc.)
+    - preferred_cuisine
+    The scoring system gives +20 points for fitness goal matches and handles
+    all preference alignments.
+
+[x] Exclude Previous Day Recommendations
+    Status: IMPLEMENTED
+    Location: api/services/recommendation/filter.py:45-55
+    Details: _get_recent_recommendations() excludes meals recommended in the
+    last 24 hours. Also excludes "hated" meals via MealPreference model.
+
+[x] Only Recommend to Active Users (24-hour window)
+    Status: IMPLEMENTED
+    Location: api/tasks/meal_recommendations.py:41-55
+    Details: scheduled_send_meal_recommendations() filters users who have
+    sent a message in the last 24 hours using:
+    messages__role=Message.ROLE_USER,
+    messages__created_at__gte=twenty_four_hours_ago
+
+[x] Message Model with Intent
+    Status: IMPLEMENTED
+    Location: api/models/message.py
+    Details: Message model has 'current_intent' field that tracks the intent
+    of bot messages for context in conversations.
+
+[x] Timezone Support
+    Status: IMPLEMENTED
+    Location: api/models/city.py, api/services/recommendation/generator.py
+    Details: Cities have timezone field (60+ options). Time period detection
+    (morning/afternoon/evening/night) uses user's local timezone.
+
+[x] AI Meal Analysis (nutritional, fitness, health, cuisine)
+    Status: IMPLEMENTED
+    Location: api/tasks/meal_analysis.py, api/services/ai/meal_analyzer.py
+    Details: Uses GPT-4o vision to analyze meal images and extract:
+    - Calories, protein, carbs, fats, fiber, sugar, sodium, cholesterol
+    - Best time of day (morning/afternoon/evening)
+    - Matching fitness goals
+    - Health restrictions/allergies
+    - Cuisine classification
+
+[x] Order Flow with WhatsApp Flow
+    Status: IMPLEMENTED
+    Location: whatsapp_flows/flow-order.json, api/views/whatsapp_flow.py
+    Details: Complete order flow with meal selection, quantity, delivery
+    address update, and confirmation.
+
+[x] Withdrawal WhatsApp Flow
+    Status: IMPLEMENTED
+    Location: whatsapp_flows/flow-withdraw.json, api/views/whatsapp_flow.py
+    Details: Bank account details, withdrawal amount, status tracking.
+
+[x] Async Recommendation Generation
+    Status: IMPLEMENTED
+    Location: api/tasks/meal_recommendations.py
+    Details: Uses Huey task queue with Redis backend. Recommendations run
+    as background tasks via scheduled_send_meal_recommendations().
+
+[x] Cron Job for Recommendations
+    Status: IMPLEMENTED
+    Location: api/tasks/meal_recommendations.py
+    Details: @huey.periodic_task(crontab(minute='*/30')) runs every 30 minutes.
+
+[x] MealEmbedding Model (for embedding-based filtering)
+    Status: PARTIALLY IMPLEMENTED
+    Location: api/models/meal_embedding.py
+    Details: Model exists with embedding field. The scorer.py has
+    semantic_similarity_penalty but full embedding-based filtering from
+    notes (create embeddings -> filter top options) is not fully utilized.
+
+[x] Order Review WhatsApp Flow
+    Status: IMPLEMENTED
+    Location: whatsapp_flows/flow-order-review.json
+    Details: 1-5 star rating, sentiment feedback (like/neutral/hate), comments.
+
+[x] Special Occasion Meal Boosting
+    Status: IMPLEMENTED
+    Location: api/models/special_occasion.py, api/services/recommendation/scorer.py
+    Details: SpecialOccasion model allows date-based meal boosting with
+    configurable weights. Can be recurring annually or one-time events.
+
+================================================================================
+NOT IMPLEMENTED / PARTIALLY IMPLEMENTED FEATURES
+================================================================================
+
+[ ] Currency Defaults to USD
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 3
+    Current State: Currency is city-based, no global USD default.
+    Suggestion: Add a fallback in User model or AppSettings to default to USD
+    when city currency is not set. Could also set USD as the default in the
+    Currency model or as a setting.
+
+[ ] 22-Hour Warning Message (before stopping recommendations)
+    Status: NOT IMPLEMENTED
+    Notes Reference: Lines 9-10
+    Current State: No task exists to warn users at 22 hours before the 24-hour
+    cutoff that recommendations will stop.
+    Suggestion: Create a new Huey task that:
+    1. Finds users whose last message was 22-24 hours ago
+    2. Sends warning: "Hi it's important you respond so we know you still want
+       recommendations..."
+    3. Could run hourly to catch users in the 22-24 hour window
+
+[ ] Delivery Location Outside City Handling
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 14
+    Current State: No logic to detect when delivery location is outside user's
+    current city, update their city, and recommend 2 meals in new location.
+    Suggestion: In order flow or save_delivery_location tool:
+    1. Geocode/reverse geocode the new address
+    2. Compare against user's current city coverage area
+    3. If outside, update user.city and trigger new recommendations
+
+[ ] Strict JSON Response Handling
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 17
+    Current State: No special handling when expecting JSON but receiving plain
+    text from user.
+    Suggestion: Add validation in message processing that detects expected
+    response type (from current_intent or flow state) and re-prompts user
+    with the intended action if they send plain text instead.
+
+[ ] Batch Processing for Cost Reduction (same city)
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 18
+    Current State: Each user recommendation is processed individually.
+    Suggestion: Group users by city before recommendation generation.
+    Load city meals once, process all users in that city, then move to next.
+    Could reduce DB queries and allow bulk LLM calls.
+
+[ ] Tell LLM Time of Day
+    Status: PARTIALLY IMPLEMENTED
+    Notes Reference: Line 20
+    Current State: Time period is used for filtering meals but may not be
+    explicitly passed to LLM in the system prompt.
+    Suggestion: Add current time period and user's local time to the AI
+    system prompt so LLM can make contextually aware responses.
+
+[ ] Weekly Recommendation Pre-generation
+    Status: NOT IMPLEMENTED
+    Notes Reference: Lines 22, 28
+    Current State: Recommendations are generated daily/per-request.
+    Suggestion: Create a weekly batch job that:
+    1. Generates 7 days of recommendations per user
+    2. Stores in a new WeeklyRecommendation model
+    3. Only regenerates if user updates preferences/health/etc.
+    4. Would reduce compute and API costs significantly
+
+[ ] Free-Form Text Typing Support with AI Intent Detection
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 30
+    Current State: System uses button/interactive responses primarily.
+    Suggestion: Implement text message handling that:
+    1. Detects if user is replying to a specific message
+    2. If not, uses last bot message with intent as context
+    3. Uses AI to analyze what option user is referring to
+    4. Maps natural language to action (e.g., "the first one" -> select option 1)
+
+[ ] LLM Asks for Missing User Info
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 33
+    Current State: No mechanism to have LLM request missing required fields.
+    Suggestion: Add user info completeness check to system prompt. If fields
+    missing (city, preferences, health), instruct LLM to ask after completing
+    current request.
+
+[ ] Two-Step Tool Call Optimization
+    Status: NOT IMPLEMENTED
+    Notes Reference: Lines 35, 39-40
+    Current State: All tools loaded into every LLM call.
+    Suggestion: Implement staged tool selection:
+    Step 1: LLM sees tool categories (location, order, profile, etc.)
+    Step 2: Based on category, load only relevant tools
+    Step 3: LLM calls specific tool with arguments
+    This could significantly reduce input tokens and cost.
+
+[ ] Action Reply for Pagination (Page 2, etc.)
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 37
+    Current State: No pagination in interactive messages.
+    Suggestion: Add "Next Page" / "Page X" action buttons for long lists.
+    Track pagination state in message context or user session.
+
+[ ] LLM Content Field for Cropped Messages
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 38
+    Current State: Message model has 'content' but no separate 'llm_content'.
+    Suggestion: Add llm_content field to Message model. When bot messages
+    are long, store IDs/summary in llm_content for LLM context while showing
+    full content to user. LLM would see "...content cropped..." indicator.
+
+[ ] Embedding-Based Meal Discovery
+    Status: PARTIALLY IMPLEMENTED
+    Notes Reference: Lines 43-44
+    Current State: MealEmbedding model exists, semantic_similarity_penalty
+    exists in scorer, but full "create city embeddings -> filter top matches"
+    flow is not implemented.
+    Suggestion:
+    1. Generate embeddings for all meals on creation
+    2. When recommending, use vector similarity to find top candidates
+    3. Then apply scoring filters on smaller candidate set
+    4. Could use pgvector extension for efficient similarity search
+
+[ ] Meal Reorder with Order Code
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 47
+    Current State: No reorder functionality.
+    Suggestion: Add reorder_meal tool that:
+    1. Accepts order code or meal search query
+    2. Looks up original order details
+    3. Pre-fills order flow with previous selections
+    4. "order rice and beans" -> search meals -> create order
+
+[ ] Improved Recommendation with Free Service Window Check
+    Status: PARTIALLY IMPLEMENTED
+    Notes Reference: Line 49
+    Current State: Cron runs every 30 minutes but no "free service window"
+    concept visible.
+    Suggestion: Add service window check (e.g., 8am-10pm local time) before
+    sending recommendations. Don't disturb users at night.
+
+[ ] 4-Digit Order Confirmation Code
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 57
+    Current State: No confirmation code system for order handoff.
+    Suggestion:
+    1. Generate 4-digit code on order creation
+    2. Send to user, vendor, and rider
+    3. Rider gives code to vendor on pickup
+    4. User gives code to rider on delivery
+    5. Add verification step in order status updates
+
+[ ] Simple Lat/Lon Location Format
+    Status: NOT IMPLEMENTED
+    Notes Reference: Lines 60-63
+    Current State: Uses GeoJSON PointField (GDAL dependency).
+    Suggestion: Replace GeoJSON with simple CharField:
+    - Format: "lat,lon" (e.g., "6.5244,3.3792")
+    - Add preview_url field: Google Maps link with marker
+    - For areas: "[(lat,lon),(lat,lon),...]" with validation
+    - Would remove GDAL dependency entirely
+
+[ ] Required Fields Check on Each Request
+    Status: NOT IMPLEMENTED
+    Notes Reference: Line 26
+    Current State: No systematic check that user has city, preferences,
+    health info before processing requests.
+    Suggestion: Add middleware or check at start of message processing:
+    1. Verify user.city is set (from delivery address)
+    2. Check if preferences are filled
+    3. If missing, prompt user to complete profile before continuing
+
+================================================================================
+ADDITIONAL OBSERVATIONS & SUGGESTIONS
+================================================================================
+
+1. PRICE FILTERING
+   Notes mention "price is way above their average" but current implementation
+   has budget_average field. Verify this is being used correctly in
+   recommendation filtering.
+
+2. GROUP-BASED RECOMMENDATION FALLBACK
+   Notes mention "if less than 2 options left or user not in a group, manually
+   generate recommendations". Current implementation may need explicit fallback
+   logic for edge cases.
+
+3. INTENT TRACKING
+   Notes say "maybe adding current intent to message model is better" - this IS
+   implemented with current_intent field on Message model.
+
+4. HEALTH CONDITION RESTRICTIONS
+   The AI meal analysis extracts health restrictions but verify these are being
+   cross-referenced correctly with user health conditions in recommendations.
+
+5. DAILY STOCK MANAGEMENT
+   Meal model has remaining_stock and resets_daily_at fields - ensure cron job
+   exists to reset stock daily.
+
+================================================================================
+PRIORITY RECOMMENDATIONS
+================================================================================
+
+HIGH PRIORITY (Impact + Effort Balance):
+1. 22-hour warning message task - Improves user retention
+2. Two-step tool call optimization - Reduces costs
+3. Required fields check - Prevents errors
+4. Simple lat/lon format - Removes GDAL dependency headache
+
+MEDIUM PRIORITY:
+5. Weekly recommendation pre-generation - Cost savings
+6. Free-form text support - Better UX
+7. 4-digit confirmation code - Order security
+8. Meal reorder functionality - Convenience feature
+
+LOWER PRIORITY (Nice to have):
+9. LLM content field - Optimization
+10. Action reply pagination - UX polish
+11. Batch processing by city - Optimization
+12. Full embedding-based filtering - Advanced recommendation
+
+================================================================================
+END OF ANALYSIS
+================================================================================

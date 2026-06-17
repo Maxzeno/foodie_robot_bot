@@ -13,8 +13,8 @@ from api.models.message import RoleChoices
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = [
-        'code', 'phone', 'city', 'order_count',
-        'message_count', 'is_active_badge', 'is_blocked_badge', 'created_at'
+        'code', 'phone', 'city', 'referral_info', 'profile_complete_badge',
+        'order_count', 'message_count', 'is_active_badge', 'is_blocked_badge', 'created_at'
     ]
     list_filter = ['city', 'gender', 'is_active', 'is_blocked', 'created_at']
     search_fields = ['code', 'phone', 'email', 'username', 'first_name', 'last_name']
@@ -50,7 +50,7 @@ class UserAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.annotate(
+        return qs.select_related('referred_by', 'city').annotate(
             _order_count=Count('orders', distinct=True),
             _message_count=Count('messages', filter=Q(messages__role=RoleChoices.USER), distinct=True),
             _last_message=Max('messages__created_at', filter=Q(messages__role=RoleChoices.USER))
@@ -94,3 +94,41 @@ class UserAdmin(admin.ModelAdmin):
             )
         return ''
     is_blocked_badge.short_description = 'Blocked'
+
+    def referral_info(self, obj):
+        if obj.referred_by:
+            return format_html(
+                '<span style="color: #007bff; font-weight: 500;">✓ {}</span>',
+                obj.referred_by.code or obj.referred_by.phone
+            )
+        return format_html('<span style="color: #6c757d;">-</span>')
+    referral_info.short_description = 'Referred By'
+
+    def profile_complete_badge(self, obj):
+        # Check if key profile fields are filled
+        required_fields = [
+            obj.average_meal_budget,
+            obj.fitness_goals,
+        ]
+        secondary_required_fields = [
+            obj.city,
+        ]
+
+        required_complete = all(required_fields)
+        secondary_required_complete = all(secondary_required_fields)
+
+        if required_complete and secondary_required_complete:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px;">✓ Complete</span>'
+            )
+        elif required_complete:
+            return format_html(
+                '<span style="background: #ffc107; color: black; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px;">⚠ Partial</span>'
+            )
+        return format_html(
+            '<span style="background: #dc3545; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">✗ Incomplete</span>'
+        )
+    profile_complete_badge.short_description = 'Profile'

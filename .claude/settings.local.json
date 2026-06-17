@@ -102,7 +102,8 @@
       "Bash(python manage.py shell:*)",
       "Bash(HUEY_IMMEDIATE=True python manage.py shell:*)",
       "Bash(python manage.py test:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

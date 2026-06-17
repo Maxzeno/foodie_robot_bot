@@ -1,20 +1,7 @@
-"""
-Helper functions for generating WhatsApp messages when no meal recommendations are available.
-"""
 from typing import Dict, Tuple
 
 
 def get_no_recommendation_message(filter_stats: Dict, currency_symbol: str = "₦") -> str:
-    """
-    Generate a user-friendly message explaining why no meal recommendations are available.
-
-    Args:
-        filter_stats: Dictionary containing filter statistics from MealRecommendationService
-        currency_symbol: Currency symbol to use in budget messages (default: ₦)
-
-    Returns:
-        str: User-friendly message explaining the issue
-    """
     primary_reason = filter_stats.get('primary_reason', 'unknown')
 
     if primary_reason == 'no_meals_in_city':
@@ -67,32 +54,11 @@ def get_no_recommendation_message(filter_stats: Dict, currency_symbol: str = "�
 
 
 def should_show_profile_update_flow(primary_reason: str) -> bool:
-    """
-    Determine if the profile update flow should be shown based on the reason.
-
-    Profile update can help with: budget, hated meals.
-    Profile update won't help with: no_meals_in_city, restaurant_hours, meal_hours, stock.
-
-    Args:
-        primary_reason: The primary reason code for no recommendations
-
-    Returns:
-        bool: True if profile update flow should be shown
-    """
     profile_fixable_reasons = {'budget', 'hated'}
     return primary_reason in profile_fixable_reasons
 
 
 def get_no_recommendation_message_short(primary_reason: str) -> str:
-    """
-    Get a short version of the no-recommendation message for logging.
-
-    Args:
-        primary_reason: The primary reason code
-
-    Returns:
-        str: Short description of the reason
-    """
     reason_descriptions = {
         'no_meals_in_city': 'No meals available in city',
         'budget': 'Budget too restrictive',

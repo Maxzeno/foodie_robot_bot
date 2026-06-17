@@ -1,4 +1,0 @@
-Implement a model in admin i can use to send message to all users in a city or all user then another to to send message to single users but check and only send message to the users currently active (in 24 hours free service window)
-
-----------------
-fix issue with image processing

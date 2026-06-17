@@ -72,12 +72,6 @@ def format_engaging_recommendation_message(
 
 
 def build_meal_recommendation(user: User) -> bool:
-    """
-    Build and send meal recommendations to the user.
-
-    Returns:
-        bool: True if recommendations were sent, False if no meals available
-    """
     with transaction.atomic():
         service = MealRecommendationService()
 
@@ -175,12 +169,6 @@ def build_meal_recommendation(user: User) -> bool:
 def meal_recommendations(
     user: User,
 ) -> bool:
-    """
-    Get meal recommendations for the user.
-
-    Returns:
-        bool: True if recommendations were sent, False otherwise
-    """
     time_of_day = user.get_time_period()
 
     # Check if it's night time - no recommendations during night
