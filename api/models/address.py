@@ -19,6 +19,12 @@ class DeliveryAddress(BaseModel):
         ordering = ['-created_at']
         verbose_name = "Delivery Address"
         verbose_name_plural = "Delivery Addresses"
+        indexes = [
+            # Get user's latest delivery address (very frequent)
+            models.Index(fields=['user', '-created_at'], name='addr_user_created_idx'),
+            # Filter by default address
+            models.Index(fields=['user', 'is_default'], name='addr_user_default_idx'),
+        ]
 
     def __str__(self):
         return f"{self.point} - {self.name}"

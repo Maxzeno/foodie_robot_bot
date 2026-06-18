@@ -19,5 +19,17 @@ class Review(BaseModel):
     sentiment = models.CharField(max_length=7, choices=SentimentChoices.choices)
     comment = models.TextField(blank=True)
 
+    class Meta:
+        indexes = [
+            # User reviews history
+            models.Index(fields=['user', '-created_at'], name='review_user_created_idx'),
+            # Check if review exists for order
+            models.Index(fields=['order'], name='review_order_idx'),
+            # Filter by sentiment
+            models.Index(fields=['sentiment', '-created_at'], name='review_sentiment_created_idx'),
+            # User reviews by sentiment
+            models.Index(fields=['user', 'sentiment'], name='review_user_sentiment_idx'),
+        ]
+
     def __str__(self):
         return f"{self.user} - {self.order} ({self.sentiment}, {self.meal_rating} stars)"

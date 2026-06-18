@@ -46,11 +46,23 @@ class Message(BaseModel):
         constraints = [
             CheckConstraint(
                 check=(
-                    Q(role=RoleChoices.USER) | 
+                    Q(role=RoleChoices.USER) |
                     (Q(role=RoleChoices.BOT) & ~Q(current_intent=None))
                 ),
                 name="bot_messages_require_current_intent",
             )
+        ]
+        indexes = [
+            # Conversation history queries (most frequent)
+            models.Index(fields=['user', '-created_at'], name='msg_user_created_idx'),
+            # Check if bot message exists for user
+            models.Index(fields=['user', 'role'], name='msg_user_role_idx'),
+            # Ordered conversation by role and time
+            models.Index(fields=['user', 'role', '-created_at'], name='msg_user_role_created_idx'),
+            # Reply message lookups
+            models.Index(fields=['message_id'], name='msg_message_id_idx'),
+            # Filter by current intent
+            models.Index(fields=['user', 'current_intent'], name='msg_user_intent_idx'),
         ]
 
     def get_content_meta(self):

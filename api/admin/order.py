@@ -78,7 +78,7 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
         }),
     )
 
-    actions = ['mark_as_dispatched', 'mark_as_arrived', 'mark_as_received', 'mark_as_paid']
+    actions = ['mark_as_accepted', 'mark_as_at_restaurant', 'mark_as_on_the_way', 'mark_as_delivered', 'mark_as_paid']
 
     def user_link(self, obj):
         return format_html(
@@ -349,17 +349,21 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
         return format_html(''.join(html_parts))
     route_preview.short_description = 'Route (Pickup → Dropoff)'
 
-    @admin.action(description='Mark selected orders as Dispatched')
-    def mark_as_dispatched(self, request, queryset):
-        queryset.update(status=OrderStatus.DISPATCHED)
+    @admin.action(description='Mark selected orders as Accepted')
+    def mark_as_accepted(self, request, queryset):
+        queryset.update(status=OrderStatus.ACCEPTED)
 
-    @admin.action(description='Mark selected orders as Arrived')
-    def mark_as_arrived(self, request, queryset):
-        queryset.update(status=OrderStatus.ARRIVED)
+    @admin.action(description='Mark selected orders as At Restaurant')
+    def mark_as_at_restaurant(self, request, queryset):
+        queryset.update(status=OrderStatus.AT_RESTAURANT)
 
-    @admin.action(description='Mark selected orders as Received')
-    def mark_as_received(self, request, queryset):
-        queryset.update(status=OrderStatus.RECEIVED, delivered_at=timezone.now())
+    @admin.action(description='Mark selected orders as On The Way')
+    def mark_as_on_the_way(self, request, queryset):
+        queryset.update(status=OrderStatus.ON_THE_WAY)
+
+    @admin.action(description='Mark selected orders as Delivered')
+    def mark_as_delivered(self, request, queryset):
+        queryset.update(status=OrderStatus.DELIVERED, delivered_at=timezone.now())
 
     @admin.action(description='Mark selected orders as Paid')
     def mark_as_paid(self, request, queryset):

@@ -26,6 +26,12 @@ WHATSAPP_PHONE_NUMBER_ID: str = settings.WHATSAPP_PHONE_NUMBER_ID
 @transaction.atomic
 @router.post('/whatsapp', auth=None)
 def whatsapp_webhook(request):
+    MAX_WEBHOOK_SIZE = 1_000_000  # 1MB
+
+    if len(request.body) > MAX_WEBHOOK_SIZE:
+        print("Payload too large:", len(request.body))
+        return {"detail": "Payload too large"}
+    
     print("Received WhatsApp webhook")
     # Verify that the request is from WhatsApp by checking the signature
     signature = request.headers.get('X-Hub-Signature-256', '')

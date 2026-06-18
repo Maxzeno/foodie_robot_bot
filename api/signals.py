@@ -45,21 +45,28 @@ def send_review_request_on_order_received(sender, instance, created, **kwargs):
     if not instance.user:
         return
 
-    if instance.status == OrderStatus.DISPATCHED:
+    if instance.status == OrderStatus.ACCEPTED:
         Message.bot_message(
-                content=f"Your order #{instance.code} has been dispatched! Rider is on the way.",
+                content=f"Your order #{instance.code} has been accepted by a rider!",
                 user=instance.user,
             )
         return
-    
-    if instance.status == OrderStatus.ARRIVED:
+
+    if instance.status == OrderStatus.AT_RESTAURANT:
         Message.bot_message(
-                content=f"Your order #{instance.code} has arrived! Rider is at the delivery location.",
+                content=f"Rider is at the restaurant picking up your order #{instance.code}.",
                 user=instance.user,
             )
         return
-    
-    if instance.status == OrderStatus.RECEIVED:
+
+    if instance.status == OrderStatus.ON_THE_WAY:
+        Message.bot_message(
+                content=f"Your order #{instance.code} is on the way!",
+                user=instance.user,
+            )
+        return
+
+    if instance.status == OrderStatus.DELIVERED:
         # Check if review already exists for this order
         existing_review = Review.objects.filter(order=instance).exists()
         if existing_review:
@@ -85,7 +92,7 @@ def send_review_request_on_order_received(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Order)
 def update_delivered_at_timestamp(sender, instance, created, **kwargs):
-    if created or instance.status != OrderStatus.RECEIVED:
+    if created or instance.status != OrderStatus.DELIVERED:
         return
 
     if instance.delivered_at is None:

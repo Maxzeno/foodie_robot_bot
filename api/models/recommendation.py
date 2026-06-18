@@ -28,4 +28,17 @@ class Recommendation(BaseModel):
         #         name='unique_recommendation_per_slot'
         #     )
         # ]
-        
+        indexes = [
+            # Check existing recommendations for today
+            models.Index(fields=['user', 'day', 'time_of_day'], name='rec_user_day_time_idx'),
+            # Filter sent recommendations
+            models.Index(fields=['user', 'sent_to_user'], name='rec_user_sent_idx'),
+            # Recent recommendations lookback
+            models.Index(fields=['user', '-created_at'], name='rec_user_created_idx'),
+            # Combined index for sent recommendations by day
+            models.Index(fields=['user', 'day', 'sent_to_user'], name='rec_user_day_sent_idx'),
+            # Meal recommendation tracking
+            models.Index(fields=['meal', 'day'], name='rec_meal_day_idx'),
+            # User recommendations by time period
+            models.Index(fields=['user', 'time_of_day', '-created_at'], name='rec_user_time_created_idx'),
+        ]

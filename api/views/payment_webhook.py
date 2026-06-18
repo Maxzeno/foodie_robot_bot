@@ -22,6 +22,15 @@ router = Router(tags=["Webhook"])
 @transaction.atomic
 @router.post("/payment", auth=None)
 def payment_webhook(request):
+    """
+    Handle payment webhook from Vendy payment provider.
+
+    Uses select_for_update() to prevent race conditions when processing
+    duplicate webhooks for the same order. This ensures:
+    - Only one webhook processes the payment
+    - Referral bonuses are awarded exactly once
+    - No duplicate payment confirmations
+    """
     print("Payment Webhook", request.body)
     print("Payment Webhook Headers", request.headers)
 
@@ -76,14 +85,17 @@ def payment_webhook(request):
         if not order_id:
             print("No orderId found in webhook payload")
             return HttpResponse("No orderId", status=400)
-        
-        # Get the order
+
+        # Get the order with row-level lock to prevent race conditions
+        # This blocks concurrent webhook calls for the same order
         try:
-            order = Order.objects.get(id=order_id)
+            order = Order.objects.select_for_update().get(id=order_id)
         except Order.DoesNotExist:
             print(f"Order {order_id} not found")
             return HttpResponse("Order not found", status=404)
-        
+
+        # Check if already paid AFTER acquiring lock (atomic check)
+        # This prevents duplicate processing if two webhooks arrive simultaneously
         if order.paid:
             print(f"Order {order_id} is already marked as paid")
             return HttpResponse("Order already paid", status=200)
@@ -135,32 +147,42 @@ def payment_webhook(request):
         order.amount_paid = request_amount
         order.paid = True
         order.save()
-                
-        # check if first order paid for and if referred, give referral bonus
-        if order.user and order.user.referred_by and order.user.orders.filter(paid=True).count() == 1:
-            setting = AppSettings.get_settings()
 
-            city = order.meal.city
-            referrer = order.user.referred_by
+        # Check if first order paid for and if referred, give referral bonus
+        # Use fresh query to avoid cached counts from related manager
+        if order.user and order.user.referred_by:
+            # Count paid orders with a fresh query AFTER marking this one as paid
+            # This prevents race condition in first order detection
+            paid_order_count = Order.objects.filter(
+                user=order.user,
+                paid=True
+            ).count()
 
-            # Use the utility function to add referral earning
-            # This automatically creates ReferralEarning, updates UserBalance, and legacy field
-            UserBalance.add_referral_earning(
-                referred_by_user=referrer,
-                referred_user=order.user,
-                city=city
-            )
+            # Only award bonus if this is the FIRST paid order
+            if paid_order_count == 1:
+                setting = AppSettings.get_settings()
 
-            if city.referral_bonus > 0:
-                text = f"Hi, I was referred by #{referrer.code}"
-                encoded_text = urllib.parse.quote(text)
+                city = order.meal.city
+                referrer = order.user.referred_by
 
-                link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"
-        
-                Message.bot_message(
-                    f"🎉 You've earned a referral bonus of {city.currency.symbol}{city.referral_bonus} ({city.currency.code}) for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
-                    user=referrer
+                # Use the utility function to add referral earning
+                # This automatically creates ReferralEarning, updates UserBalance, and legacy field
+                UserBalance.add_referral_earning(
+                    referred_by_user=referrer,
+                    referred_user=order.user,
+                    city=city
                 )
+
+                if city.referral_bonus > 0:
+                    text = f"Hi, I was referred by #{referrer.code}"
+                    encoded_text = urllib.parse.quote(text)
+
+                    link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"
+
+                    Message.bot_message(
+                        f"🎉 You've earned a referral bonus of {city.currency.symbol}{city.referral_bonus} ({city.currency.code}) for referring a user who completed their first order! Keep sharing your referral link to earn more! 🚀 \n {link}",
+                        user=referrer
+                    )
         
         print(f"Order {order_id} confirmed. Request amount: {request_amount}")
         

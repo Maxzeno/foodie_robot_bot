@@ -217,6 +217,20 @@ class Meal(BaseModel):
     restricted_allergies = models.ManyToManyField(Allergy, blank=True, related_name="meals")
     cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="meals")
 
+    class Meta:
+        indexes = [
+            # Filter meals by city (very frequent in recommendation service)
+            models.Index(fields=['city', 'available'], name='meal_city_available_idx'),
+            # Restaurant meals
+            models.Index(fields=['restaurant', 'available'], name='meal_restaurant_avail_idx'),
+            # Meal code lookups
+            models.Index(fields=['code'], name='meal_code_idx'),
+            # Available meals with stock
+            models.Index(fields=['available', '-created_at'], name='meal_available_created_idx'),
+            # Price-based filtering
+            models.Index(fields=['city', 'available', 'price'], name='meal_city_avail_price_idx'),
+        ]
+
     def __str__(self):
         return f"{self.name} - {self.city.name} - {', '.join(list(self.fitness_goals.all().values_list('name', flat=True)))}"
 

@@ -31,7 +31,11 @@ TRY_LOCAL_SETTING = config('TRY_LOCAL_SETTING', default=False, cast=bool)
 
 MAPBOX_TOKEN = config('MAPBOX_TOKEN')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.0.214', '192.168.0.188', '.ngrok-free.app']
+ALLOWED_HOSTS = []
+
+if DEBUG:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.ngrok-free.app']
+
 _ALLOWED_HOST = config('ALLOWED_HOST', '')
 ALLOWED_HOSTS.extend(_ALLOWED_HOST.split())
 
@@ -274,6 +278,10 @@ HUEY = RedisHuey(
 # - Scheduler check: 1 per 60 seconds (instead of 60/min)
 # - Total: ~2-3 commands/minute instead of ~260/minute
 
+
+# JWT Configuration for Rider/Company API
+JWT_SECRET_KEY = config('JWT_SECRET_KEY', default=SECRET_KEY)
+JWT_ACCESS_TOKEN_EXPIRY_HOURS = 24  # Access token expires after 24 hours
 
 # Jazzmin Admin Configuration
 JAZZMIN_SETTINGS = {

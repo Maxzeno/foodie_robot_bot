@@ -62,16 +62,18 @@ def reset_stock_if_new_day(meal: Meal) -> Meal:
 # Format status message
 ORDER_STATUS_EMOJI = {
     OrderStatus.PENDING: "⏳",
-    OrderStatus.DISPATCHED: "🚗",
-    OrderStatus.ARRIVED: "📍",
-    OrderStatus.RECEIVED: "✅"
+    OrderStatus.ACCEPTED: "✅",
+    OrderStatus.AT_RESTAURANT: "🏪",
+    OrderStatus.ON_THE_WAY: "🚗",
+    OrderStatus.DELIVERED: "📍"
 }
 
 ORDER_STATUS_MESSAGE = {
     OrderStatus.PENDING: "Your order is being prepared",
-    OrderStatus.DISPATCHED: "Your order is on the way",
-    OrderStatus.ARRIVED: "Your order has arrived",
-    OrderStatus.RECEIVED: "Order completed"
+    OrderStatus.ACCEPTED: "A rider has accepted your order",
+    OrderStatus.AT_RESTAURANT: "Rider is at the restaurant",
+    OrderStatus.ON_THE_WAY: "Your order is on the way",
+    OrderStatus.DELIVERED: "Order completed"
 }
 
 def payment_link(order: Order):
@@ -258,9 +260,10 @@ def place_order(
             )
             return False
         
-        # Validate meal availability with comprehensive checks
+        # Pre-fetch meal to validate basic existence and get city for price calculation
+        # Availability checks will happen inside the transaction to prevent race conditions
         try:
-            meal = Meal.objects.select_related('restaurant', 'city').get(id=meal_id)
+            meal_prefetch = Meal.objects.select_related('restaurant', 'city').get(id=meal_id)
         except Meal.DoesNotExist:
             Message.bot_message(
                 "Sorry, this meal does not exist. Please choose another meal.",
@@ -268,54 +271,11 @@ def place_order(
             )
             return False
 
-        # Check if meal is marked as available
-        if not meal.available:
-            Message.bot_message(
-                "Sorry, this meal is not available at the moment. Please choose another meal.",
-                user=user
-            )
-            return False
-
-        # Check if restaurant is active
-        if meal.restaurant.inactive:
-            Message.bot_message(
-                f"Sorry, {meal.restaurant.name} is currently inactive. Please try another restaurant.",
-                user=user
-            )
-            return False
-
-        # Check if restaurant is open now (using user's local time)
-        user_local_time = user.get_local_time()
-        current_time = user_local_time.time()
-        current_day = user_local_time.strftime('%A').lower()
-
-        if not meal.restaurant.is_open_now(current_time=current_time, current_day=current_day):
-            Message.bot_message(
-                f"Sorry, {meal.name} is not available at this time. Please check back later.",
-                user=user
-            )
-            return False
-
-        # Check if meal is available at current time
-        if not meal.is_available_at_time(check_time=current_time):
-            Message.bot_message(
-                f"Sorry, {meal.name} is not available at this time. Please check back later.",
-                user=user
-            )
-            return False
-
-        # Check if meal has stock available
-        if not meal.has_stock_available():
-            Message.bot_message(
-                f"Sorry, {meal.name} is sold out for today. Please try another meal or come back tomorrow.",
-                user=user
-            )
-            return False
-
+        # Basic non-changing validations (user context checks)
         # Check if meal is in user's city
-        if meal.city != user.city:
+        if meal_prefetch.city != user.city:
             Message.bot_message(
-                f"Sorry, this meal is only available in {meal.city.name}. Your current location is in {user.city.name if user.city else 'an unknown city'}.",
+                f"Sorry, this meal is only available in {meal_prefetch.city.name}. Your current location is in {user.city.name if user.city else 'an unknown city'}.",
                 user=user
             )
             return False
@@ -353,35 +313,76 @@ def place_order(
             )
             return False
 
-        # Calculate pricing
-        meal_price = meal.price * number_of_plates
+        # Calculate pricing (use prefetched meal for read-only price data)
+        meal_price = meal_prefetch.price * number_of_plates
 
-        rest_lng, rest_lat = get_point_coordinates(meal.restaurant.point)
+        rest_lng, rest_lat = get_point_coordinates(meal_prefetch.restaurant.point)
         if rest_lng is None or rest_lat is None:
             Message.bot_message(
                 "Sorry, the restaurant location is not properly configured. Please contact support or try another meal.",
                 user=user
             )
             return False
-        delivery_fee = Decimal(str(cal_delivery_fee(meal.city.delivery_fee_per_km,
-                                                    meal.city.min_delivery_fee,
+        delivery_fee = Decimal(str(cal_delivery_fee(meal_prefetch.city.delivery_fee_per_km,
+                                                    meal_prefetch.city.min_delivery_fee,
                                                     rest_lat,
                                                     rest_lng,
                                                     addr_lat,
                                                     addr_lng)))
-        
+
         delivery_fee = delivery_fee * math.ceil(number_of_plates/5)
         total_price = meal_price + delivery_fee
 
-        # Create order and decrement stock atomically
+        # Get current time for availability checks (will be used inside transaction)
+        user_local_time = user.get_local_time()
+        current_time = user_local_time.time()
+        current_day = user_local_time.strftime('%A').lower()
+
+        # Create order and decrement stock atomically with ALL availability checks
         with transaction.atomic():
             # Lock the meal row for update to prevent race conditions
-            meal = Meal.objects.select_for_update().get(id=meal_id)
+            # This ensures no other order can modify the meal while we're checking availability
+            meal = Meal.objects.select_for_update().select_related('restaurant', 'city').get(id=meal_id)
+
+            # ALL AVAILABILITY CHECKS HAPPEN HERE (after acquiring lock)
+            # This prevents TOCTOU race conditions where state changes between check and use
+
+            # Check if meal is marked as available
+            if not meal.available:
+                Message.bot_message(
+                    "Sorry, this meal is not available at the moment. Please choose another meal.",
+                    user=user
+                )
+                return False
+
+            # Check if restaurant is active
+            if meal.restaurant.inactive:
+                Message.bot_message(
+                    f"Sorry, {meal.restaurant.name} is currently inactive. Please try another restaurant.",
+                    user=user
+                )
+                return False
+
+            # Check if restaurant is open now (using user's local time)
+            if not meal.restaurant.is_open_now(current_time=current_time, current_day=current_day):
+                Message.bot_message(
+                    f"Sorry, {meal.name} is not available at this time. Please check back later.",
+                    user=user
+                )
+                return False
+
+            # Check if meal is available at current time
+            if not meal.is_available_at_time(check_time=current_time):
+                Message.bot_message(
+                    f"Sorry, {meal.name} is not available at this time. Please check back later.",
+                    user=user
+                )
+                return False
 
             # Reset stock if it's a new day in the meal's city timezone
             meal = reset_stock_if_new_day(meal)
 
-            # Double-check stock availability within the transaction
+            # Check stock availability within the transaction (after lock and reset)
             if meal.daily_stock_limit is not None:
                 if meal.remaining_stock is None:
                     meal.remaining_stock = meal.daily_stock_limit

@@ -11,12 +11,14 @@
 This comprehensive audit identified **47 issues** across security, scalability, and code quality categories. The findings range from **CRITICAL** security vulnerabilities (test endpoints in production, race conditions) to **HIGH** priority scaling issues (N+1 queries, missing indexes) and **MEDIUM** code quality concerns.
 
 ### Severity Breakdown
+
 - **CRITICAL**: 8 issues
 - **HIGH**: 15 issues
 - **MEDIUM**: 16 issues
 - **LOW**: 8 issues
 
 ### Key Recommendations
+
 1. **Immediate Action Required**: Remove test endpoints, fix race conditions in payment webhook, add input validation
 2. **Short-term (1-2 weeks)**: Optimize database queries, add indexes, implement proper error logging
 3. **Medium-term (1 month)**: Refactor recommendation service, add comprehensive monitoring, implement rate limiting improvements
@@ -24,6 +26,7 @@ This comprehensive audit identified **47 issues** across security, scalability, 
 ---
 
 ## Table of Contents
+
 1. [Critical Security Vulnerabilities](#1-critical-security-vulnerabilities)
 2. [High Priority Security Issues](#2-high-priority-security-issues)
 3. [Authentication & Authorization Issues](#3-authentication--authorization-issues)
@@ -38,9 +41,10 @@ This comprehensive audit identified **47 issues** across security, scalability, 
 ## 1. Critical Security Vulnerabilities
 
 ### 1.1 Test Endpoints Exposed in Production ⚠️ CRITICAL
-**Severity:** CRITICAL
-**File:** `/api/views/whatsapp_webhook.py`
-**Lines:** 192-254
+
+__Severity:__ CRITICAL
+__File:__ `/api/views/whatsapp_webhook.py`
+__Lines:__ 192-254
 
 **Issue:**
 Multiple test endpoints are exposed without authentication that could be exploited:
@@ -68,6 +72,7 @@ def text_temp_recommendation(request):
 ```
 
 **Impact:**
+
 - Unauthenticated attackers can send messages as a specific user
 - Can trigger AI processing and WhatsApp messages
 - Can test recommendation algorithms
@@ -75,6 +80,7 @@ def text_temp_recommendation(request):
 - No rate limiting on these endpoints
 
 **Recommendation:**
+
 ```python
 # Option 1: Remove entirely for production
 if settings.DEBUG:
@@ -91,9 +97,10 @@ def whatsapp_test(request, text:str):
 ---
 
 ### 1.2 Race Condition in Payment Webhook ⚠️ CRITICAL
-**Severity:** CRITICAL
-**File:** `/api/views/payment_webhook.py`
-**Lines:** 87-137
+
+__Severity:__ CRITICAL
+__File:__ `/api/views/payment_webhook.py`
+__Lines:__ 87-137
 
 **Issue:**
 Payment verification has a TOCTOU (Time-of-Check-Time-of-Use) vulnerability:
@@ -111,17 +118,20 @@ order.save()
 ```
 
 The `order.paid` check is **outside** the atomic transaction, allowing:
+
 1. Two webhooks arrive simultaneously
 2. Both pass the `if order.paid` check
 3. Both mark the order as paid
 4. Referral bonus could be awarded twice
 
 **Impact:**
+
 - Double payment processing
 - Duplicate referral bonuses
 - Race condition in first order detection: `order.user.orders.filter(paid=True).count() == 1`
 
 **Recommendation:**
+
 ```python
 @transaction.atomic
 def payment_webhook(request):
@@ -140,9 +150,10 @@ def payment_webhook(request):
 ---
 
 ### 1.3 Insufficient Input Validation on WhatsApp Webhook ⚠️ CRITICAL
-**Severity:** CRITICAL
-**File:** `/api/views/whatsapp_webhook.py`
-**Lines:** 38-130
+
+__Severity:__ CRITICAL
+__File:__ `/api/views/whatsapp_webhook.py`
+__Lines:__ 38-130
 
 **Issue:**
 Multiple missing validations on webhook payload:
@@ -154,12 +165,14 @@ text = message["text"]["body"]  # No length limit
 ```
 
 **Impact:**
+
 - Malformed JSON can crash the webhook
 - Extremely long messages can cause DoS
 - Invalid phone numbers bypass E.164 validation
 - No size limit on JSON payload
 
 **Recommendation:**
+
 ```python
 # Add request size limit
 MAX_WEBHOOK_SIZE = 1_000_000  # 1MB
@@ -187,9 +200,10 @@ if len(text) > 10000:  # 10KB limit
 ---
 
 ### 1.4 Order Stock Decrement Not Atomic with Verification ⚠️ CRITICAL
-**Severity:** CRITICAL
-**File:** `/api/services/ai/tool_handlers/order.py`
-**Lines:** 376-398
+
+__Severity:__ CRITICAL
+__File:__ `/api/services/ai/tool_handlers/order.py`
+__Lines:__ 376-398
 
 **Issue:**
 Stock verification and decrement are atomic, but availability checks happen **before** the transaction:
@@ -209,12 +223,14 @@ with transaction.atomic():
 ```
 
 **Impact:**
+
 - Between availability check and transaction start, stock could be depleted
 - Multiple concurrent orders could pass the initial check
 - Could result in overselling when stock is low
 
 **Recommendation:**
 Move ALL availability checks inside the transaction:
+
 ```python
 with transaction.atomic():
     meal = Meal.objects.select_for_update().get(id=meal_id)
@@ -233,9 +249,10 @@ with transaction.atomic():
 ---
 
 ### 1.5 Unprotected Public Key Upload Endpoint 🔒 HIGH
-**Severity:** HIGH
-**File:** `/api/views/whatsapp_flow_webhook.py`
-**Lines:** 110-137
+
+__Severity:__ HIGH
+__File:__ `/api/views/whatsapp_flow_webhook.py`
+__Lines:__ 110-137
 
 **Issue:**
 Authentication check has a logical flaw:
@@ -248,12 +265,14 @@ def upload_public_key(request):
 ```
 
 **Problems:**
+
 1. Uses session authentication (Django admin), but webhooks don't have sessions
 2. No API key or token authentication
 3. Relies on user being logged into Django admin
 4. Could be bypassed if someone gains admin session
 
 **Recommendation:**
+
 ```python
 @router.post("/upload-public-key")
 def upload_public_key(request):
@@ -270,6 +289,7 @@ def upload_public_key(request):
 ---
 
 ### 1.6 AI Tool Handler Lacks Input Sanitization 🔒 HIGH
+
 **Severity:** HIGH
 **File:** `/api/services/ai/orchestrator.py`
 **Lines:** 150-164
@@ -289,12 +309,14 @@ for tool_call in response_message.tool_calls[:5]:
 ```
 
 **Impact:**
+
 - LLM could be manipulated to inject malicious arguments
 - No type checking on arguments
 - Could cause crashes or unexpected behavior
 - Potential for injection attacks if args are used in queries
 
 **Recommendation:**
+
 ```python
 # Add schema validation
 from pydantic import BaseModel, ValidationError
@@ -320,6 +342,7 @@ for tool_call in response_message.tool_calls[:5]:
 ---
 
 ### 1.7 Password Handling Issues 🔒 MEDIUM
+
 **Severity:** MEDIUM
 **File:** `/api/models/user.py`
 **Lines:** 71-93
@@ -344,6 +367,7 @@ def save(self, *args, **kwargs):
 ```
 
 **Problems:**
+
 1. `.strip()` on password before hashing could cause login issues
 2. Complex logic makes it hard to audit
 3. Phone-based auth means passwords are rarely used, but code is still active
@@ -351,6 +375,7 @@ def save(self, *args, **kwargs):
 
 **Recommendation:**
 Since the app uses phone-based auth, simplify:
+
 ```python
 # Remove password functionality entirely if not used
 # OR make it clearer:
@@ -364,6 +389,7 @@ def save(self, *args, **kwargs):
 ---
 
 ### 1.8 Sensitive Data in Print Statements 🔒 MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
@@ -383,12 +409,14 @@ print("DECRYPTED FLOW DATA:", decrypted_data)  # Contains PII
 ```
 
 **Impact:**
+
 - Logs contain PII (phone numbers, names, addresses)
 - Payment information exposed in logs
 - Compliance issues (GDPR, PCI-DSS)
 - Could be accessed by unauthorized personnel
 
 **Recommendation:**
+
 ```python
 import logging
 logger = logging.getLogger(__name__)
@@ -410,16 +438,19 @@ logger.info(f"Payment webhook: {redact_sensitive_data(payload)}")
 ## 2. High Priority Security Issues
 
 ### 2.1 No Request Rate Limiting on Critical Endpoints 🔒 HIGH
-**Severity:** HIGH
-**File:** `/api/views/payment_webhook.py`
+
+__Severity:__ HIGH
+__File:__ `/api/views/payment_webhook.py`
 
 **Issue:**
 Payment webhook has no rate limiting, allowing:
+
 - Replay attacks
 - Brute force attempts
 - DoS via repeated webhook calls
 
 **Recommendation:**
+
 ```python
 from api.utils.rate_limit import check_rate_limit
 
@@ -439,6 +470,7 @@ def payment_webhook(request):
 ---
 
 ### 2.2 Weak Error Messages Leak Information 🔒 MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
@@ -455,6 +487,7 @@ return {"detail": "Skipped: No phone number ID"}  # Reveals config
 
 **Recommendation:**
 Use generic error messages for external APIs:
+
 ```python
 # Generic error for webhooks
 return HttpResponse("Invalid request", status=400)
@@ -463,11 +496,12 @@ return HttpResponse("Invalid request", status=400)
 ---
 
 ### 2.3 Missing CSRF Protection on Flow Webhook 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/views/whatsapp_flow_webhook.py`
-**Lines:** 65-107
 
-**Issue:**
+__Severity:__ MEDIUM
+__File:__ `/api/views/whatsapp_flow_webhook.py`
+__Lines:__ 65-107
+
+__Issue:__
 While `@csrf_exempt` is required for webhooks, there's no alternative protection mechanism beyond encryption.
 
 **Recommendation:**
@@ -478,9 +512,10 @@ Add webhook signature verification similar to WhatsApp message webhook.
 ## 3. Authentication & Authorization Issues
 
 ### 3.1 User Auto-Creation Without Verification ⚠️ MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/views/whatsapp_webhook.py`
-**Lines:** 135
+
+__Severity:__ MEDIUM
+__File:__ `/api/views/whatsapp_webhook.py`
+__Lines:__ 135
 
 **Issue:**
 Users are auto-created on first message without phone verification:
@@ -490,20 +525,23 @@ user, created = User.objects.get_or_create(phone=phone)
 ```
 
 **Impact:**
+
 - Anyone with WhatsApp webhook access can create users
 - No phone number ownership verification
 - Could create spam accounts
 
 **Recommendation:**
+
 - Add phone verification step via WhatsApp OTP
 - Or rely on WhatsApp's signature verification as proof of phone ownership (current implicit approach)
 
 ---
 
 ### 3.2 Referral System Vulnerable to Abuse 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/views/whatsapp_webhook.py`
-**Lines:** 150-156
+
+__Severity:__ MEDIUM
+__File:__ `/api/views/whatsapp_webhook.py`
+__Lines:__ 150-156
 
 **Issue:**
 Referral code extraction happens on first message without validation:
@@ -519,11 +557,13 @@ if not found_bot_msg:
 ```
 
 **Problems:**
+
 - No check if referrer is legitimate
 - Could be exploited to farm referral bonuses
 - No fraud detection
 
 **Recommendation:**
+
 ```python
 # Add fraud detection
 if referrer and referrer != user:
@@ -543,6 +583,7 @@ if referrer and referrer != user:
 ## 4. Scaling & Performance Issues
 
 ### 4.1 N+1 Query Problems Throughout Codebase ⚠️ HIGH
+
 **Severity:** HIGH
 **Files:** Multiple
 
@@ -550,6 +591,7 @@ if referrer and referrer != user:
 Extensive N+1 queries that will cause performance degradation at scale.
 
 #### Example 1: Order History (order.py:474)
+
 ```python
 orders = Order.objects.filter(user=user).order_by('-created_at')[offset:offset + limit]
 
@@ -558,6 +600,7 @@ for i, order in enumerate(orders, 1):
 ```
 
 **Fix:**
+
 ```python
 orders = Order.objects.filter(user=user)\
     .select_related('meal', 'currency')\
@@ -565,6 +608,7 @@ orders = Order.objects.filter(user=user)\
 ```
 
 #### Example 2: Recommendation Task (recommend_meal.py:172-210)
+
 ```python
 recommended_meals = Meal.objects.filter(id__in=meal_ids)
 
@@ -576,6 +620,7 @@ for index, meal in enumerate(recommended_meals):
 ```
 
 **Fix:**
+
 ```python
 recommended_meals = Meal.objects.filter(id__in=meal_ids)\
     .select_related('restaurant', 'city', 'city__currency')\
@@ -583,6 +628,7 @@ recommended_meals = Meal.objects.filter(id__in=meal_ids)\
 ```
 
 #### Example 3: User Profile Loading
+
 ```python
 # In multiple tool handlers
 user.city.currency.symbol  # 2 queries if not cached
@@ -591,6 +637,7 @@ user.fitness_goals.name  # Another query
 
 **Fix:**
 Always load user with related data:
+
 ```python
 user = User.objects.select_related(
     'city', 'city__currency', 'fitness_goals'
@@ -602,8 +649,9 @@ user = User.objects.select_related(
 ---
 
 ### 4.2 Recommendation Service Has Severe Performance Issues ⚠️ CRITICAL
-**Severity:** CRITICAL (for scaling)
-**File:** `/api/services/recommendation/meal_recommendation.py`
+
+__Severity:__ CRITICAL (for scaling)
+__File:__ `/api/services/recommendation/meal_recommendation.py`
 
 **Issue:**
 The recommendation algorithm performs dozens of queries per user:
@@ -620,17 +668,20 @@ The recommendation algorithm performs dozens of queries per user:
    - Similar users' preferences
 
 **Estimated Queries Per User:**
+
 - Base queries: ~5
 - Per meal candidate (300 max): ~4-6 queries
 - **Total: 1,200+ queries per recommendation generation**
 
 **Impact at Scale:**
+
 - 1,000 active users = 1.2M queries every 30 minutes
 - Database CPU exhaustion
 - Slow response times
 - Redis/cache pressure
 
 **Recommendation:**
+
 ```python
 # 1. Cache recommendation results
 @cached(timeout=1800)  # 30 minutes
@@ -658,11 +709,13 @@ recent_counts = Recommendation.objects.filter(
 ---
 
 ### 4.3 Background Task Running Every 30 Minutes is Inefficient ⚠️ HIGH
-**Severity:** HIGH
-**File:** `/api/tasks/recommend_meal.py`
-**Lines:** 319-326
+
+__Severity:__ HIGH
+__File:__ `/api/tasks/recommend_meal.py`
+__Lines:__ 319-326
 
 **Issue:**
+
 ```python
 @periodic_task(crontab(minute='0,30'))
 def scheduled_send_meal_recommendations():
@@ -670,12 +723,14 @@ def scheduled_send_meal_recommendations():
 ```
 
 **Problems:**
+
 1. Processes ALL active users every 30 min (could be thousands)
 2. Most users won't need recommendations at that moment
 3. Causes database load spikes every 30 minutes
 4. No load distribution
 
 **Recommendation:**
+
 ```python
 # Option 1: Stagger task execution
 @periodic_task(crontab(minute='*/5'))  # Every 5 minutes
@@ -694,11 +749,13 @@ def scheduled_send_meal_recommendations():
 ---
 
 ### 4.4 Database Cache Instead of Redis 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/foodie_robot/settings.py`
-**Lines:** 152-161
+
+__Severity:__ MEDIUM
+__File:__ `/foodie_robot/settings.py`
+__Lines:__ 152-161
 
 **Issue:**
+
 ```python
 CACHES = {
     'default': {
@@ -709,12 +766,14 @@ CACHES = {
 ```
 
 **Problems:**
+
 - Database cache adds load to main database
 - Slower than in-memory cache
 - Rate limiting uses this cache (fallback)
 - Cache queries compete with business queries
 
 **Recommendation:**
+
 ```python
 # Use Redis for caching (you already have Redis for Huey)
 CACHES = {
@@ -733,6 +792,7 @@ CACHES = {
 ---
 
 ### 4.5 Missing Database Indexes ⚠️ HIGH
+
 **Severity:** HIGH
 **Files:** Model files
 
@@ -740,6 +800,7 @@ CACHES = {
 No explicit indexes defined on frequently queried fields:
 
 **Missing Indexes:**
+
 1. `Message.user` + `Message.created_at` (for conversation history)
 2. `Order.user` + `Order.paid` (for referral check)
 3. `Recommendation.user` + `Recommendation.day` + `Recommendation.time_of_day`
@@ -748,6 +809,7 @@ No explicit indexes defined on frequently queried fields:
 6. `Review.user` + `Review.created_at`
 
 **Recommendation:**
+
 ```python
 # Add to models
 class Message(BaseModel):
@@ -771,8 +833,9 @@ class Order(BaseModel):
 ---
 
 ### 4.6 No Connection Pooling Configuration 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/foodie_robot/settings.py`
+
+__Severity:__ MEDIUM
+__File:__ `/foodie_robot/settings.py`
 
 **Issue:**
 PostgreSQL connection settings don't include pooling:
@@ -787,6 +850,7 @@ DATABASES = {
 ```
 
 **Recommendation:**
+
 ```python
 DATABASES = {
     'default': {
@@ -805,6 +869,7 @@ DATABASES = {
 ---
 
 ### 4.7 Unbounded Queries ⚠️ MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
@@ -821,6 +886,7 @@ Meal.objects.filter(id__in=meal_ids)  # No limit on meal_ids size
 
 **Recommendation:**
 Add hard limits:
+
 ```python
 MAX_MEAL_IDS = 100
 if len(meal_ids) > MAX_MEAL_IDS:
@@ -832,9 +898,10 @@ if len(meal_ids) > MAX_MEAL_IDS:
 ## 5. Database Query Optimization
 
 ### 5.1 Redundant Database Queries in Hot Paths 🔒 HIGH
-**Severity:** HIGH
-**File:** `/api/views/whatsapp_webhook.py`
-**Lines:** 131-133, 148
+
+__Severity:__ HIGH
+__File:__ `/api/views/whatsapp_webhook.py`
+__Lines:__ 131-133, 148
 
 **Issue:**
 Same message queried twice:
@@ -846,6 +913,7 @@ found_bot_msg = Message.objects.filter(user=user, role=RoleChoices.BOT).exists()
 ```
 
 **Recommendation:**
+
 ```python
 # Combine queries
 messages = Message.objects.filter(
@@ -859,9 +927,10 @@ found_bot_msg = any(role == RoleChoices.BOT for _, role in messages)
 ---
 
 ### 5.2 Inefficient User Location Lookup 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/services/ai/tool_handlers/order.py`
-**Lines:** 176, 332
+
+__Severity:__ MEDIUM
+__File:__ `/api/services/ai/tool_handlers/order.py`
+__Lines:__ 176, 332
 
 **Issue:**
 Delivery address queried multiple times per order:
@@ -873,6 +942,7 @@ delivery_address = DeliveryAddress.objects.filter(user=user).first()
 ```
 
 **Recommendation:**
+
 ```python
 # Cache on user object or use select_related
 user = User.objects.prefetch_related('delivery_addresses').get(...)
@@ -884,10 +954,12 @@ delivery_address = user.delivery_addresses.first()
 ## 6. Code Quality & Maintainability
 
 ### 6.1 TODO Comments Indicating Incomplete Features 🔧 MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
 **Found TODOs:**
+
 ```python
 # whatsapp_webhook.py:212
 # # TODO: to be removed in production
@@ -900,6 +972,7 @@ delivery_address = user.delivery_addresses.first()
 ```
 
 **Recommendation:**
+
 - Remove test endpoints or protect them
 - Create tickets for incomplete features
 - Don't leave TODOs in production code
@@ -907,10 +980,12 @@ delivery_address = user.delivery_addresses.first()
 ---
 
 ### 6.2 Commented Out Code 🔧 LOW
+
 **Severity:** LOW
 **Files:** Multiple
 
 **Examples:**
+
 ```python
 # whatsapp_webhook.py:246-254
 # @csrf_exempt
@@ -930,6 +1005,7 @@ Remove commented code. Use git history if needed.
 ---
 
 ### 6.3 Inconsistent Error Handling 🔧 MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
@@ -949,6 +1025,7 @@ except Exception as e:
 ```
 
 **Recommendation:**
+
 - Define clear error handling strategy
 - Use custom exceptions
 - Log all errors with proper context
@@ -957,6 +1034,7 @@ except Exception as e:
 ---
 
 ### 6.4 Excessive Use of Print Statements Instead of Logging 🔧 MEDIUM
+
 **Severity:** MEDIUM
 **Files:** Multiple
 
@@ -970,12 +1048,14 @@ print("Tool call detected:", response_message.tool_calls)
 ```
 
 **Problems:**
+
 - No log levels (can't filter by severity)
 - No structured logging
 - Can't control output in production
 - Missing timestamps, context
 
 **Recommendation:**
+
 ```python
 import logging
 logger = logging.getLogger(__name__)
@@ -988,10 +1068,12 @@ logger.error("Tool execution failed", exc_info=True)
 ---
 
 ### 6.5 Magic Numbers and Hardcoded Values 🔧 LOW
+
 **Severity:** LOW
 **Files:** Multiple
 
 **Examples:**
+
 ```python
 # order.py:373
 delivery_fee = delivery_fee * math.ceil(number_of_plates/5)  # Why 5?
@@ -1004,6 +1086,7 @@ for tool_call in response_message.tool_calls[:5]:  # Why 5 tools max?
 ```
 
 **Recommendation:**
+
 ```python
 # Use constants
 MAX_TOOL_CALLS = 5
@@ -1015,8 +1098,9 @@ delivery_fee = delivery_fee * math.ceil(number_of_plates / PLATES_PER_DELIVERY_U
 ---
 
 ### 6.6 Complex Nested Conditionals 🔧 MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/views/whatsapp_webhook.py`
+
+__Severity:__ MEDIUM
+__File:__ `/api/views/whatsapp_webhook.py`
 
 **Issue:**
 Deep nesting makes code hard to test and maintain:
@@ -1053,6 +1137,7 @@ def validate_webhook_message(change):
 ---
 
 ### 6.7 No Type Hints on Critical Functions 🔧 LOW
+
 **Severity:** LOW
 **Files:** Multiple
 
@@ -1068,6 +1153,7 @@ def process_message(self):  # Returns str or None, but not typed
 ```
 
 **Recommendation:**
+
 ```python
 from typing import Optional
 from django.http import HttpResponse
@@ -1084,17 +1170,20 @@ def process_message(self) -> Optional[str]:
 ## 7. Configuration & Environment Issues
 
 ### 7.1 Hardcoded URLs and Endpoints 🔧 MEDIUM
-**Severity:** MEDIUM
-**File:** `/api/services/ai/tool_handlers/order.py`
-**Lines:** 78-79
+
+__Severity:__ MEDIUM
+__File:__ `/api/services/ai/tool_handlers/order.py`
+__Lines:__ 78-79
 
 **Issue:**
+
 ```python
 # url = "https://api.staging.myvendy.com/public/transactions/payment-url"
 url = "https://api.myvendy.com/public/transactions/payment-url"
 ```
 
 **Recommendation:**
+
 ```python
 # settings.py
 VENDY_API_URL = config('VENDY_API_URL', default='https://api.myvendy.com')
@@ -1106,16 +1195,19 @@ url = f"{settings.VENDY_API_URL}/public/transactions/payment-url"
 ---
 
 ### 7.2 Sensitive Data in Settings Could Be Exposed 🔒 MEDIUM
-**Severity:** MEDIUM
-**File:** `/foodie_robot/settings.py`
+
+__Severity:__ MEDIUM
+__File:__ `/foodie_robot/settings.py`
 
 **Issue:**
 If `settings.py` is accidentally committed or exposed:
+
 - Contains API key references
 - Shows infrastructure details
 - Reveals third-party services used
 
 **Recommendation:**
+
 - Ensure `.env` is in `.gitignore`
 - Use secrets management (AWS Secrets Manager, HashiCorp Vault)
 - Rotate keys regularly
@@ -1124,10 +1216,12 @@ If `settings.py` is accidentally committed or exposed:
 ---
 
 ### 7.3 Debug Mode Detection Issues 🔧 LOW
-**Severity:** LOW
-**File:** `/foodie_robot/settings.py`
+
+__Severity:__ LOW
+__File:__ `/foodie_robot/settings.py`
 
 **Issue:**
+
 ```python
 DEBUG = config('DEBUG', default=False, cast=bool)
 ```
@@ -1137,6 +1231,7 @@ String "False" evaluates to `True` in Python. Need explicit parsing.
 
 **Recommendation:**
 Already using `cast=bool` which handles this, but verify `.env`:
+
 ```bash
 # Correct
 DEBUG=False  # or 0
@@ -1148,8 +1243,9 @@ DEBUG="False"
 ---
 
 ### 7.4 Missing Environment Variable Validation 🔧 MEDIUM
-**Severity:** MEDIUM
-**File:** `/foodie_robot/settings.py`
+
+__Severity:__ MEDIUM
+__File:__ `/foodie_robot/settings.py`
 
 **Issue:**
 No validation that required environment variables are set:
@@ -1160,6 +1256,7 @@ OPENAI_API_KEY = config('OPENAI_API_KEY')  # Could be None
 ```
 
 **Recommendation:**
+
 ```python
 # Add startup validation
 required_settings = [
@@ -1178,11 +1275,13 @@ if missing:
 ---
 
 ### 7.5 ALLOWED_HOSTS Configuration Vulnerability 🔒 HIGH
-**Severity:** HIGH
-**File:** `/foodie_robot/settings.py`
-**Lines:** 34-36
+
+__Severity:__ HIGH
+__File:__ `/foodie_robot/settings.py`
+__Lines:__ 34-36
 
 **Issue:**
+
 ```python
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.0.214', '192.168.0.188', '.ngrok-free.app']
 _ALLOWED_HOST = config('ALLOWED_HOST', '')
@@ -1190,11 +1289,13 @@ ALLOWED_HOSTS.extend(_ALLOWED_HOST.split())
 ```
 
 **Problems:**
+
 1. Hardcoded IPs (`192.168.0.214`, `192.168.0.188`) could be internal IPs
 2. `.ngrok-free.app` allows ANY ngrok subdomain
 3. `0.0.0.0` is too permissive
 
 **Recommendation:**
+
 ```python
 # Only include production domains
 if DEBUG:
@@ -1210,14 +1311,16 @@ else:
 ### Immediate Actions (Week 1)
 
 #### Priority 1: Security
-- [ ] **Remove or protect test endpoints** (whatsapp_webhook.py:192-254)
-- [ ] **Fix payment webhook race condition** with `select_for_update()`
+
+- [ ] __Remove or protect test endpoints__ (whatsapp_webhook.py:192-254)
+- [ ] __Fix payment webhook race condition__ with `select_for_update()`
 - [ ] **Add request size limits** on webhook endpoints
 - [ ] **Move all availability checks inside transaction** for orders
 - [ ] **Replace print statements with proper logging**
-- [ ] **Fix ALLOWED_HOSTS** configuration
+- [ ] __Fix ALLOWED_HOSTS__ configuration
 
 #### Priority 2: Critical Bugs
+
 - [ ] **Fix stock decrement race condition** in order placement
 - [ ] **Add database indexes** on frequently queried fields
 - [ ] **Implement proper error handling** instead of swallowing exceptions
@@ -1227,13 +1330,15 @@ else:
 ### Short-term Actions (Weeks 2-4)
 
 #### Database Optimization
-- [ ] **Add select_related/prefetch_related** to all querysets (30+ locations)
+
+- [ ] __Add select_related/prefetch_related__ to all querysets (30+ locations)
 - [ ] **Create database indexes** for Message, Order, Recommendation
 - [ ] **Switch from database cache to Redis cache**
 - [ ] **Add connection pooling** configuration
 - [ ] **Audit all queries** for N+1 problems
 
 #### Security Hardening
+
 - [ ] **Add input validation** on all webhook payloads
 - [ ] **Implement rate limiting** on payment webhook
 - [ ] **Add fraud detection** for referral system
@@ -1241,6 +1346,7 @@ else:
 - [ ] **Add API key rotation** mechanism
 
 #### Code Quality
+
 - [ ] **Remove all commented code**
 - [ ] **Remove or protect TODO items**
 - [ ] **Add type hints** to all public functions
@@ -1252,6 +1358,7 @@ else:
 ### Medium-term Actions (1-2 Months)
 
 #### Performance & Scaling
+
 - [ ] **Refactor recommendation service** to use caching and pre-computation
 - [ ] **Implement read replicas** for recommendation queries
 - [ ] **Optimize background task scheduling** (stagger execution)
@@ -1259,6 +1366,7 @@ else:
 - [ ] **Implement database partitioning** for large tables (messages, orders)
 
 #### Monitoring & Observability
+
 - [ ] **Add Sentry** or error tracking
 - [ ] **Implement structured logging** with log aggregation
 - [ ] **Add APM** (Application Performance Monitoring)
@@ -1266,6 +1374,7 @@ else:
 - [ ] **Set up alerts** for errors, slow queries, rate limits
 
 #### Testing & Quality
+
 - [ ] **Add unit tests** for critical paths (payment, orders, recommendations)
 - [ ] **Add integration tests** for webhooks
 - [ ] **Set up load testing** for recommendation service
@@ -1277,12 +1386,14 @@ else:
 ### Long-term Improvements (3+ Months)
 
 #### Architecture
+
 - [ ] **Separate read/write databases**
 - [ ] **Implement CQRS** for recommendation system
 - [ ] **Add message queue** for async processing (RabbitMQ, SQS)
 - [ ] **Microservices architecture** consideration (recommendation service, payment service)
 
 #### Advanced Features
+
 - [ ] **Implement webhook retry mechanism** with exponential backoff
 - [ ] **Add request idempotency** for payment webhooks
 - [ ] **Implement circuit breakers** for external API calls
@@ -1294,6 +1405,7 @@ else:
 ## Appendix A: Files Audited
 
 ### Core Application Files
+
 - `/api/views/whatsapp_webhook.py` (255 lines)
 - `/api/views/payment_webhook.py` (179 lines)
 - `/api/views/whatsapp_flow_webhook.py` (138 lines)
@@ -1308,6 +1420,7 @@ else:
 - `/foodie_robot/settings.py` (304 lines)
 
 ### Key Patterns Analyzed
+
 - Database query patterns (20+ files)
 - Authentication flows
 - Payment processing
@@ -1321,6 +1434,7 @@ else:
 ## Appendix B: Security Checklist
 
 ### Authentication & Authorization
+
 - ✅ WhatsApp signature verification implemented
 - ✅ Payment webhook signature verification implemented
 - ❌ Test endpoints unprotected
@@ -1329,6 +1443,7 @@ else:
 - ❌ Referral system lacks fraud detection
 
 ### Input Validation
+
 - ❌ Missing request size limits
 - ❌ No phone number format validation on webhook
 - ❌ No text length limits
@@ -1336,6 +1451,7 @@ else:
 - ⚠️ Some JSON parsing without error handling
 
 ### Data Protection
+
 - ✅ HTTPS enforced (assumed from production)
 - ❌ PII logged in plain text
 - ✅ Password hashing (when used)
@@ -1343,12 +1459,14 @@ else:
 - ❌ No data retention policies visible
 
 ### Rate Limiting
+
 - ✅ Implemented for WhatsApp messages (30/min)
 - ❌ Not implemented for payment webhook
 - ❌ Not implemented for flow webhook
 - ⚠️ Fallback to non-atomic cache
 
 ### Error Handling
+
 - ⚠️ Inconsistent patterns
 - ❌ Some exceptions swallowed
 - ❌ Error messages leak information
@@ -1359,6 +1477,7 @@ else:
 ## Appendix C: Performance Benchmarks (Estimated)
 
 ### Current Performance (Estimated)
+
 | Operation | Queries | Time | Scalability |
 |-----------|---------|------|-------------|
 | WhatsApp message processing | 5-10 | 200-500ms | ⚠️ Moderate |
@@ -1368,6 +1487,7 @@ else:
 | Background task (all users) | 50,000+ | 10-30min | ❌ Poor |
 
 ### Target Performance (After Optimization)
+
 | Operation | Queries | Time | Improvement |
 |-----------|---------|------|-------------|
 | WhatsApp message processing | 3-5 | 100-200ms | 2x faster |
@@ -1394,6 +1514,7 @@ else:
 | Hardcoded credentials | Low | High | **Medium** | P2 |
 
 **Risk Levels:**
+
 - **Critical**: Immediate action required
 - **High**: Address within 1-2 weeks
 - **Medium**: Address within 1 month
