@@ -22,6 +22,14 @@ from ninja.errors import HttpError
 
 router = Router(tags=["Rider Orders"])
 
+def _get_coords(self, point):
+    """Extract (lng, lat) from a GeoJSON point."""
+    if point and isinstance(point, dict):
+        coords = point.get('coordinates', [])
+        if len(coords) >= 2:
+            return coords[0], coords[1]
+    return None, None
+
 
 @router.get("/history", auth=jwt_auth, response={200: OrderHistoryResponse})
 @require_rider
@@ -64,7 +72,7 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
             'status': order.status,
-            'confirmationCode': order.confirmation_code,
+            # 'confirmationCode': order.confirmation_code,
             'mealName': order.meal.name,
             'mealQuantity': order.quantity,
             'mealPrice': float(order.meal_price),
@@ -105,7 +113,7 @@ def order_detail(request, order_id: str):
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
             'status': order.status,
-            'confirmationCode': order.confirmation_code,
+            # 'confirmationCode': order.confirmation_code,
             'mealName': order.meal.name,
             'mealQuantity': order.quantity,
             'mealPrice': float(order.meal_price),
@@ -152,25 +160,26 @@ def get_new_order(request):
     if not order:
         return {'details': 'No orders available at the moment'}
 
-    # Calculate distance and duration (placeholder for now)
-    estimated_distance = "2.5 km"
-    estimated_duration = "15 minutes"
+    pickup_lng, pickup_lat = _get_coords(order.pickup_point)
+    dropoff_lng, dropoff_lat = _get_coords(order.dropoff_point)
 
     return {
         'id': order.code,
         'restaurantName': order.meal.restaurant.name,
         'restaurantPhone': order.meal.restaurant.phone,
+
         'pickupAddress': order.pickup_street_address or '',
         'dropoffAddress': order.dropoff_street_address or '',
+        'pickupAddressLink': f"https://www.google.com/maps?q={pickup_lat},{pickup_lng}",
+        'dropoffAddressLink': f"https://www.google.com/maps?q={dropoff_lat},{dropoff_lng}",
+
         'customerName': order.user.get_full_name() or order.user.username or '',
         'customerPhone': order.user.phone or '',
         'deliveryFee': float(order.delivery_fee),
-        'confirmationCode': order.confirmation_code or '',
+        # 'confirmationCode': order.confirmation_code or '',
         'mealName': order.meal.name,
         'mealQuantity': order.quantity,
         'mealPrice': float(order.meal_price),
-        'estimatedDistance': estimated_distance,
-        'estimatedDuration': estimated_duration
     }
 
 
@@ -249,6 +258,11 @@ def update_order_status(request, order_id: str, payload: UpdateStatusRequest):
 @transaction.atomic
 def confirm_delivery(request, order_id: str, payload: ConfirmDeliveryRequest):
     """Confirm delivery using customer's 4-digit confirmation code."""
+    try:
+        check_rate_limit(payload.email, endpoint=f"{order_id}/confirm-delivery", max_requests=5, window_seconds=60)
+    except RateLimitExceeded as e:
+        raise HttpError(429, str(e))
+
     try:
         rider = request.user.rider_profile
     except Rider.DoesNotExist:

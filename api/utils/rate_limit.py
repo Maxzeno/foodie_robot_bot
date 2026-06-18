@@ -133,7 +133,7 @@ def _get_cached_redis_client():
     return _redis_client
 
 
-def check_rate_limit(user_identifier, max_requests=10, window_seconds=60):
+def check_rate_limit(user_identifier, endpoint=None, max_requests=10, window_seconds=60):
     """
     Check if user has exceeded rate limit using atomic Redis operations.
 
@@ -153,8 +153,11 @@ def check_rate_limit(user_identifier, max_requests=10, window_seconds=60):
         - Falls back to Django cache if Redis unavailable
         - Fixed window counter algorithm
     """
-    cache_key = f"rate_limit:{user_identifier}"
-
+    if endpoint:
+        cache_key = f"rate_limit:{user_identifier}:{endpoint}"
+    else:
+        cache_key = f"rate_limit:{user_identifier}"
+        
     redis_client = _get_cached_redis_client()
 
     if redis_client:

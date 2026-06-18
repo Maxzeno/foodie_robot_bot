@@ -28,18 +28,18 @@ class Rider(BaseModel):
     is_verified = models.BooleanField(default=False)
 
     # Statistics (denormalized for performance)
-    total_deliveries = models.IntegerField(default=0)
-    completed_today = models.IntegerField(default=0)
-    average_rating = models.DecimalField(
-        max_digits=3,
-        decimal_places=2,
-        default=0.00
-    )
-    total_earnings = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0.00
-    )
+    # total_deliveries = models.IntegerField(default=0)
+    # completed_today = models.IntegerField(default=0)
+    # average_rating = models.DecimalField(
+    #     max_digits=3,
+    #     decimal_places=2,
+    #     default=0.00
+    # )
+    # total_earnings = models.DecimalField(
+    #     max_digits=12,
+    #     decimal_places=2,
+    #     default=0.00
+    # )
 
     class Meta:
         indexes = [

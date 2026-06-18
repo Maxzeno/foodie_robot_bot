@@ -11,7 +11,7 @@ from api.schemas.rider_schemas import (
     RefreshTokenRequest, RefreshTokenResponse
 )
 from api.models.user import User
-from api.models.password_reset import PasswordReset
+from api.models.otp_code import OTPcode
 from api.models.refresh_token import RefreshToken
 from api.models.user_balance import UserBalance
 from api.models.currency import Currency
@@ -93,8 +93,9 @@ def send_reset_code(request, payload: SendResetCodeRequest):
     Send 8-digit reset code to user's email.
     Rate limit: 5 requests per minute.
     """
+    
     try:
-        check_rate_limit(payload.email, max_requests=5, window_seconds=60)
+        check_rate_limit(payload.email, endpoint="forgot-password/send-code", max_requests=5, window_seconds=60)
     except RateLimitExceeded as e:
         raise HttpError(429, str(e))
 
@@ -104,7 +105,7 @@ def send_reset_code(request, payload: SendResetCodeRequest):
         raise HttpError(404, "No account found with this email")
 
     # Generate reset code
-    reset_code = PasswordReset.generate_code(user)
+    reset_code = OTPcode.generate_code(user)
 
     # TODO: Send email with reset code using Celery task
     # For now, just log it (in production, use an email service)
@@ -120,10 +121,16 @@ def send_reset_code(request, payload: SendResetCodeRequest):
 def verify_reset_code(request, payload: VerifyResetCodeRequest):
     """Verify 8-digit reset code."""
     try:
+        check_rate_limit(payload.email, endpoint="forgot-password/verify-code", max_requests=5, window_seconds=60)
+    except RateLimitExceeded as e:
+        raise HttpError(429, str(e))
+
+    try:
         user = User.objects.get(email=payload.email)
-        reset_code = PasswordReset.objects.get(
+        reset_code = OTPcode.objects.get(
             user=user,
-            code=payload.resetCode
+            code=payload.resetCode,
+            purpose=OTPcode.PurposeChoices.PASSWORD_RESET
         )
 
         if not reset_code.is_valid():
@@ -135,7 +142,7 @@ def verify_reset_code(request, payload: VerifyResetCodeRequest):
 
         return {'details': 'Code verified successfully'}
 
-    except (User.DoesNotExist, PasswordReset.DoesNotExist):
+    except (User.DoesNotExist, OTPcode.DoesNotExist):
         raise HttpError(400, "Reset code is invalid or expired")
 
 
@@ -143,11 +150,17 @@ def verify_reset_code(request, payload: VerifyResetCodeRequest):
 def reset_password(request, payload: ResetPasswordRequest):
     """Reset password using verified code."""
     try:
+        check_rate_limit(payload.email, endpoint="forgot-password/reset", max_requests=5, window_seconds=60)
+    except RateLimitExceeded as e:
+        raise HttpError(429, str(e))
+
+    try:
         user = User.objects.get(email=payload.email)
-        reset_code = PasswordReset.objects.get(
+        reset_code = OTPcode.objects.get(
             user=user,
             code=payload.resetCode,
-            is_verified=True
+            is_verified=True,
+            purpose=OTPcode.PurposeChoices.PASSWORD_RESET
         )
 
         if not reset_code.is_valid():
@@ -163,7 +176,7 @@ def reset_password(request, payload: ResetPasswordRequest):
 
         return {'details': 'Password reset successfully'}
 
-    except (User.DoesNotExist, PasswordReset.DoesNotExist):
+    except (User.DoesNotExist, OTPcode.DoesNotExist):
         raise HttpError(400, "Reset code is invalid or expired")
 
 

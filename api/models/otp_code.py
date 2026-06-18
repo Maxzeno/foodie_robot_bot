@@ -7,16 +7,17 @@ from api.models.base import BaseModel
 from api.models.user import User
 
 
-class PasswordReset(BaseModel):
-    """
-    Store password reset codes (8-digit, 15-minute expiry).
-    """
+class OTPcode(BaseModel):
+    class PurposeChoices(models.TextChoices):
+        PASSWORD_RESET = 'password_reset', 'Password Reset'
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='password_resets'
+        related_name='otp_codes'
     )
 
+    purpose = models.CharField(max_length=40, default=PurposeChoices.PASSWORD_RESET, choices=PurposeChoices.choices)
     code = models.CharField(max_length=8)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
@@ -32,17 +33,17 @@ class PasswordReset(BaseModel):
         return f"PasswordReset for {self.user.email or self.user.phone} - {self.code}"
 
     @classmethod
-    def generate_code(cls, user):
+    def generate_code(cls, user, purspose=PurposeChoices.PASSWORD_RESET, minutes=20):
         """Generate 8-digit reset code, expires in 15 minutes."""
         code = str(random.randint(10000000, 99999999))
-        expires_at = timezone.now() + timedelta(minutes=15)
+        expires_at = timezone.now() + timedelta(minutes=minutes)
 
-        # Invalidate any existing codes for this user
-        cls.objects.filter(user=user, is_used=False).update(is_used=True)
+        cls.objects.filter(user=user, is_used=False, purspose=purspose).update(is_used=True)
 
         return cls.objects.create(
             user=user,
             code=code,
+            purspose=purspose,
             expires_at=expires_at
         )
 

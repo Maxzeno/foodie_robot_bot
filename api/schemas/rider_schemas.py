@@ -164,7 +164,6 @@ class BankDetails(BaseModel):
 class RestaurantPaymentRequest(BaseModel):
     orderId: str
     bankDetails: BankDetails
-    amount: float
 
 
 class RestaurantPaymentResponse(BaseModel):
@@ -236,7 +235,7 @@ class RiderProfileResponse(BaseModel):
     phone: str
     balance: float
     isOnline: bool
-    stats: RiderStatsResponse
+    # stats: RiderStatsResponse
 
 
 class CompanyStatsResponse(BaseModel):
@@ -252,4 +251,4 @@ class CompanyProfileResponse(BaseModel):
     email: str
     phone: str
     balance: float
-    stats: CompanyStatsResponse
+    # stats: CompanyStatsResponse

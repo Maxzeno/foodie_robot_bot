@@ -64,10 +64,10 @@ def get_rider_profile(request):
         'phone': user.phone or '',
         'balance': balance,
         'isOnline': rider.is_online,
-        'stats': {
-            'totalDeliveries': rider.total_deliveries,
-            'completedToday': rider.completed_today,
-            'averageRating': float(rider.average_rating),
-            'totalEarnings': float(rider.total_earnings)
-        }
+        # 'stats': {
+        #     'totalDeliveries': rider.total_deliveries,
+        #     'completedToday': rider.completed_today,
+        #     'averageRating': float(rider.average_rating),
+        #     'totalEarnings': float(rider.total_earnings)
+        # }
     }

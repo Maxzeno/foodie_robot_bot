@@ -60,7 +60,7 @@ class Order(BaseModel):
 
     # NEW: 4-digit confirmation code for delivery
     confirmation_code = models.CharField(
-        max_length=4,
+        max_length=5,
         null=True,
         blank=True
     )

@@ -435,6 +435,7 @@ def place_order(
 🍽️ {meal.name}
 🔢 Quantity: {number_of_plates} plate(s)
 
+
 💰 Price Breakdown:
 • Meal: {currency_symbol}{meal_price:,.2f}
 • Delivery: {currency_symbol}{delivery_fee:,.2f}
@@ -443,6 +444,8 @@ def place_order(
 📍 Delivery to:
 • Address: {delivery_address.street_address or 'Last set address'}
 • View current delivery address: https://www.google.com/maps?q={addr_lat},{addr_lng} (Update your delivery address if this isn't your desired address before you pay.)
+
+🔒 Confirmation code (only share with the rider on arrival): {order.confirmation_code}
 
 💳 Please proceed to payment to confirm your order.
 """.strip()

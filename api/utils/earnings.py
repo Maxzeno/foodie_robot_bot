@@ -35,10 +35,10 @@ def process_delivery_completion(order):
         )
 
         # Update company stats
-        rider.company.total_orders += 1
-        rider.company.completed_today += 1
-        rider.company.total_revenue += order.delivery_fee
-        rider.company.save()
+        # rider.company.total_orders += 1
+        # rider.company.completed_today += 1
+        # rider.company.total_revenue += order.delivery_fee
+        # rider.company.save()
 
         rider_balance = None
     else:
@@ -51,9 +51,9 @@ def process_delivery_completion(order):
         company_balance = None
 
     # Update rider stats (regardless of company affiliation)
-    rider.total_deliveries += 1
-    rider.completed_today += 1
-    rider.total_earnings += order.delivery_fee
-    rider.save()
+    # rider.total_deliveries += 1
+    # rider.completed_today += 1
+    # rider.total_earnings += order.delivery_fee
+    # rider.save()
 
     return rider_balance, company_balance

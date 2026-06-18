@@ -1,9 +1,8 @@
 from django.utils.crypto import get_random_string
-import random
-
+import string
 
 def generate_unique_code(model, field, length=8):
-    allowed_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    allowed_chars = string.ascii_uppercase + string.digits
     unique_code = get_random_string(length=length, allowed_chars=allowed_chars)
 
     # Dynamically filter the model using the provided field
@@ -13,7 +12,7 @@ def generate_unique_code(model, field, length=8):
     return unique_code.lower()
 
 
-def generate_confirmation_code():
-    """Generate 4-digit confirmation code for order delivery."""
-    return str(random.randint(1000, 9999))
-
+def generate_confirmation_code(length=5):
+    """Generate 5-character lowercase alphanumeric confirmation code."""
+    chars = string.ascii_uppercase + string.digits
+    return get_random_string(length=length, allowed_chars=chars)

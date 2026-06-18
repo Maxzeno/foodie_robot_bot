@@ -4,7 +4,7 @@ from api.models.order import *
 from api.models.rider import *
 from api.models.company import *
 from api.models.refresh_token import *
-from api.models.password_reset import *
+from api.models.otp_code import *
 from api.models.recommendation import *
 from api.models.location import *
 from api.models.review import *

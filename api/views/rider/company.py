@@ -175,10 +175,10 @@ def get_company_profile(request):
         'email': user.email,
         'phone': user.phone or '',
         'balance': balance,
-        'stats': {
-            'totalOrders': company.total_orders,
-            'activeRiders': company.active_riders,
-            'completedToday': company.completed_today,
-            'totalRevenue': float(company.total_revenue)
-        }
+        # 'stats': {
+        #     'totalOrders': company.total_orders,
+        #     'activeRiders': company.active_riders,
+        #     'completedToday': company.completed_today,
+        #     'totalRevenue': float(company.total_revenue)
+        # }
     }
