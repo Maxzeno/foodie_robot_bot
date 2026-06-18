@@ -1,2 +1,5 @@
-- add Rider and Company model to admin
 - later implement adding the funds to the vendor balance if they are fully registered and in that case the UI will not show that tranfer rather it will show collected meal from restaurant and also keep track of the money added to vendor balance.
+
+- maybe send money to the rider to send to the resturant for the meal
+
+- make the app helpful for riders to manage their selvies and take external orders

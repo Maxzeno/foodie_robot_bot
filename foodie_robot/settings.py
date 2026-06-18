@@ -34,7 +34,7 @@ MAPBOX_TOKEN = config('MAPBOX_TOKEN')
 ALLOWED_HOSTS = []
 
 if DEBUG:
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.ngrok-free.app']
+    ALLOWED_HOSTS = ['127.0.0.1', '10.71.154.9', 'localhost', '.ngrok-free.app']
 
 _ALLOWED_HOST = config('ALLOWED_HOST', '')
 ALLOWED_HOSTS.extend(_ALLOWED_HOST.split())
@@ -231,17 +231,60 @@ AUTH_USER_MODEL = 'api.User'
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOWED_ORIGIN_REGEXES = []
+# Flutter Web CORS Origins
+# Production
+FLUTTER_PRODUCTION_DOMAINS = [
+    'rider.foodierobot.com',
+]
+
+# Local development (Flutter web typically runs on these ports)
+FLUTTER_LOCAL_ORIGINS = [
+    'http://127.0.0.1:52240',
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^https://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+    r"^https://127\.0\.0\.1:\d+$",
+] if DEBUG else []
 CORS_ALLOWED_ORIGINS = []
 CSRF_TRUSTED_ORIGINS = []
 
+# Add Flutter production domains
+for domain in FLUTTER_PRODUCTION_DOMAINS:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{domain}')
+    CORS_ALLOWED_ORIGINS.append(f'https://{domain}')
+
+# Add Flutter local development origins
+if DEBUG:
+    CORS_ALLOWED_ORIGINS.extend(FLUTTER_LOCAL_ORIGINS)
+    CSRF_TRUSTED_ORIGINS.extend(FLUTTER_LOCAL_ORIGINS)
+
+# Add backend allowed hosts
 for host in _ALLOWED_HOST.split():
     CSRF_TRUSTED_ORIGINS.append(f'http://{host}')
     CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
-
-for host in _ALLOWED_HOST.split():
     CORS_ALLOWED_ORIGINS.append(f'http://{host}')
     CORS_ALLOWED_ORIGINS.append(f'https://{host}')
+
+# Additional CORS headers for Flutter web
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_EXPOSE_HEADERS = [
+    'content-type',
+    'x-csrf-token',
+]
 
 
 # Huey Configuration

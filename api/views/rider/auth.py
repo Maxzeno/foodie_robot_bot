@@ -1,7 +1,6 @@
 """Authentication endpoints for Rider/Company API."""
 
 from ninja import Router
-from django.contrib.auth import authenticate
 from django.utils import timezone
 
 from api.schemas.rider_schemas import (
@@ -15,6 +14,7 @@ from api.models.otp_code import OTPcode
 from api.models.refresh_token import RefreshToken
 from api.models.user_balance import UserBalance
 from api.models.currency import Currency
+from api.utils.email import send_email
 from api.utils.jwt_auth import JWTAuth
 from api.utils.auth_bearer import jwt_auth
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
@@ -34,10 +34,12 @@ def login(request, payload: LoginRequest):
     except RateLimitExceeded as e:
         raise HttpError(429, str(e))
 
-    # Authenticate user
-    user = authenticate(username=payload.email, password=payload.password)
-
-    if not user:
+    # Authenticate user by email
+    try:
+        user = User.objects.get(email=payload.email)
+        if not user.check_password(payload.password):
+            raise HttpError(401, "Invalid email or password")
+    except User.DoesNotExist:
         raise HttpError(401, "Invalid email or password")
 
     # Check if user has rider or company role
@@ -107,9 +109,11 @@ def send_reset_code(request, payload: SendResetCodeRequest):
     # Generate reset code
     reset_code = OTPcode.generate_code(user)
 
-    # TODO: Send email with reset code using Celery task
-    # For now, just log it (in production, use an email service)
-    print(f"[PASSWORD RESET] Code for {user.email}: {reset_code.code}")
+    send_email(
+        to_email=user.email,
+        to_name=user.get_full_name() or user.username or '',
+        subject="Your Password Reset Code",
+        html_body=f"Your password reset code is: {reset_code.code}\nIt expires at {reset_code.expires_at}.")
 
     return {
         'details': 'Reset code sent to email',

@@ -146,39 +146,3 @@ def get_withdrawal_history(request, page: int = 1, limit: int = 20):
         'withdrawals': withdrawal_items,
         'pagination': pagination
     }
-
-
-@router.get("/profile", auth=jwt_auth, response={200: dict})
-@require_company
-def get_company_profile(request):
-    """Get company profile information and statistics."""
-    try:
-        company = request.user.company_profile
-    except Company.DoesNotExist:
-        raise HttpError(400, "Company profile not found")
-
-    user = request.user
-
-    # Get balance
-    currency = Currency.objects.filter(code='NGN').first()
-    if not currency:
-        currency = Currency.objects.first()
-
-    balance = 0
-    if currency:
-        user_balance = UserBalance.get_balance(user, currency)
-        balance = float(user_balance.amount)
-
-    return {
-        'id': company.id,
-        'name': company.name,
-        'email': user.email,
-        'phone': user.phone or '',
-        'balance': balance,
-        # 'stats': {
-        #     'totalOrders': company.total_orders,
-        #     'activeRiders': company.active_riders,
-        #     'completedToday': company.completed_today,
-        #     'totalRevenue': float(company.total_revenue)
-        # }
-    }

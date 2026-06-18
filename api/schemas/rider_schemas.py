@@ -235,20 +235,8 @@ class RiderProfileResponse(BaseModel):
     phone: str
     balance: float
     isOnline: bool
-    # stats: RiderStatsResponse
-
-
-class CompanyStatsResponse(BaseModel):
-    totalOrders: int
-    activeRiders: int
-    completedToday: int
-    totalRevenue: float
-
-
-class CompanyProfileResponse(BaseModel):
-    id: int
-    name: str
-    email: str
-    phone: str
-    balance: float
-    # stats: CompanyStatsResponse
+    role: str
+    currency: str
+    currency_symbol: str
+    city_id: int
+    city: str

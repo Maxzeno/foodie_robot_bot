@@ -1,19 +1,125 @@
 """
 Admin configuration for User model.
 """
+from django import forms
 from django.contrib import admin
 from django.db.models import Count, Max, Q
 from django.utils.html import format_html
 from django.utils import timezone
 
-from api.models.user import User
+from api.models.user import User, UserRole
 from api.models.message import RoleChoices
+
+
+class RolesWidget(forms.CheckboxSelectMultiple):
+    """Custom widget for displaying roles as styled checkboxes."""
+
+    def __init__(self, *args, **kwargs):
+        choices = [(role.value, role.label) for role in UserRole]
+        super().__init__(choices=choices, *args, **kwargs)
+
+    def format_value(self, value):
+        """Convert JSON array to list for checkbox rendering."""
+        if isinstance(value, str):
+            import json
+            try:
+                value = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                value = []
+        return value or []
+
+    def render(self, name, value, attrs=None, renderer=None):
+        """Render checkboxes with custom styling."""
+        from django.utils.html import format_html
+        from django.utils.safestring import mark_safe
+
+        if value is None:
+            value = []
+        elif isinstance(value, str):
+            import json
+            try:
+                value = json.loads(value)
+            except:
+                value = []
+
+        # Role colors matching the badge display
+        role_styles = {
+            'customer': 'color: #007bff; font-weight: 500;',
+            'rider': 'color: #28a745; font-weight: 500;',
+            'company': 'color: #6f42c1; font-weight: 500;',
+        }
+
+        html_parts = [
+            '<ul style="list-style-type: none; padding-left: 0; margin: 10px 0;">'
+        ]
+
+        for role_value, role_label in self.choices:
+            is_checked = role_value in value
+            checked_attr = 'checked' if is_checked else ''
+            style = role_styles.get(role_value, '')
+
+            html_parts.append(f'''
+                <li style="margin-bottom: 12px; padding: 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid {role_styles.get(role_value, '#6c757d').split(': ')[1].split(';')[0]};">
+                    <label style="display: flex; align-items: center; cursor: pointer; {style}">
+                        <input type="checkbox" name="{name}" value="{role_value}" {checked_attr}
+                               style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
+                        <span style="font-size: 14px;">{role_label}</span>
+                    </label>
+                </li>
+            ''')
+
+        html_parts.append('</ul>')
+
+        return mark_safe(''.join(html_parts))
+
+
+class UserAdminForm(forms.ModelForm):
+    """Custom form for User admin with checkbox roles field."""
+
+    roles = forms.MultipleChoiceField(
+        choices=[(role.value, role.label) for role in UserRole],
+        widget=RolesWidget(),
+        required=False,
+        help_text="Select one or more roles for this user"
+    )
+
+    class Meta:
+        model = User
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pre-populate roles from the JSONField
+        if self.instance and self.instance.pk:
+            current_roles = self.instance.roles or []
+            self.initial['roles'] = current_roles
+        elif not self.instance.pk:
+            # Default to 'customer' for new users
+            self.initial['roles'] = ['customer']
+
+    def save(self, commit=True):
+        """Save roles as JSON array."""
+        user = super().save(commit=False)
+        # Convert selected roles back to list for JSONField
+        user.roles = self.cleaned_data.get('roles', [])
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    form = UserAdminForm
+
+    class Media:
+        css = {
+            'all': []
+        }
+        js = []
+
     list_display = [
-        'code', 'phone', 'city', 'referral_info', 'profile_complete_badge',
+        'code', 'phone', 'city', 'roles_badge', 'referral_info', 'profile_complete_badge',
         'order_count', 'message_count', 'is_active_badge', 'is_blocked_badge', 'created_at'
     ]
     list_filter = ['city', 'gender', 'is_active', 'is_blocked', 'created_at']
@@ -39,7 +145,7 @@ class UserAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Status & Permissions', {
-            'fields': ('is_active', 'is_blocked', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': ('roles', 'is_active', 'is_blocked', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -132,3 +238,27 @@ class UserAdmin(admin.ModelAdmin):
             'border-radius: 3px; font-size: 11px;">✗ Incomplete</span>'
         )
     profile_complete_badge.short_description = 'Profile'
+
+    def roles_badge(self, obj):
+        if not obj.roles:
+            return format_html(
+                '<span style="background: #6c757d; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px;">None</span>'
+            )
+
+        role_colors = {
+            'customer': '#007bff',  # Blue
+            'rider': '#28a745',     # Green
+            'company': '#6f42c1'    # Purple
+        }
+
+        badges = []
+        for role in obj.roles:
+            color = role_colors.get(role, '#6c757d')
+            badges.append(
+                f'<span style="background: {color}; color: white; padding: 3px 8px; '
+                f'border-radius: 3px; font-size: 11px; margin-right: 3px;">{role.title()}</span>'
+            )
+
+        return format_html(''.join(badges))
+    roles_badge.short_description = 'Roles'

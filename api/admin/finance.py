@@ -44,7 +44,7 @@ class ReferralEarningAdmin(admin.ModelAdmin):
 
 @admin.register(UserBalance)
 class UserBalanceAdmin(admin.ModelAdmin):
-    list_display = ['user_link', 'amount_display', 'currency', 'updated_at']
+    list_display = ['id', 'user_link', 'amount_display', 'currency', 'updated_at']
     list_filter = ['currency', 'updated_at']
     search_fields = ['user__phone', 'user__code']
     raw_id_fields = ['user']

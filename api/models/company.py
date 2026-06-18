@@ -21,16 +21,6 @@ class Company(BaseModel):
         blank=True
     )
 
-    # Statistics (denormalized for performance)
-    # total_orders = models.IntegerField(default=0)
-    # active_riders = models.IntegerField(default=0)
-    # completed_today = models.IntegerField(default=0)
-    # total_revenue = models.DecimalField(
-    #     max_digits=12,
-    #     decimal_places=2,
-    #     default=0.00
-    # )
-
     class Meta:
         indexes = [
             models.Index(fields=['user'], name='company_user_idx'),

@@ -5,6 +5,8 @@ This package organizes admin classes into separate modules for better maintainab
 
 - base.py: Common utilities, widgets, and mixins (GeoJSON support)
 - user.py: User admin
+- rider.py: Rider admin
+- company.py: Company admin
 - order.py: Order admin with map previews
 - message.py: Message admin
 - meal.py: Meal and MealEmbedding admin
@@ -20,6 +22,8 @@ This package organizes admin classes into separate modules for better maintainab
 
 # Import all admin classes to register them
 from api.admin.user import UserAdmin
+from api.admin.rider import RiderAdmin
+from api.admin.company import CompanyAdmin
 from api.admin.order import OrderAdmin
 from api.admin.message import MessageAdmin
 from api.admin.meal import MealAdmin, MealEmbeddingAdmin
@@ -38,6 +42,8 @@ from api.admin.admin_message import BroadcastMessageAdmin, SingleUserMessageAdmi
 # Export all admin classes
 __all__ = [
     'UserAdmin',
+    'RiderAdmin',
+    'CompanyAdmin',
     'OrderAdmin',
     'MessageAdmin',
     'MealAdmin',

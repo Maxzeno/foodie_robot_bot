@@ -33,10 +33,12 @@ class User(AbstractUser, BaseModel):
     username = models.CharField(unique=True, max_length=200, null=True, blank=True)
 
     code = models.CharField(max_length=100, unique=True, blank=True)
-
+    def default_roles():
+        return ["customer"]
+    
     # Multiple roles support (customer, rider, company)
     roles = models.JSONField(
-        default=list,
+        default=default_roles,
         help_text="List of user roles: ['customer'], ['rider'], ['company'], or combinations"
     )
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
@@ -58,6 +60,9 @@ class User(AbstractUser, BaseModel):
 
     is_active = models.BooleanField(default=True)
     is_blocked = models.BooleanField(default=False)
+    
+    is_online = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
 
     fitness_goals = models.ForeignKey(FitnessGoal, on_delete=models.PROTECT, related_name="users", null=True, blank=True)
     health_conditions = models.ManyToManyField(HealthCondition, blank=True, related_name="users")

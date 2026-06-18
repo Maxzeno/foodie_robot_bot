@@ -3,6 +3,7 @@
 from ninja import Router
 from django.utils import timezone
 
+from api.models.user import User
 from api.schemas.rider_schemas import (
     OnlineStatusRequest, OnlineStatusResponse, SimpleResponse,
     RiderProfileResponse
@@ -18,37 +19,29 @@ router = Router(tags=["Rider Status & Profile"])
 
 
 @router.put("/online-status", auth=jwt_auth, response={200: OnlineStatusResponse})
-@require_rider
 def toggle_online_status(request, payload: OnlineStatusRequest):
-    """Toggle rider's online/offline status for receiving orders."""
-    try:
-        rider = request.user.rider_profile
-    except Rider.DoesNotExist:
-        raise HttpError(400, "Rider profile not found")
-
     # Update online status
-    rider.is_online = payload.isOnline
-    rider.save()
+    user = request.user
+    user.is_online = payload.isOnline
+    user.save()
 
     return {
-        'isOnline': rider.is_online,
+        'isOnline': user.is_online,
         'updatedAt': timezone.now()
     }
 
 
 @router.get("/profile", auth=jwt_auth, response={200: RiderProfileResponse})
-@require_rider
 def get_rider_profile(request):
-    """Get rider's profile information and statistics."""
-    try:
-        rider = request.user.rider_profile
-    except Rider.DoesNotExist:
-        raise HttpError(400, "Rider profile not found")
+    user: User = request.user
 
-    user = request.user
-
+    currency_code = 'NGN'
+    currency_symbol = "₦"
+    if user.city and user.city.currency:
+        currency_code = user.city.currency.code
+    
     # Get rider balance
-    currency = Currency.objects.filter(code='NGN').first()
+    currency = Currency.objects.filter(code=currency_code).first()
     if not currency:
         currency = Currency.objects.first()
 
@@ -63,11 +56,10 @@ def get_rider_profile(request):
         'email': user.email,
         'phone': user.phone or '',
         'balance': balance,
-        'isOnline': rider.is_online,
-        # 'stats': {
-        #     'totalDeliveries': rider.total_deliveries,
-        #     'completedToday': rider.completed_today,
-        #     'averageRating': float(rider.average_rating),
-        #     'totalEarnings': float(rider.total_earnings)
-        # }
+        'isOnline': user.is_online,
+        'city': user.city.name if user.city else None,
+        'city_id': user.city.id if user.city else None,
+        'currency': currency_code,
+        'currency_symbol': currency_symbol,
+        'role': 'company' if 'company' in user.roles else 'rider' if 'rider' in user.roles else 'customer'
     }

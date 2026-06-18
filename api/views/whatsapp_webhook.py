@@ -139,9 +139,10 @@ def whatsapp_webhook(request):
         return {"detail": "Done"}
 
     user, created = User.objects.get_or_create(phone=phone)
-
-    if user.is_blocked:
-        return {"detail": "Done"}
+    # TODO: test this
+    if 'customer' not in user.roles:
+        user.roles.append('customer')
+        user.save(update_fields=['roles'])
 
     if username and not user.username:
         user.username = username
