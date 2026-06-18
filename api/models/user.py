@@ -10,8 +10,6 @@ from api.models.message import CurrentIntentChoices, Message, RoleChoices
 from api.utils.generate import generate_unique_code
 import pytz
 from django.utils import timezone
-from api.models.recommendation import Recommendation
-from datetime import timedelta
 
 
 def unique_user_code():
@@ -133,12 +131,18 @@ class User(AbstractUser, BaseModel):
             return 'morning'
         elif 12 <= hour < 17:
             return 'afternoon'
-        elif 17 <= hour < 22:
+        elif 17 <= hour < 19:
             return 'evening'
         else:
             return 'night'
         
     def get_recommendation_day_number(self) -> int:
+        """
+        Calculate which day of recommendations this is for the user.
+        Returns the number of unique days the user has received recommendations + 1 for today.
+        """
+        from api.models.recommendation import Recommendation
+
         today = self.get_local_time().date()
 
         # Count unique days with recommendations (excluding today)
@@ -151,6 +155,13 @@ class User(AbstractUser, BaseModel):
         return past_days + 1
 
     def get_recommendation_streak(self) -> int:
+        """
+        Calculate the user's current recommendation engagement streak.
+        A streak is maintained when user receives recommendations on consecutive days.
+        """
+        from api.models.recommendation import Recommendation
+        from datetime import timedelta
+
         today = self.get_local_time().date()
 
         # Get all unique days with recommendations, ordered descending

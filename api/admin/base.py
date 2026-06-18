@@ -271,6 +271,29 @@ class GeoJSONPolygonWidget(forms.Widget):
             </div>
             <div id="{map_id}" style="height: 500px; border: 2px solid #667eea; border-top: none; position: relative;"></div>
 
+            <!-- Place Search Panel -->
+            <div style="background: #e8f4f8; padding: 12px; border: 2px solid #17a2b8; border-top: none;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="{widget_id}_search" placeholder="Search city boundary (e.g., Lagos, Nigeria)"
+                                   style="flex: 1; padding: 10px 14px; border: 2px solid #17a2b8; border-radius: 4px; font-size: 14px;"
+                                   onkeypress="if(event.key==='Enter'){{event.preventDefault();searchPlace_{widget_id}();}}" />
+                            <button type="button" onclick="searchPlace_{widget_id}()" id="{widget_id}_btn_search"
+                                    style="padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; white-space: nowrap;">
+                                🔍 Search Boundary
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="{widget_id}_search_results" style="margin-top: 10px; display: none;">
+                    <!-- Search results will be displayed here -->
+                </div>
+                <div id="{widget_id}_search_status" style="margin-top: 8px; font-size: 12px; color: #666;">
+                    Search for a city to auto-load its boundary from OpenStreetMap
+                </div>
+            </div>
+
             <!-- Control Panel -->
             <div style="background: #f8f9fa; padding: 12px; border: 2px solid #dee2e6; border-top: none; border-radius: 0 0 8px 8px;">
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -683,6 +706,193 @@ class GeoJSONPolygonWidget(forms.Widget):
                     updateStatus_{widget_id}('❌ Invalid JSON format! Error: ' + error.message, '#dc3545');
                     console.error('GeoJSON load error:', error);
                 }}
+            }};
+
+            // Place search functionality
+            var searchPreviewLayer_{widget_id} = null;
+
+            window.searchPlace_{widget_id} = function() {{
+                var query = document.getElementById('{widget_id}_search').value.trim();
+                if (!query) {{
+                    updateSearchStatus_{widget_id}('Please enter a place name to search', '#dc3545');
+                    return;
+                }}
+
+                var searchBtn = document.getElementById('{widget_id}_btn_search');
+                searchBtn.disabled = true;
+                searchBtn.textContent = '⏳ Searching...';
+                updateSearchStatus_{widget_id}('Searching for "' + query + '"...', '#17a2b8');
+
+                // Call Nominatim API with polygon_geojson parameter
+                var url = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({{
+                    q: query,
+                    format: 'json',
+                    polygon_geojson: '1',
+                    limit: '5',
+                    addressdetails: '1'
+                }});
+
+                fetch(url, {{
+                    headers: {{
+                        'Accept': 'application/json',
+                        'User-Agent': 'FoodieRobot Admin (boundary search)'
+                    }}
+                }})
+                .then(function(response) {{
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                }})
+                .then(function(results) {{
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = '🔍 Search Boundary';
+
+                    if (!results || results.length === 0) {{
+                        updateSearchStatus_{widget_id}('No results found for "' + query + '"', '#dc3545');
+                        document.getElementById('{widget_id}_search_results').style.display = 'none';
+                        return;
+                    }}
+
+                    // Filter results that have polygon/boundary data
+                    var boundaryResults = results.filter(function(r) {{
+                        return r.geojson && (r.geojson.type === 'Polygon' || r.geojson.type === 'MultiPolygon');
+                    }});
+
+                    if (boundaryResults.length === 0) {{
+                        updateSearchStatus_{widget_id}('No boundary data found for "' + query + '". Try a more specific search like "Lagos, Nigeria" or "Ikeja, Lagos"', '#ffc107');
+                        document.getElementById('{widget_id}_search_results').style.display = 'none';
+                        return;
+                    }}
+
+                    displaySearchResults_{widget_id}(boundaryResults);
+                    updateSearchStatus_{widget_id}('Found ' + boundaryResults.length + ' result(s) with boundary data. Click to preview, then "Apply" to use.', '#28a745');
+                }})
+                .catch(function(error) {{
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = '🔍 Search Boundary';
+                    updateSearchStatus_{widget_id}('Search error: ' + error.message, '#dc3545');
+                    console.error('Search error:', error);
+                }});
+            }};
+
+            function updateSearchStatus_{widget_id}(message, color) {{
+                var status = document.getElementById('{widget_id}_search_status');
+                status.innerHTML = '<span style="color: ' + (color || '#666') + ';">' + message + '</span>';
+            }}
+
+            function displaySearchResults_{widget_id}(results) {{
+                var container = document.getElementById('{widget_id}_search_results');
+                container.style.display = 'block';
+                container.innerHTML = '';
+
+                results.forEach(function(result, index) {{
+                    var div = document.createElement('div');
+                    div.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px; background: white; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 8px;';
+
+                    var typeBadge = result.type || 'place';
+                    var typeColor = typeBadge === 'city' ? '#28a745' : (typeBadge === 'administrative' ? '#007bff' : '#6c757d');
+
+                    div.innerHTML = '<div style="flex: 1;">' +
+                        '<div style="font-weight: 500;">' + result.display_name + '</div>' +
+                        '<div style="font-size: 11px; color: #666; margin-top: 2px;">' +
+                        '<span style="background: ' + typeColor + '; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-right: 5px;">' + typeBadge.toUpperCase() + '</span>' +
+                        'Type: ' + result.geojson.type +
+                        '</div>' +
+                        '</div>' +
+                        '<button type="button" onclick="previewBoundary_{widget_id}(' + index + ')" ' +
+                        'style="padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">👁️ Preview</button>' +
+                        '<button type="button" onclick="applyBoundary_{widget_id}(' + index + ')" ' +
+                        'style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✅ Apply</button>';
+
+                    container.appendChild(div);
+                }});
+
+                // Store results for later use
+                window.searchResults_{widget_id} = results;
+            }}
+
+            window.previewBoundary_{widget_id} = function(index) {{
+                var result = window.searchResults_{widget_id}[index];
+                if (!result || !result.geojson) return;
+
+                // Remove existing preview layer
+                if (searchPreviewLayer_{widget_id}) {{
+                    map_{widget_id}.removeLayer(searchPreviewLayer_{widget_id});
+                }}
+
+                // Add preview layer with different styling (dashed, orange)
+                searchPreviewLayer_{widget_id} = L.geoJSON(result.geojson, {{
+                    style: {{
+                        color: '#fd7e14',
+                        weight: 3,
+                        fillOpacity: 0.15,
+                        dashArray: '5, 10'
+                    }}
+                }}).addTo(map_{widget_id});
+
+                // Zoom to the preview boundary
+                map_{widget_id}.fitBounds(searchPreviewLayer_{widget_id}.getBounds(), {{padding: [50, 50]}});
+
+                updateSearchStatus_{widget_id}('Previewing boundary for "' + result.display_name.split(',')[0] + '". Click "Apply" to use this boundary.', '#fd7e14');
+            }};
+
+            window.applyBoundary_{widget_id} = function(index) {{
+                var result = window.searchResults_{widget_id}[index];
+                if (!result || !result.geojson) return;
+
+                var geojson = result.geojson;
+
+                // Handle MultiPolygon by taking the largest polygon
+                if (geojson.type === 'MultiPolygon') {{
+                    var largest = null;
+                    var largestSize = 0;
+                    geojson.coordinates.forEach(function(polygonCoords) {{
+                        if (polygonCoords[0] && polygonCoords[0].length > largestSize) {{
+                            largestSize = polygonCoords[0].length;
+                            largest = polygonCoords;
+                        }}
+                    }});
+                    if (largest) {{
+                        geojson = {{ type: 'Polygon', coordinates: largest }};
+                    }}
+                }}
+
+                if (geojson.type !== 'Polygon' || !geojson.coordinates || !geojson.coordinates[0]) {{
+                    updateSearchStatus_{widget_id}('Could not extract polygon from result', '#dc3545');
+                    return;
+                }}
+
+                // Clear preview layer
+                if (searchPreviewLayer_{widget_id}) {{
+                    map_{widget_id}.removeLayer(searchPreviewLayer_{widget_id});
+                    searchPreviewLayer_{widget_id} = null;
+                }}
+
+                // Load the boundary into the editor
+                points_{widget_id} = [];
+                var coords = geojson.coordinates[0];
+                for (var i = 0; i < coords.length - 1; i++) {{
+                    points_{widget_id}.push([coords[i][1], coords[i][0]]);
+                }}
+
+                // Update history and redraw
+                history_{widget_id} = [];
+                historyIndex_{widget_id} = -1;
+                saveToHistory_{widget_id}();
+                drawPolygon_{widget_id}();
+                updateUI_{widget_id}();
+                savePolygon_{widget_id}();
+
+                // Zoom to fit
+                if (polygon_{widget_id}) {{
+                    map_{widget_id}.fitBounds(polygon_{widget_id}.getBounds(), {{padding: [50, 50]}});
+                }}
+
+                // Hide search results
+                document.getElementById('{widget_id}_search_results').style.display = 'none';
+
+                var placeName = result.display_name.split(',')[0];
+                updateStatus_{widget_id}('✅ Boundary for "' + placeName + '" applied! ' + points_{widget_id}.length + ' points loaded.', '#28a745');
+                updateSearchStatus_{widget_id}('Boundary applied successfully! You can now edit it manually if needed.', '#28a745');
             }};
         }})();
         </script>

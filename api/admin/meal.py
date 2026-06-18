@@ -102,7 +102,7 @@ class MealAdmin(admin.ModelAdmin):
     form = MealAdminForm
     list_display = [
         'image_preview', 'name', 'restaurant', 'city', 'price_display',
-        'available_badge', 'stock_display', 'order_count', 'times_of_day_display'
+        'available_badge', 'stock_display', 'order_count', 'fitness_goals_display', 'times_of_day_display'
     ]
     list_filter = ['available', 'city', 'restaurant', 'fitness_goals', 'cuisine', 'created_at']
     search_fields = ['name', 'code', 'description', 'restaurant__name']
@@ -135,7 +135,7 @@ class MealAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.annotate(_order_count=Count('orders', distinct=True))
+        return qs.select_related('restaurant', 'city').prefetch_related('fitness_goals').annotate(_order_count=Count('orders', distinct=True))
 
     def image_preview(self, obj):
         if obj.image_url:
@@ -196,6 +196,18 @@ class MealAdmin(admin.ModelAdmin):
                 )
         return format_html(''.join(badges)) if badges else '-'
     times_of_day_display.short_description = 'Times of Day'
+
+    def fitness_goals_display(self, obj):
+        goals = obj.fitness_goals.all()
+        if not goals:
+            return '-'
+        goal_names = [goal.name.replace('_', ' ').title() for goal in goals]
+        return format_html(
+            '<span style="background: #e3f2fd; color: #1976d2; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">{}</span>',
+            ', '.join(goal_names)
+        )
+    fitness_goals_display.short_description = 'Fitness Goals'
 
 
 @admin.register(MealEmbedding)

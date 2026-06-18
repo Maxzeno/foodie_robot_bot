@@ -36,6 +36,7 @@ from api.models.meal import Meal
 from api.models.meal_preference import MealPreference
 from api.models.recommendation import Recommendation
 from api.models.review import Review
+from api.models.address import DeliveryAddress
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class MealRecommendationService:
     EPSILON_ESTABLISHED_USER = 0.10    # 10% exploration for established users (> 20 orders)
 
     # === QUERY LIMITS ===
-    MAX_CANDIDATE_MEALS = 150           # Limit initial query size
+    MAX_CANDIDATE_MEALS = 300           # Limit initial query size
     COLLABORATIVE_SIMILAR_USERS = 10    # Number of similar users to consider
 
     # === LOOKBACK WINDOWS ===
@@ -95,6 +96,12 @@ class MealRecommendationService:
     RECENCY_LOOKBACK_DAYS = 7           # How far back to check for recent meals (reduced from 14)
     FREQUENCY_LOOKBACK_DAYS = 14        # Window for frequency calculation (reduced from 30)
     SEMANTIC_SIMILARITY_LOOKBACK_DAYS = 3  # How far back to check for similar meal names (reduced from 7)
+
+    # === DISTANCE PENALTY ===
+    # Penalize meals from restaurants far from user's delivery address
+    DISTANCE_FREE_ZONE_KM = 5.0         # No penalty within this distance
+    DISTANCE_PENALTY_PER_BAND = 5.0    # Penalty points per 5km band beyond free zone
+    DISTANCE_BAND_SIZE_KM = 5.0         # Size of each penalty band
 
     def __init__(self):
         """Initialize the meal recommendation service."""
@@ -143,6 +150,21 @@ class MealRecommendationService:
         """
         logger.info(f"Getting recommendations for user {user.id} ({num_recommendations_per_period} per period)")
 
+        # === CHECK USER DELIVERY ADDRESS ===
+        # User must have a delivery address to get recommendations
+        user_location = self._get_user_location(user)
+        if user_location is None:
+            logger.warning(f"No delivery address found for user {user.id}. Cannot generate recommendations.")
+            return {
+                "morning": [],
+                "afternoon": [],
+                "evening": [],
+                "no_results_reason": {
+                    "primary_reason": "no_delivery_address",
+                    "message": "User has no delivery address"
+                }
+            }
+
         # === LAYER 1: HARD CONSTRAINT FILTERING ===
         # Get meals already recommended today to prevent same-day duplicates
         today_meal_ids = self._get_today_recommended_meals(user)
@@ -178,6 +200,7 @@ class MealRecommendationService:
         # === LAYER 2: SMART SCORING SYSTEM ===
         # Gather user data for scoring
         user_data = self._gather_user_data(user)
+        user_data['user_location'] = user_location  # Add user location for distance penalty
 
         # Score all available meals
         scored_meals = []
@@ -271,6 +294,7 @@ class MealRecommendationService:
             'total_meals_in_city': 0,
             'filtered_by_unavailable': 0,
             'filtered_by_inactive_restaurant': 0,
+            'filtered_by_no_restaurant_location': 0,
             'filtered_by_hated': 0,
             'filtered_by_stock': 0,
             'filtered_by_restaurant_hours': 0,
@@ -291,6 +315,14 @@ class MealRecommendationService:
             city=user.city,
             restaurant__inactive=False  # Only active restaurants
         ).select_related('restaurant', 'city', 'city__currency')
+
+        # === LOCATION FILTER ===
+        # Exclude meals from restaurants without coordinates (required for distance calculation)
+        if track_filter_reasons:
+            before_location = queryset.count()
+        queryset = queryset.exclude(restaurant__point__isnull=True)
+        if track_filter_reasons:
+            filter_stats['filtered_by_no_restaurant_location'] = before_location - queryset.count()
 
         # === SAFETY FILTERS ===
 
@@ -418,6 +450,7 @@ class MealRecommendationService:
             ('meal_hours', filter_stats.get('filtered_by_meal_hours', 0)),
             ('hated', filter_stats.get('filtered_by_hated', 0)),
             ('stock', filter_stats.get('filtered_by_stock', 0)),
+            ('no_restaurant_location', filter_stats.get('filtered_by_no_restaurant_location', 0)),
         ]
 
         # Sort by count (descending)
@@ -456,6 +489,9 @@ class MealRecommendationService:
             city=user.city,
             restaurant__inactive=False
         ).select_related('restaurant', 'city', 'city__currency')
+
+        # Exclude restaurants without coordinates (required for distance calculation)
+        queryset = queryset.exclude(restaurant__point__isnull=True)
 
         # Only apply exclusions for today's already recommended meals
         if exclude_meal_ids:
@@ -563,6 +599,11 @@ class MealRecommendationService:
         score -= self._calculate_recency_penalty(meal, user_data['recent_meal_history'])
         score -= self._calculate_frequency_penalty(meal, user_data['meal_frequency'])
         score -= self._calculate_semantic_similarity_penalty(meal, user_data['recent_meal_keywords'])
+
+        # === DISTANCE PENALTY ===
+        user_location = user_data.get('user_location')
+        if user_location:
+            score -= self._calculate_distance_penalty(meal, user_location)
 
         # === EXPLORATION BONUS ===
         score += self._score_exploration()
@@ -1468,3 +1509,130 @@ class MealRecommendationService:
             return boost
 
         return 0.0
+
+    # ============================================================================
+    # LOCATION-BASED DISTANCE PENALTY
+    # ============================================================================
+
+    def _get_user_location(self, user) -> Optional[Dict]:
+        """
+        Get user's most recent delivery address coordinates.
+
+        Args:
+            user: User instance
+
+        Returns:
+            GeoJSON Point dict or None if no delivery address exists
+            Example: {"type": "Point", "coordinates": [longitude, latitude]}
+        """
+        try:
+            latest_address = DeliveryAddress.objects.filter(
+                user=user
+            ).order_by('-created_at').first()
+
+            if latest_address and latest_address.point:
+                return latest_address.point
+
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching user location: {e}")
+            return None
+
+    def _calculate_haversine_distance(
+        self,
+        point1: Dict,
+        point2: Dict
+    ) -> Optional[float]:
+        """
+        Calculate the Haversine distance between two GeoJSON points.
+
+        The Haversine formula calculates the great-circle distance between
+        two points on a sphere given their longitudes and latitudes.
+
+        Args:
+            point1: GeoJSON Point {"type": "Point", "coordinates": [lon, lat]}
+            point2: GeoJSON Point {"type": "Point", "coordinates": [lon, lat]}
+
+        Returns:
+            Distance in kilometers, or None if points are invalid
+        """
+        try:
+            # Extract coordinates (GeoJSON format: [longitude, latitude])
+            lon1, lat1 = point1['coordinates']
+            lon2, lat2 = point2['coordinates']
+
+            # Earth's radius in kilometers
+            R = 6371.0
+
+            # Convert degrees to radians
+            lat1_rad = math.radians(lat1)
+            lat2_rad = math.radians(lat2)
+            delta_lat = math.radians(lat2 - lat1)
+            delta_lon = math.radians(lon2 - lon1)
+
+            # Haversine formula
+            a = (math.sin(delta_lat / 2) ** 2 +
+                 math.cos(lat1_rad) * math.cos(lat2_rad) *
+                 math.sin(delta_lon / 2) ** 2)
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+            distance = R * c
+            return distance
+
+        except (KeyError, TypeError, ValueError) as e:
+            logger.warning(f"Error calculating distance: {e}")
+            return None
+
+    def _calculate_distance_penalty(
+        self,
+        meal: Meal,
+        user_location: Dict
+    ) -> float:
+        """
+        Calculate penalty based on distance from user to restaurant.
+
+        Penalty formula:
+        - 0-5 km: No penalty (free zone)
+        - 5-10 km: -10 points
+        - 10-15 km: -20 points
+        - 15-20 km: -30 points
+        - ... continues with -10 points per 5km band
+
+        Args:
+            meal: Meal instance (must have restaurant with point)
+            user_location: User's GeoJSON Point from delivery address
+
+        Returns:
+            Penalty score (0 or negative value)
+        """
+        # Get restaurant location
+        restaurant_point = meal.restaurant.point if meal.restaurant else None
+
+        if not restaurant_point:
+            # This shouldn't happen as we filter out restaurants without points
+            # But just in case, return 0 (no penalty)
+            return 0.0
+
+        # Calculate distance
+        distance_km = self._calculate_haversine_distance(user_location, restaurant_point)
+
+        if distance_km is None:
+            return 0.0
+
+        # No penalty within free zone
+        if distance_km <= self.DISTANCE_FREE_ZONE_KM:
+            return 0.0
+
+        # Calculate penalty: for each 5km band beyond free zone, add 10 points penalty
+        # e.g., 7km -> band 1 -> 10 points
+        # e.g., 12km -> band 2 -> 20 points
+        excess_distance = distance_km - self.DISTANCE_FREE_ZONE_KM
+        num_bands = math.ceil(excess_distance / self.DISTANCE_BAND_SIZE_KM)
+        penalty = num_bands * self.DISTANCE_PENALTY_PER_BAND
+
+        logger.debug(
+            f"Distance penalty for '{meal.name}' from '{meal.restaurant.name}': "
+            f"{distance_km:.1f}km -> -{penalty:.0f} points"
+        )
+
+        return penalty
