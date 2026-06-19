@@ -146,39 +146,22 @@ def notify_rider_of_assignment(order: Order, rider: Rider):
         order_data = {
             'id': order.id,
             'code': order.code,
+            'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
+            'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
+            'restaurantName': order.meal.restaurant.name,
+            'restaurantPhone': order.meal.restaurant.phone,
+            'pickupAddress': order.pickup_street_address or '',
+            'dropoffAddress': order.dropoff_street_address or '',
+            'customerName': order.user.get_full_name() or order.user.username or '',
+            'customerPhone': order.user.phone or '',
+            'deliveryFee': float(order.delivery_fee),
             'status': order.status,
-            'meal': {
-                'id': order.meal.id,
-                'name': order.meal.name,
-                'price': float(order.meal_price),
-                'restaurant': {
-                    'name': order.meal.restaurant.name,
-                    'address': order.meal.restaurant.address,
-                }
-            },
-            'pickup_street_address': order.pickup_street_address,
-            # 'pickup_point': order.pickup_point,
-            'dropoff_street_address': order.dropoff_street_address,
-            # 'dropoff_point': order.dropoff_point,
-
-            'pickupAddressLink': order.pickup_point_link(),
-            'dropoffAddressLink': order.dropoff_point_link(),
-
-            'quantity': order.quantity,
-            'total_price': float(order.total_price),
-            'delivery_fee': float(order.delivery_fee),
-            'currency': {
-                'code': order.currency.code,
-                'symbol': order.currency.symbol
-            },
-            'note': order.note,
-            'confirmation_code': order.confirmation_code,
-            'rider_assigned_at': order.rider_assigned_at.isoformat() if order.rider_assigned_at else None,
-            'created_at': order.created_at.isoformat() if order.created_at else None,
-            'user': {
-                'name': order.user.get_full_name() or order.user.username or '',
-                'phone': order.user.phone,
-            }
+            'mealName': order.meal.name,
+            'mealQuantity': order.quantity,
+            'mealPrice': float(order.meal_price),
+            'paymentCompleted': order.paid,
+            'createdAt': order.created_at,
+            'completedAt': order.delivered_at
         }
 
         async_to_sync(channel_layer.group_send)(

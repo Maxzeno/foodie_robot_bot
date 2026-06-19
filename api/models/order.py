@@ -98,7 +98,7 @@ class Order(BaseModel):
             coordinates = self.pickup_point.get('coordinates', [])
             if len(coordinates) == 2:
                 lng, lat = coordinates
-                return f"https://www.google.com/maps?q={lat},{lng}"
+                return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}&travelmode=driving"
         return None
     
 
@@ -107,7 +107,7 @@ class Order(BaseModel):
             coordinates = self.dropoff_point.get('coordinates', [])
             if len(coordinates) == 2:
                 lng, lat = coordinates
-                return f"https://www.google.com/maps?q={lat},{lng}"
+                return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}&travelmode=driving"
         return None
 
     class Meta:

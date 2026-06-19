@@ -77,7 +77,7 @@ def restaurant_payment(request, payload: RestaurantPaymentRequest):
             return {
                 'details': 'Payment successful',
                 'transactionId': order.restaurant_payment_transaction_id,
-                'orderId': order.code,
+                'orderId': order.id,
                 'amount': float(order.meal_price),
                 'status': 'completed',
                 'paidAt': order.restaurant_payment_completed_at

@@ -66,6 +66,9 @@ class SimpleResponse(BaseModel):
 
 class OrderItemResponse(BaseModel):
     id: str
+    code: str
+    restaurantPaymentTransactionId: Optional[str] = None
+    restaurantPaymentCompletedAt: Optional[str] = None
     restaurantName: str
     restaurantPhone: str
     pickupAddress: str
@@ -98,6 +101,9 @@ class OrderHistoryResponse(BaseModel):
 
 class NewOrderResponse(BaseModel):
     id: str
+    code: str
+    restaurantPaymentTransactionId: Optional[str] = None
+    restaurantPaymentCompletedAt: Optional[str] = None
     restaurantName: str
     restaurantPhone: str
     pickupAddress: str

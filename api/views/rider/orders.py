@@ -63,7 +63,10 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
     # Serialize
     order_items = [
         {
-            'id': order.code,
+            'id': order.id,
+            'code': order.code,
+            'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
+            'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
             'restaurantName': order.meal.restaurant.name,
             'restaurantPhone': order.meal.restaurant.phone,
             'pickupAddress': order.pickup_street_address or '',
@@ -72,7 +75,6 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
             'status': order.status,
-            # 'confirmationCode': order.confirmation_code,
             'mealName': order.meal.name,
             'mealQuantity': order.quantity,
             'mealPrice': float(order.meal_price),
@@ -91,7 +93,7 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
 
 @router.get("/{order_id}", auth=jwt_auth, response={200: OrderItemResponse, 404: SimpleResponse})
 @require_rider
-def order_detail(request, order_id: str):
+def order_detail(request, order_id: int):
     """Get detailed order information."""
     try:
         rider = request.user.rider_profile
@@ -101,10 +103,14 @@ def order_detail(request, order_id: str):
     try:
         order = Order.objects.select_related(
             'meal', 'meal__restaurant', 'user', 'currency'
-        ).get(code=order_id, rider=rider)
+        ).get(id=order_id, rider=rider)
 
         return {
-            'id': order.code,
+            'id': order.id,
+            'code': order.code,
+            'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
+            'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
+
             'restaurantName': order.meal.restaurant.name,
             'restaurantPhone': order.meal.restaurant.phone,
             'pickupAddress': order.pickup_street_address or '',
@@ -164,7 +170,11 @@ def get_new_order(request):
         return {'details': 'No orders available at the moment'}
 
     return {
-        'id': order.code,
+        'id': order.id,
+        'code': order.code,
+        'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
+        'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
+
         'restaurantName': order.meal.restaurant.name,
         'restaurantPhone': order.meal.restaurant.phone,
 
@@ -214,7 +224,7 @@ def accept_order(request, order_id: int):
 
         return {
             'details': 'Order accepted successfully',
-            'orderId': order.code,
+            'orderId': order.id,
             'status': order.status
         }
 
@@ -224,7 +234,7 @@ def accept_order(request, order_id: int):
 
 @router.put("/{order_id}/status", auth=jwt_auth, response={200: UpdateStatusResponse, 400: SimpleResponse, 404: SimpleResponse})
 @require_rider
-def update_order_status(request, order_id: str, payload: UpdateStatusRequest):
+def update_order_status(request, order_id: int, payload: UpdateStatusRequest):
     """Update order status (atRestaurant, onTheWay, delivered)."""
     try:
         rider = request.user.rider_profile
@@ -232,7 +242,7 @@ def update_order_status(request, order_id: str, payload: UpdateStatusRequest):
         raise HttpError(400, "Rider profile not found")
 
     try:
-        order = Order.objects.get(code=order_id, rider=rider)
+        order = Order.objects.get(id=order_id, rider=rider)
 
         # Validate status transition
         try:
@@ -246,7 +256,7 @@ def update_order_status(request, order_id: str, payload: UpdateStatusRequest):
 
         return {
             'details': 'Order status updated successfully',
-            'orderId': order.code,
+            'orderId': order.id,
             'status': order.status,
             'updatedAt': timezone.now()
         }
@@ -258,7 +268,7 @@ def update_order_status(request, order_id: str, payload: UpdateStatusRequest):
 @router.post("/{order_id}/confirm-delivery", auth=jwt_auth, response={200: ConfirmDeliveryResponse, 400: SimpleResponse, 404: SimpleResponse})
 @require_rider
 @transaction.atomic
-def confirm_delivery(request, order_id: str, payload: ConfirmDeliveryRequest):
+def confirm_delivery(request, order_id: int, payload: ConfirmDeliveryRequest):
     """Confirm delivery using customer's 4-digit confirmation code."""
     try:
         check_rate_limit(payload.email, endpoint=f"{order_id}/confirm-delivery", max_requests=5, window_seconds=60)
@@ -271,7 +281,7 @@ def confirm_delivery(request, order_id: str, payload: ConfirmDeliveryRequest):
         raise HttpError(400, "Rider profile not found")
 
     try:
-        order = Order.objects.select_for_update().get(code=order_id, rider=rider)
+        order = Order.objects.select_for_update().get(id=order_id, rider=rider)
 
         # Verify confirmation code
         if order.confirmation_code != payload.confirmationCode:
@@ -287,7 +297,7 @@ def confirm_delivery(request, order_id: str, payload: ConfirmDeliveryRequest):
 
         return {
             'details': 'Delivery confirmed successfully',
-            'orderId': order.code,
+            'orderId': order.id,
             'status': order.status,
             'deliveryFee': float(order.delivery_fee),
             'completedAt': order.delivered_at
