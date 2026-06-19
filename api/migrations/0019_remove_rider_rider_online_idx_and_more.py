@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             model_name="user",
             name="roles",
             field=models.JSONField(
-                default=api.models.user.User.default_roles,
+                default=list,  # Default to empty list
                 help_text="List of user roles: ['customer'], ['rider'], ['company'], or combinations",
             ),
         ),

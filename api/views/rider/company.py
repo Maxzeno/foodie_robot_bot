@@ -10,7 +10,7 @@ from api.schemas.rider_schemas import (
     WithdrawRequest, WithdrawResponse,
     WithdrawalHistoryResponse
 )
-from api.models.company import Company
+from api.models.rider import Rider
 from api.models.withdrawal import Withdrawal, WithdrawalStatus
 from api.models.user_balance import UserBalance
 from api.models.currency import Currency
@@ -27,9 +27,9 @@ router = Router(tags=["Company Balance & Withdrawal"])
 def get_company_balance(request):
     """Get current balance for company account."""
     try:
-        company = request.user.company_profile
-    except Company.DoesNotExist:
-        raise HttpError(400, "Company profile not found")
+        rider = request.user.rider_profile
+    except Rider.DoesNotExist:
+        raise HttpError(400, "Rider profile not found")
 
     # Get default currency (NGN)
     currency = Currency.objects.filter(code='NGN').first()
@@ -64,9 +64,9 @@ def get_company_balance(request):
 def withdraw_funds(request, payload: WithdrawRequest):
     """Initiate withdrawal of company earnings."""
     try:
-        company = request.user.company_profile
-    except Company.DoesNotExist:
-        raise HttpError(400, "Company profile not found")
+        rider = request.user.rider_profile
+    except Rider.DoesNotExist:
+        raise HttpError(400, "Rider profile not found")
 
     # Get default currency
     currency = Currency.objects.filter(code='NGN').first()

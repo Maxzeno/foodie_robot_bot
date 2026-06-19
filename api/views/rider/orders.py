@@ -109,11 +109,14 @@ def order_detail(request, order_id: str):
             'restaurantPhone': order.meal.restaurant.phone,
             'pickupAddress': order.pickup_street_address or '',
             'dropoffAddress': order.dropoff_street_address or '',
+
+            'pickupAddressLink': order.pickup_point_link(),
+            'dropoffAddressLink': order.dropoff_point_link(),
+
             'customerName': order.user.get_full_name() or order.user.username or '',
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
             'status': order.status,
-            # 'confirmationCode': order.confirmation_code,
             'mealName': order.meal.name,
             'mealQuantity': order.quantity,
             'mealPrice': float(order.meal_price),
@@ -160,9 +163,6 @@ def get_new_order(request):
     if not order:
         return {'details': 'No orders available at the moment'}
 
-    pickup_lng, pickup_lat = _get_coords(order.pickup_point)
-    dropoff_lng, dropoff_lat = _get_coords(order.dropoff_point)
-
     return {
         'id': order.code,
         'restaurantName': order.meal.restaurant.name,
@@ -170,23 +170,26 @@ def get_new_order(request):
 
         'pickupAddress': order.pickup_street_address or '',
         'dropoffAddress': order.dropoff_street_address or '',
-        'pickupAddressLink': f"https://www.google.com/maps?q={pickup_lat},{pickup_lng}",
-        'dropoffAddressLink': f"https://www.google.com/maps?q={dropoff_lat},{dropoff_lng}",
+
+        'pickupAddressLink': order.pickup_point_link(),
+        'dropoffAddressLink': order.dropoff_point_link(),
 
         'customerName': order.user.get_full_name() or order.user.username or '',
         'customerPhone': order.user.phone or '',
         'deliveryFee': float(order.delivery_fee),
-        # 'confirmationCode': order.confirmation_code or '',
         'mealName': order.meal.name,
         'mealQuantity': order.quantity,
         'mealPrice': float(order.meal_price),
+        'paymentCompleted': order.paid,
+        'createdAt': order.created_at,
+        'completedAt': order.delivered_at
     }
 
 
 @router.post("/{order_id}/accept", auth=jwt_auth, response={200: AcceptOrderResponse, 409: SimpleResponse, 404: SimpleResponse})
 @require_rider
 @transaction.atomic
-def accept_order(request, order_id: str):
+def accept_order(request, order_id: int):
     """Rider accepts a new order."""
     try:
         rider = request.user.rider_profile
@@ -196,17 +199,16 @@ def accept_order(request, order_id: str):
     try:
         # Lock order to prevent race condition
         order = Order.objects.select_for_update().get(
-            code=order_id,
+            id=order_id,
+            rider=rider,
             status=OrderStatus.PENDING,
             paid=True
         )
 
         # Check if already assigned
-        if order.rider is not None:
-            raise HttpError(409, "This order has been accepted by another rider")
+        if order.status == OrderStatus.ACCEPTED:
+            raise HttpError(409, "This order has already been accepted")
 
-        # Assign to rider
-        order.rider = rider
         order.status = OrderStatus.ACCEPTED
         order.save()
 

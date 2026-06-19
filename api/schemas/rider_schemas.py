@@ -70,11 +70,12 @@ class OrderItemResponse(BaseModel):
     restaurantPhone: str
     pickupAddress: str
     dropoffAddress: str
+    pickupAddressLink: str
+    dropoffAddressLink: str
     customerName: str
     customerPhone: str
     deliveryFee: float
     status: str
-    confirmationCode: Optional[str] = None
     mealName: str
     mealQuantity: int
     mealPrice: float
@@ -101,15 +102,17 @@ class NewOrderResponse(BaseModel):
     restaurantPhone: str
     pickupAddress: str
     dropoffAddress: str
+    pickupAddressLink: str
+    dropoffAddressLink: str
     customerName: str
     customerPhone: str
     deliveryFee: float
-    confirmationCode: str
     mealName: str
     mealQuantity: int
     mealPrice: float
-    estimatedDistance: str
-    estimatedDuration: str
+    paymentCompleted: bool
+    createdAt: datetime
+    completedAt: Optional[datetime] = None
 
 
 class AcceptOrderResponse(BaseModel):
@@ -130,7 +133,7 @@ class UpdateStatusResponse(BaseModel):
 
 
 class ConfirmDeliveryRequest(BaseModel):
-    confirmationCode: str  # 4 digits
+    confirmationCode: str
 
 
 class ConfirmDeliveryResponse(BaseModel):

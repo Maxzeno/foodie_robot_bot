@@ -2,7 +2,6 @@ from api.models.user import *
 from api.models.meal import *
 from api.models.order import *
 from api.models.rider import *
-from api.models.company import *
 from api.models.refresh_token import *
 from api.models.otp_code import *
 from api.models.recommendation import *

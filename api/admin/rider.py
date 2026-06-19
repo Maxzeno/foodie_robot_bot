@@ -16,7 +16,8 @@ class RiderAdmin(admin.ModelAdmin):
     list_filter = ['company', 'created_at']
     search_fields = [
         'user__code', 'user__phone', 'user__email',
-        'user__first_name', 'user__last_name', 'company__name'
+        'user__first_name', 'user__last_name', 'company_name',
+        'company__user__phone', 'company__user__email'
     ]
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['-created_at']
@@ -25,7 +26,7 @@ class RiderAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Rider Info', {
-            'fields': ('user', 'company')
+            'fields': ('user', 'company', 'company_name')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -35,7 +36,7 @@ class RiderAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related('user', 'company', 'company__user')
+        return qs.select_related('user', 'company__user')
 
     def rider_info(self, obj):
         name = f"{obj.user.first_name or ''} {obj.user.last_name or ''}".strip()
@@ -49,10 +50,20 @@ class RiderAdmin(admin.ModelAdmin):
     rider_info.short_description = 'Rider'
 
     def company_info(self, obj):
-        if obj.company:
+        # Check if this rider has a company name (is a company)
+        if obj.company_name:
+            managed_count = obj.managed_riders.count()
             return format_html(
-                '<span style="color: #007bff;">{}</span>',
-                obj.company.name
+                '<span style="color: #007bff; font-weight: bold;">{}</span><br>'
+                '<span style="color: #666; font-size: 11px;">Manages {} rider(s)</span>',
+                obj.company_name, managed_count
+            )
+        # Check if this rider belongs to another rider (company)
+        elif obj.company:
+            company_name = obj.company.company_name or f"{obj.company.user.email or obj.company.user.phone}"
+            return format_html(
+                '<span style="color: #007bff;">Managed by: {}</span>',
+                company_name
             )
         return format_html(
             '<span style="color: #6c757d; font-style: italic;">Independent</span>'

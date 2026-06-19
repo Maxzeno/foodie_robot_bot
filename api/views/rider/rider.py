@@ -39,6 +39,7 @@ def get_rider_profile(request):
     currency_symbol = "₦"
     if user.city and user.city.currency:
         currency_code = user.city.currency.code
+        currency_symbol = user.city.currency.symbol
     
     # Get rider balance
     currency = Currency.objects.filter(code=currency_code).first()
@@ -55,11 +56,11 @@ def get_rider_profile(request):
         'name': user.get_full_name() or user.username or '',
         'email': user.email,
         'phone': user.phone or '',
+        'role': 'company' if user.is_company else 'rider',
         'balance': balance,
         'isOnline': user.is_online,
         'city': user.city.name if user.city else None,
         'city_id': user.city.id if user.city else None,
         'currency': currency_code,
         'currency_symbol': currency_symbol,
-        'role': 'company' if 'company' in user.roles else 'rider' if 'rider' in user.roles else 'customer'
     }

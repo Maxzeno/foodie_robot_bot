@@ -13,6 +13,7 @@ from api.models.order import Order
 
 from api.models.settings import AppSettings
 from api.models.user_balance import UserBalance
+from api.tasks import assign_rider_to_order
 import urllib.parse
 
 router = Router(tags=["Webhook"])
@@ -147,6 +148,9 @@ def payment_webhook(request):
         order.amount_paid = request_amount
         order.paid = True
         order.save()
+
+        # Trigger auto-assignment of rider to the paid order
+        assign_rider_to_order(order.id)
 
         # Check if first order paid for and if referred, give referral bonus
         # Use fresh query to avoid cached counts from related manager

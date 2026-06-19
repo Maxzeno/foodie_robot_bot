@@ -52,6 +52,13 @@ class Order(BaseModel):
         related_name='orders'
     )
 
+    # Track when rider was assigned for timeout logic
+    rider_assigned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when rider was assigned to this order"
+    )
+
     # DEPRECATED: Old rider string fields (kept for backward compatibility)
     rider_note = models.CharField(max_length=500, null=True, blank=True)
     rider_name = models.CharField(max_length=250, null=True, blank=True)
@@ -86,6 +93,23 @@ class Order(BaseModel):
         blank=True
     )
 
+    def pickup_point_link(self):
+        if self.pickup_point:
+            coordinates = self.pickup_point.get('coordinates', [])
+            if len(coordinates) == 2:
+                lng, lat = coordinates
+                return f"https://www.google.com/maps?q={lat},{lng}"
+        return None
+    
+
+    def dropoff_point_link(self):
+        if self.dropoff_point:
+            coordinates = self.dropoff_point.get('coordinates', [])
+            if len(coordinates) == 2:
+                lng, lat = coordinates
+                return f"https://www.google.com/maps?q={lat},{lng}"
+        return None
+
     class Meta:
         indexes = [
             # Order history queries (very frequent)
@@ -98,6 +122,8 @@ class Order(BaseModel):
             models.Index(fields=['code'], name='order_code_idx'),
             # Status filtering
             models.Index(fields=['status', '-created_at'], name='order_status_created_idx'),
+            # Rider assignment timeout queries
+            models.Index(fields=['rider', 'status', 'rider_assigned_at'], name='order_rider_timeout_idx'),
         ]
 
     def clean(self):

@@ -27,7 +27,8 @@ class AuthBearer(HttpBearer):
         """
         try:
             payload = JWTAuth.decode_access_token(token)
-            user = User.objects.get(id=payload['user_id'])
+            # Eagerly load rider_profile to avoid N+1 queries
+            user = User.objects.select_related('rider_profile').get(id=payload['user_id'])
 
             # Attach user and payload to request
             request.user = user

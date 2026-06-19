@@ -7,11 +7,11 @@ from django.db.models import Count, Max, Q
 from django.utils.html import format_html
 from django.utils import timezone
 
-from api.models.user import User, UserRole
+from api.models.user import User
 from api.models.message import RoleChoices
 
 
-class RolesWidget(forms.CheckboxSelectMultiple):
+class _DEPRECATED_RolesWidget(forms.CheckboxSelectMultiple):
     """Custom widget for displaying roles as styled checkboxes."""
 
     def __init__(self, *args, **kwargs):
@@ -74,38 +74,11 @@ class RolesWidget(forms.CheckboxSelectMultiple):
 
 
 class UserAdminForm(forms.ModelForm):
-    """Custom form for User admin with checkbox roles field."""
-
-    roles = forms.MultipleChoiceField(
-        choices=[(role.value, role.label) for role in UserRole],
-        widget=RolesWidget(),
-        required=False,
-        help_text="Select one or more roles for this user"
-    )
+    """Custom form for User admin."""
 
     class Meta:
         model = User
         fields = '__all__'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Pre-populate roles from the JSONField
-        if self.instance and self.instance.pk:
-            current_roles = self.instance.roles or []
-            self.initial['roles'] = current_roles
-        elif not self.instance.pk:
-            # Default to 'customer' for new users
-            self.initial['roles'] = ['customer']
-
-    def save(self, commit=True):
-        """Save roles as JSON array."""
-        user = super().save(commit=False)
-        # Convert selected roles back to list for JSONField
-        user.roles = self.cleaned_data.get('roles', [])
-        if commit:
-            user.save()
-            self.save_m2m()
-        return user
 
 
 @admin.register(User)
@@ -119,7 +92,7 @@ class UserAdmin(admin.ModelAdmin):
         js = []
 
     list_display = [
-        'code', 'phone', 'city', 'roles_badge', 'referral_info', 'profile_complete_badge',
+        'code', 'phone', 'city', 'user_type_badge', 'referral_info', 'profile_complete_badge',
         'order_count', 'message_count', 'is_active_badge', 'is_blocked_badge', 'created_at'
     ]
     list_filter = ['city', 'gender', 'is_active', 'is_blocked', 'created_at']
@@ -145,7 +118,7 @@ class UserAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Status & Permissions', {
-            'fields': ('roles', 'is_active', 'is_blocked', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_blocked', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -239,26 +212,29 @@ class UserAdmin(admin.ModelAdmin):
         )
     profile_complete_badge.short_description = 'Profile'
 
-    def roles_badge(self, obj):
-        if not obj.roles:
-            return format_html(
-                '<span style="background: #6c757d; color: white; padding: 3px 8px; '
-                'border-radius: 3px; font-size: 11px;">None</span>'
-            )
-
-        role_colors = {
-            'customer': '#007bff',  # Blue
-            'rider': '#28a745',     # Green
-            'company': '#6f42c1'    # Purple
-        }
-
+    def user_type_badge(self, obj):
+        """Show user type based on model relationships."""
         badges = []
-        for role in obj.roles:
-            color = role_colors.get(role, '#6c757d')
-            badges.append(
-                f'<span style="background: {color}; color: white; padding: 3px 8px; '
-                f'border-radius: 3px; font-size: 11px; margin-right: 3px;">{role.title()}</span>'
-            )
+
+        # Everyone is a customer by default
+        badges.append(
+            '<span style="background: #007bff; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px; margin-right: 3px;">Customer</span>'
+        )
+
+        # Check if rider
+        if obj.is_rider:
+            # Check if company
+            if obj.is_company:
+                badges.append(
+                    '<span style="background: #6f42c1; color: white; padding: 3px 8px; '
+                    'border-radius: 3px; font-size: 11px; margin-right: 3px;">Company</span>'
+                )
+            else:
+                badges.append(
+                    '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                    'border-radius: 3px; font-size: 11px; margin-right: 3px;">Rider</span>'
+                )
 
         return format_html(''.join(badges))
-    roles_badge.short_description = 'Roles'
+    user_type_badge.short_description = 'Type'

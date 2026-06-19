@@ -83,6 +83,7 @@ CLOUDINARY_STORAGE = {
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -90,6 +91,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "channels",
     "corsheaders",
     "cloudinary_storage",
     "cloudinary",
@@ -127,6 +129,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "foodie_robot.wsgi.application"
+ASGI_APPLICATION = "foodie_robot.asgi.application"
 
 
 # Database
@@ -321,6 +324,15 @@ HUEY = RedisHuey(
 # - Scheduler check: 1 per 60 seconds (instead of 60/min)
 # - Total: ~2-3 commands/minute instead of ~260/minute
 
+# Channels Configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL or "redis://localhost:6379/0"],
+        },
+    },
+}
 
 # JWT Configuration for Rider/Company API
 JWT_SECRET_KEY = config('JWT_SECRET_KEY', default=SECRET_KEY)

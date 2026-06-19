@@ -42,8 +42,8 @@ def login(request, payload: LoginRequest):
     except User.DoesNotExist:
         raise HttpError(401, "Invalid email or password")
 
-    # Check if user has rider or company role
-    if not ('rider' in user.roles or 'company' in user.roles):
+    # Check if user has rider profile
+    if not user.is_rider:
         raise HttpError(403, "You don't have permission to access this resource")
 
     # Generate tokens
@@ -60,8 +60,15 @@ def login(request, payload: LoginRequest):
         user_balance = UserBalance.get_balance(user, currency)
         balance = float(user_balance.amount)
 
-    # Determine primary role
-    primary_role = 'rider' if 'rider' in user.roles else 'company'
+    # All authenticated users in this endpoint are riders
+    # Companies are just riders with company capabilities
+    primary_role = 'company' if user.is_company else 'rider'
+    
+    currency_code = 'NGN'
+    currency_symbol = "₦"
+    if user.city and user.city.currency:
+        currency_code = user.city.currency.code
+        currency_symbol = user.city.currency.symbol
 
     return {
         'user': {
@@ -70,7 +77,12 @@ def login(request, payload: LoginRequest):
             'email': user.email,
             'phone': user.phone,
             'role': primary_role,
-            'balance': balance
+            'balance': balance,
+            'isOnline': user.is_online,
+            'city': user.city.name if user.city else None,
+            'city_id': user.city.id if user.city else None,
+            'currency': currency_code,
+            'currency_symbol': currency_symbol,
         },
         'accessToken': access_token,
         'refreshToken': refresh_token

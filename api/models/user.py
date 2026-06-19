@@ -21,26 +21,12 @@ class GenderChoices(models.TextChoices):
     FEMALE = 'female', 'Female'
 
 
-class UserRole(models.TextChoices):
-    CUSTOMER = 'customer', 'Customer'
-    RIDER = 'rider', 'Rider'
-    COMPANY = 'company', 'Company'
-
-
 class User(AbstractUser, BaseModel):
     email = models.EmailField(unique=True, null=True, blank=True)
     password = models.CharField(max_length=128, null=True, blank=True)
     username = models.CharField(unique=True, max_length=200, null=True, blank=True)
 
     code = models.CharField(max_length=100, unique=True, blank=True)
-    def default_roles():
-        return ["customer"]
-    
-    # Multiple roles support (customer, rider, company)
-    roles = models.JSONField(
-        default=default_roles,
-        help_text="List of user roles: ['customer'], ['rider'], ['company'], or combinations"
-    )
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     average_meal_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -125,21 +111,18 @@ class User(AbstractUser, BaseModel):
 
         super().save(*args, **kwargs)
 
-    def has_role(self, role):
-        """Check if user has a specific role."""
-        return role in self.roles
+    @property
+    def is_rider(self):
+        """Check if user is a rider (has rider profile)."""
+        try:
+            return self.rider_profile is not None
+        except:
+            return False
 
-    def add_role(self, role):
-        """Add a role to user."""
-        if role not in self.roles:
-            self.roles.append(role)
-            self.save()
-
-    def remove_role(self, role):
-        """Remove a role from user."""
-        if role in self.roles:
-            self.roles.remove(role)
-            self.save()
+    @property
+    def is_company(self):
+        """Check if user is a company (rider with company capabilities)."""
+        return self.is_rider and self.rider_profile.is_company
 
     def __str__(self):
         return f"{self.code} - {self.phone}"

@@ -19,7 +19,6 @@ class JWTAuth:
         payload = {
             'user_id': user.id,
             'email': user.email,
-            'roles': user.roles,
             'exp': datetime.utcnow() + timedelta(hours=settings.JWT_ACCESS_TOKEN_EXPIRY_HOURS),
             'iat': datetime.utcnow(),
             'type': 'access'
