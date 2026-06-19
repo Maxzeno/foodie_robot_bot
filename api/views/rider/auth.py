@@ -16,22 +16,22 @@ from api.models.user_balance import UserBalance
 from api.models.currency import Currency
 from api.utils.email import send_email
 from api.utils.jwt_auth import JWTAuth
-from api.utils.auth_bearer import jwt_auth
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
 from ninja.errors import HttpError
 
 router = Router(tags=["Rider Auth"])
 
 
-@router.post("/login", response={200: LoginResponse, 401: SimpleResponse, 403: SimpleResponse})
+@router.post("/login", response={200: LoginResponse, 401: SimpleResponse, 403: SimpleResponse}, auth=None)
 def login(request, payload: LoginRequest):
     """
-    Authenticate rider/company and return JWT tokens.
+    Authenticate rider and return JWT tokens.
     Rate limit: 5 requests per minute.
     """
     try:
-        check_rate_limit(payload.email, max_requests=5, window_seconds=60)
+        check_rate_limit(payload.email, endpoint='login', max_requests=5, window_seconds=60)
     except RateLimitExceeded as e:
+        print("Rate limit exceeded for login:", str(e))
         raise HttpError(429, str(e))
 
     # Authenticate user by email
@@ -89,7 +89,7 @@ def login(request, payload: LoginRequest):
     }
 
 
-@router.post("/logout", auth=jwt_auth, response={200: SimpleResponse})
+@router.post("/logout", response={200: SimpleResponse})
 def logout(request):
     """Invalidate refresh tokens for the user."""
     # Revoke all active refresh tokens
@@ -98,10 +98,10 @@ def logout(request):
         is_revoked=False
     ).update(is_revoked=True)
 
-    return {'details': 'Logged out successfully'}
+    return {'detail': 'Logged out successfully'}
 
 
-@router.post("/forgot-password/send-code", response={200: SendResetCodeResponse, 404: SimpleResponse})
+@router.post("/forgot-password/send-code", response={200: SendResetCodeResponse, 404: SimpleResponse}, auth=None)
 def send_reset_code(request, payload: SendResetCodeRequest):
     """
     Send 8-digit reset code to user's email.
@@ -128,12 +128,12 @@ def send_reset_code(request, payload: SendResetCodeRequest):
         html_body=f"Your password reset code is: {reset_code.code}\nIt expires at {reset_code.expires_at}.")
 
     return {
-        'details': 'Reset code sent to email',
+        'detail': 'Reset code sent to email',
         'codeExpiresAt': reset_code.expires_at
     }
 
 
-@router.post("/forgot-password/verify-code", response={200: SimpleResponse, 400: SimpleResponse})
+@router.post("/forgot-password/verify-code", response={200: SimpleResponse, 400: SimpleResponse}, auth=None)
 def verify_reset_code(request, payload: VerifyResetCodeRequest):
     """Verify 8-digit reset code."""
     try:
@@ -156,13 +156,13 @@ def verify_reset_code(request, payload: VerifyResetCodeRequest):
         reset_code.is_verified = True
         reset_code.save()
 
-        return {'details': 'Code verified successfully'}
+        return {'detail': 'Code verified successfully'}
 
     except (User.DoesNotExist, OTPcode.DoesNotExist):
         raise HttpError(400, "Reset code is invalid or expired")
 
 
-@router.post("/forgot-password/reset", response={200: SimpleResponse, 400: SimpleResponse})
+@router.post("/forgot-password/reset", response={200: SimpleResponse, 400: SimpleResponse}, auth=None)
 def reset_password(request, payload: ResetPasswordRequest):
     """Reset password using verified code."""
     try:
@@ -190,13 +190,13 @@ def reset_password(request, payload: ResetPasswordRequest):
         reset_code.is_used = True
         reset_code.save()
 
-        return {'details': 'Password reset successfully'}
+        return {'detail': 'Password reset successfully'}
 
     except (User.DoesNotExist, OTPcode.DoesNotExist):
         raise HttpError(400, "Reset code is invalid or expired")
 
 
-@router.post("/refresh-token", response={200: RefreshTokenResponse, 401: SimpleResponse})
+@router.post("/refresh-token", response={200: RefreshTokenResponse, 401: SimpleResponse}, auth=None)
 def refresh_token(request, payload: RefreshTokenRequest):
     """Get new access token using refresh token."""
     try:

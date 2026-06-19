@@ -3,15 +3,6 @@ from ninja.errors import HttpError
 
 
 def require_rider(func):
-    """
-    Decorator to check user is a rider (has rider profile).
-
-    Usage:
-        @router.get("/orders/new", auth=jwt_auth)
-        @require_rider
-        def get_new_order(request):
-            return {"message": "New order"}
-    """
     @wraps(func)
     def wrapper(request, *args, **kwargs):
         user = request.user
@@ -24,15 +15,6 @@ def require_rider(func):
 
 
 def require_company(func):
-    """
-    Decorator to check user is a company (rider with company capabilities).
-
-    Usage:
-        @router.get("/company/balance", auth=jwt_auth)
-        @require_company
-        def get_company_balance(request):
-            return {"balance": 1000}
-    """
     @wraps(func)
     def wrapper(request, *args, **kwargs):
         user = request.user

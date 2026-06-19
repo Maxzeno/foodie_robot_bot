@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from api.models.user import User
 from api.models.refresh_token import RefreshToken
+from ninja.errors import HttpError
 
 
 class JWTAuth:
@@ -63,9 +64,9 @@ class JWTAuth:
             )
             return payload
         except jwt.ExpiredSignatureError:
-            raise ValueError("Token has expired")
+            raise HttpError(401, "Token has expired. Try to login again.")
         except jwt.InvalidTokenError:
-            raise ValueError("Invalid token")
+            raise HttpError(401, "Invalid token. Try to login again.")
 
     @staticmethod
     def verify_refresh_token(token):

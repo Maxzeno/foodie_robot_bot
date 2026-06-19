@@ -11,14 +11,13 @@ from api.schemas.rider_schemas import (
 from api.models.rider import Rider
 from api.models.user_balance import UserBalance
 from api.models.currency import Currency
-from api.utils.auth_bearer import jwt_auth
 from api.utils.permissions import require_rider
 from ninja.errors import HttpError
 
 router = Router(tags=["Rider Status & Profile"])
 
 
-@router.put("/online-status", auth=jwt_auth, response={200: OnlineStatusResponse})
+@router.put("/online-status", response={200: OnlineStatusResponse})
 def toggle_online_status(request, payload: OnlineStatusRequest):
     # Update online status
     user = request.user
@@ -31,7 +30,7 @@ def toggle_online_status(request, payload: OnlineStatusRequest):
     }
 
 
-@router.get("/profile", auth=jwt_auth, response={200: RiderProfileResponse})
+@router.get("/profile", response={200: RiderProfileResponse})
 def get_rider_profile(request):
     user: User = request.user
 

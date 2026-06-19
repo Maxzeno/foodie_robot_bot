@@ -31,6 +31,7 @@ TRY_LOCAL_SETTING = config('TRY_LOCAL_SETTING', default=False, cast=bool)
 
 MAPBOX_TOKEN = config('MAPBOX_TOKEN')
 
+ZOHO_ZEPTOMAIL_KEY = config('ZOHO_ZEPTOMAIL_KEY')
 ALLOWED_HOSTS = []
 
 if DEBUG:

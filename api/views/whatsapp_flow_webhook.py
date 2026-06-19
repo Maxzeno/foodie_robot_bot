@@ -107,7 +107,7 @@ def flow_handler(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@router.post("/upload-public-key")
+@router.post("/upload-public-key", auth=None)
 def upload_public_key(request):
     if (not request.user or not request.user.is_authenticated) or not request.user.is_staff:
           return HttpResponse("Unauthorized", status=401)

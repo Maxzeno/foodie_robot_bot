@@ -10,8 +10,6 @@ from api.schemas.rider_schemas import (
 )
 from api.models.order import Order
 from api.models.rider import Rider
-from api.models.user_balance import UserBalance
-from api.utils.auth_bearer import jwt_auth
 from api.utils.permissions import require_rider
 from api.utils.bank_verification import verify_bank_account
 from ninja.errors import HttpError
@@ -19,7 +17,7 @@ from ninja.errors import HttpError
 router = Router(tags=["Rider Payments"])
 
 
-@router.post("/verify-account", auth=jwt_auth, response={200: VerifyAccountResponse, 404: SimpleResponse})
+@router.post("/verify-account", response={200: VerifyAccountResponse, 404: SimpleResponse})
 @require_rider
 def verify_account(request, payload: VerifyAccountRequest):
     """
@@ -36,15 +34,10 @@ def verify_account(request, payload: VerifyAccountRequest):
         raise HttpError(404, str(e))
 
 
-@router.post("/restaurant-payment", auth=jwt_auth, response={200: RestaurantPaymentResponse, 400: SimpleResponse, 404: SimpleResponse})
+@router.post("/restaurant-payment", response={200: RestaurantPaymentResponse, 400: SimpleResponse, 404: SimpleResponse})
 @require_rider
 @transaction.atomic
 def restaurant_payment(request, payload: RestaurantPaymentRequest):
-    """
-    Transfer meal payment to restaurant's account.
-
-    Deducts from rider/company balance and marks order as paid to restaurant.
-    """
     try:
         rider = request.user.rider_profile
     except Rider.DoesNotExist:
@@ -75,7 +68,6 @@ def restaurant_payment(request, payload: RestaurantPaymentRequest):
             order.save()
 
             return {
-                'details': 'Payment successful',
                 'transactionId': order.restaurant_payment_transaction_id,
                 'orderId': order.id,
                 'amount': float(order.meal_price),

@@ -180,7 +180,7 @@ def whatsapp_webhook(request):
 
 
 @csrf_exempt
-@router.get("/whatsapp")
+@router.get("/whatsapp", auth=None)
 def whatsapp_verify(request):
     mode = request.GET.get("hub.mode")
     token = request.GET.get("hub.verify_token")
@@ -193,7 +193,7 @@ def whatsapp_verify(request):
 
 
 @csrf_exempt
-@router.post("/whatsapp-test")
+@router.post("/whatsapp-test", auth=None)
 def whatsapp_test(request, text:str):
     sender_message_id = uuid.uuid4().hex
     found_msg = Message.objects.filter(message_id=sender_message_id).first()
@@ -214,7 +214,7 @@ def whatsapp_test(request, text:str):
 
 # # TODO: to be removed in production
 @csrf_exempt
-@router.get("/whatsapp-test-template")
+@router.get("/whatsapp-test-template", auth=None)
 def whatsapp_test_template(request):
     user = User.objects.get(phone="2349077745730")
     Message.bot_message_template("still_want_meal_recommendations", user=user)
@@ -222,7 +222,7 @@ def whatsapp_test_template(request):
 
 # # TODO: to be removed in production
 @csrf_exempt
-@router.get("/test-temp-recommendation")
+@router.get("/test-temp-recommendation", auth=None)
 def text_temp_recommendation(request):
     user = User.objects.filter(phone="2349077745730").first()
     print("User:", user)

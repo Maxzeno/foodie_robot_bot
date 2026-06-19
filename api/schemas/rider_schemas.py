@@ -1,6 +1,6 @@
 """Pydantic schemas for Rider/Company API endpoints."""
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
@@ -9,7 +9,7 @@ from decimal import Decimal
 # ============ AUTH SCHEMAS ============
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -20,6 +20,11 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     role: str  # Primary role for this session
     balance: float
+    isOnline: bool
+    currency: str
+    currency_symbol: str
+    city_id: int
+    city: str
 
 
 class LoginResponse(BaseModel):
@@ -29,7 +34,7 @@ class LoginResponse(BaseModel):
 
 
 class SendResetCodeRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class SendResetCodeResponse(BaseModel):
@@ -38,12 +43,12 @@ class SendResetCodeResponse(BaseModel):
 
 
 class VerifyResetCodeRequest(BaseModel):
-    email: EmailStr
+    email: str
     resetCode: str  # 8 digits
 
 
 class ResetPasswordRequest(BaseModel):
-    email: EmailStr
+    email: str
     resetCode: str
     newPassword: str
 
@@ -249,3 +254,16 @@ class RiderProfileResponse(BaseModel):
     currency_symbol: str
     city_id: int
     city: str
+
+
+# ============ BANK SCHEMAS ============
+
+class BankItem(BaseModel):
+    code: str
+    name: str
+
+
+class BanksResponse(BaseModel):
+    banks: List[BankItem]
+    country: str
+    cached: bool

@@ -14,7 +14,6 @@ from api.models.rider import Rider
 from api.models.withdrawal import Withdrawal, WithdrawalStatus
 from api.models.user_balance import UserBalance
 from api.models.currency import Currency
-from api.utils.auth_bearer import jwt_auth
 from api.utils.permissions import require_company
 from api.utils.pagination import paginate_queryset
 from ninja.errors import HttpError
@@ -22,7 +21,7 @@ from ninja.errors import HttpError
 router = Router(tags=["Company Balance & Withdrawal"])
 
 
-@router.get("/balance", auth=jwt_auth, response={200: CompanyBalanceResponse})
+@router.get("/balance", response={200: CompanyBalanceResponse})
 @require_company
 def get_company_balance(request):
     """Get current balance for company account."""
@@ -59,7 +58,7 @@ def get_company_balance(request):
     }
 
 
-@router.post("/withdraw", auth=jwt_auth, response={200: WithdrawResponse, 400: SimpleResponse})
+@router.post("/withdraw", response={200: WithdrawResponse, 400: SimpleResponse})
 @require_company
 def withdraw_funds(request, payload: WithdrawRequest):
     """Initiate withdrawal of company earnings."""
@@ -104,7 +103,6 @@ def withdraw_funds(request, payload: WithdrawRequest):
     )
 
     return {
-        'details': 'Withdrawal initiated successfully',
         'withdrawalId': f"WD-{withdrawal.id}",
         'amount': float(withdrawal.amount),
         'status': withdrawal.status,
@@ -113,7 +111,7 @@ def withdraw_funds(request, payload: WithdrawRequest):
     }
 
 
-@router.get("/withdrawals", auth=jwt_auth, response={200: WithdrawalHistoryResponse})
+@router.get("/withdrawals", response={200: WithdrawalHistoryResponse})
 @require_company
 def get_withdrawal_history(request, page: int = 1, limit: int = 20):
     """Get history of company withdrawals."""

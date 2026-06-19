@@ -33,17 +33,17 @@ class OTPcode(BaseModel):
         return f"PasswordReset for {self.user.email or self.user.phone} - {self.code}"
 
     @classmethod
-    def generate_code(cls, user, purspose=PurposeChoices.PASSWORD_RESET, minutes=20):
+    def generate_code(cls, user, purpose=PurposeChoices.PASSWORD_RESET, minutes=20):
         """Generate 8-digit reset code, expires in 15 minutes."""
         code = str(random.randint(10000000, 99999999))
         expires_at = timezone.now() + timedelta(minutes=minutes)
 
-        cls.objects.filter(user=user, is_used=False, purspose=purspose).update(is_used=True)
+        cls.objects.filter(user=user, is_used=False, purpose=purpose).update(is_used=True)
 
         return cls.objects.create(
             user=user,
             code=code,
-            purspose=purspose,
+            purpose=purpose,
             expires_at=expires_at
         )
 

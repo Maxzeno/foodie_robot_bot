@@ -12,7 +12,6 @@ from api.schemas.rider_schemas import (
 )
 from api.models.order import Order, OrderStatus
 from api.models.rider import Rider
-from api.utils.auth_bearer import jwt_auth
 from api.utils.permissions import require_rider
 from api.utils.pagination import paginate_queryset
 from api.utils.rate_limit import check_rate_limit, RateLimitExceeded
@@ -31,7 +30,7 @@ def _get_coords(self, point):
     return None, None
 
 
-@router.get("/history", auth=jwt_auth, response={200: OrderHistoryResponse})
+@router.get("/history", response={200: OrderHistoryResponse})
 @require_rider
 def order_history(request, page: int = 1, limit: int = 20, status: str = None):
     """
@@ -91,7 +90,7 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
     }
 
 
-@router.get("/{order_id}", auth=jwt_auth, response={200: OrderItemResponse, 404: SimpleResponse})
+@router.get("/{order_id}", response={200: OrderItemResponse, 404: SimpleResponse})
 @require_rider
 def order_detail(request, order_id: int):
     """Get detailed order information."""
@@ -135,7 +134,7 @@ def order_detail(request, order_id: int):
         raise HttpError(404, "Order not found")
 
 
-@router.get("/new", auth=jwt_auth, response={200: NewOrderResponse | SimpleResponse})
+@router.get("/new", response={200: NewOrderResponse | SimpleResponse})
 @require_rider
 def get_new_order(request):
     """
@@ -167,7 +166,7 @@ def get_new_order(request):
     ).order_by('created_at').first()
 
     if not order:
-        return {'details': 'No orders available at the moment'}
+        return {'detail': 'No orders available at the moment'}, 404
 
     return {
         'id': order.id,
@@ -196,7 +195,7 @@ def get_new_order(request):
     }
 
 
-@router.post("/{order_id}/accept", auth=jwt_auth, response={200: AcceptOrderResponse, 409: SimpleResponse, 404: SimpleResponse})
+@router.post("/{order_id}/accept", response={200: AcceptOrderResponse, 409: SimpleResponse, 404: SimpleResponse})
 @require_rider
 @transaction.atomic
 def accept_order(request, order_id: int):
@@ -223,7 +222,6 @@ def accept_order(request, order_id: int):
         order.save()
 
         return {
-            'details': 'Order accepted successfully',
             'orderId': order.id,
             'status': order.status
         }
@@ -232,7 +230,7 @@ def accept_order(request, order_id: int):
         raise HttpError(404, "Order not found or already assigned")
 
 
-@router.put("/{order_id}/status", auth=jwt_auth, response={200: UpdateStatusResponse, 400: SimpleResponse, 404: SimpleResponse})
+@router.put("/{order_id}/status", response={200: UpdateStatusResponse, 400: SimpleResponse, 404: SimpleResponse})
 @require_rider
 def update_order_status(request, order_id: int, payload: UpdateStatusRequest):
     """Update order status (atRestaurant, onTheWay, delivered)."""
@@ -255,7 +253,6 @@ def update_order_status(request, order_id: int, payload: UpdateStatusRequest):
         order.save()
 
         return {
-            'details': 'Order status updated successfully',
             'orderId': order.id,
             'status': order.status,
             'updatedAt': timezone.now()
@@ -265,7 +262,7 @@ def update_order_status(request, order_id: int, payload: UpdateStatusRequest):
         raise HttpError(404, "Order not found")
 
 
-@router.post("/{order_id}/confirm-delivery", auth=jwt_auth, response={200: ConfirmDeliveryResponse, 400: SimpleResponse, 404: SimpleResponse})
+@router.post("/{order_id}/confirm-delivery", response={200: ConfirmDeliveryResponse, 400: SimpleResponse, 404: SimpleResponse})
 @require_rider
 @transaction.atomic
 def confirm_delivery(request, order_id: int, payload: ConfirmDeliveryRequest):
@@ -296,7 +293,6 @@ def confirm_delivery(request, order_id: int, payload: ConfirmDeliveryRequest):
         process_delivery_completion(order)
 
         return {
-            'details': 'Delivery confirmed successfully',
             'orderId': order.id,
             'status': order.status,
             'deliveryFee': float(order.delivery_fee),
