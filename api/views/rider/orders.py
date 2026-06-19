@@ -21,15 +21,6 @@ from ninja.errors import HttpError
 
 router = Router(tags=["Rider Orders"])
 
-def _get_coords(self, point):
-    """Extract (lng, lat) from a GeoJSON point."""
-    if point and isinstance(point, dict):
-        coords = point.get('coordinates', [])
-        if len(coords) >= 2:
-            return coords[0], coords[1]
-    return None, None
-
-
 @router.get("/history", response={200: OrderHistoryResponse})
 @require_rider
 def order_history(request, page: int = 1, limit: int = 20, status: str = None):
@@ -64,12 +55,15 @@ def order_history(request, page: int = 1, limit: int = 20, status: str = None):
         {
             'id': order.id,
             'code': order.code,
+            'restaurantPaymentCompleted': order.restaurant_payment_completed,
             'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
             'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
             'restaurantName': order.meal.restaurant.name,
             'restaurantPhone': order.meal.restaurant.phone,
             'pickupAddress': order.pickup_street_address or '',
             'dropoffAddress': order.dropoff_street_address or '',
+            'pickupAddressLink': order.pickup_point_link(),
+            'dropoffAddressLink': order.dropoff_point_link(),
             'customerName': order.user.get_full_name() or order.user.username or '',
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
@@ -107,6 +101,7 @@ def order_detail(request, order_id: int):
         return {
             'id': order.id,
             'code': order.code,
+            'restaurantPaymentCompleted': order.restaurant_payment_completed,
             'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
             'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
 
@@ -170,7 +165,8 @@ def get_new_order(request):
 
     return {
         'id': order.id,
-        'code': order.code,
+        'code': order.code,\
+        'restaurantPaymentCompleted': order.restaurant_payment_completed,
         'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
         'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
 
@@ -267,8 +263,9 @@ def update_order_status(request, order_id: int, payload: UpdateStatusRequest):
 @transaction.atomic
 def confirm_delivery(request, order_id: int, payload: ConfirmDeliveryRequest):
     """Confirm delivery using customer's 4-digit confirmation code."""
+    user = request.user
     try:
-        check_rate_limit(payload.email, endpoint=f"{order_id}/confirm-delivery", max_requests=5, window_seconds=60)
+        check_rate_limit(user.email, endpoint=f"{order_id}/confirm-delivery", max_requests=5, window_seconds=60)
     except RateLimitExceeded as e:
         raise HttpError(429, str(e))
 

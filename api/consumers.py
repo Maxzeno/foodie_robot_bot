@@ -133,6 +133,7 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
         return {
             'id': order.id,
             'code': order.code,
+            'restaurantPaymentCompleted': order.restaurant_payment_completed,
             'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
             'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
             'restaurantName': order.meal.restaurant.name,

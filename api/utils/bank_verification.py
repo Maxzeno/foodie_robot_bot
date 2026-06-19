@@ -1,22 +1,10 @@
 """Mock bank account verification for Nigerian banks."""
 
 # Mock bank codes (Nigerian banks)
-BANK_CODES = {
-    'GTBank': '058',
-    'Access Bank': '044',
-    'Zenith Bank': '057',
-    'First Bank': '011',
-    'UBA': '033',
-    'Fidelity Bank': '070',
-    'Ecobank': '050',
-    'Sterling Bank': '232',
-    'Union Bank': '032',
-    'Wema Bank': '035',
-    'Stanbic IBTC': '221',
-    'Polaris Bank': '076',
-    'Keystone Bank': '082',
-    'FCMB': '214',
-}
+from api.views.rider.banks import MOCK_BANKS_BY_COUNTRY
+
+
+BANK_CODES = {bank['name']: bank['code'] for bank in MOCK_BANKS_BY_COUNTRY['Nigeria']}
 
 # Mock account names for testing
 MOCK_NAMES = [

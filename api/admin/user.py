@@ -3,7 +3,7 @@ Admin configuration for User model.
 """
 from django import forms
 from django.contrib import admin
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Prefetch
 from django.utils.html import format_html
 from django.utils import timezone
 
@@ -128,8 +128,15 @@ class UserAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
+        from api.models.rider import Rider
         qs = super().get_queryset(request)
-        return qs.select_related('referred_by', 'city').annotate(
+        return qs.select_related(
+            'referred_by',
+            'city',
+            'rider_profile'
+        ).prefetch_related(
+            Prefetch('rider_profile__managed_riders', queryset=Rider.objects.only('id'))
+        ).annotate(
             _order_count=Count('orders', distinct=True),
             _message_count=Count('messages', filter=Q(messages__role=RoleChoices.USER), distinct=True),
             _last_message=Max('messages__created_at', filter=Q(messages__role=RoleChoices.USER))

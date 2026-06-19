@@ -46,7 +46,7 @@ class Rider(BaseModel):
     @property
     def is_company(self):
         """Check if this rider acts as a company (has managed riders)."""
-        return self.managed_riders.exists()
+        return self.company is None
 
 
     def clean(self):

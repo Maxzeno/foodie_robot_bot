@@ -28,21 +28,26 @@ def _haversine_distance(lat1, lon1, lat2, lon2):
 @admin.register(Order)
 class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
     list_display = [
-        'code', 'user_link', 'meal_name', 'quantity', 'total_price_display',
-        'status_badge', 'paid_badge', 'ordered_via', 'created_at'
+        'code', 'user_link', 'meal_name', 'rider_info', 'quantity', 'total_price_display',
+        'status_badge', 'paid_badge', 'restaurant_payment_badge', 'ordered_via', 'created_at'
     ]
-    list_filter = ['status', 'paid', 'ordered_via', 'currency', 'created_at']
-    search_fields = ['code', 'user__phone', 'user__code', 'meal__name', 'rider_phone', 'rider_name']
+    list_filter = ['status', 'paid', 'restaurant_payment_completed', 'ordered_via', 'currency', 'rider', 'created_at']
+    search_fields = ['code', 'user__phone', 'user__code', 'meal__name', 'rider_phone', 'rider_name', 'rider__user__phone', 'rider__user__email', 'restaurant_payment_transaction_id']
     readonly_fields = [
         'code', 'order_summary_message', 'delivery_distance', 'pickup_point_preview', 'dropoff_point_preview',
-        'route_preview', 'created_at', 'updated_at'
+        'route_preview', 'rider_assigned_at', 'restaurant_payment_completed_at', 'created_at', 'updated_at'
     ]
-    # raw_id_fields = ['user', 'meal']
+    autocomplete_fields = ['user', 'meal', 'rider']
     ordering = ['-created_at']
     list_per_page = 50
     date_hierarchy = 'created_at'
 
     geojson_point_fields = ['pickup_point', 'dropoff_point']
+
+    def get_queryset(self, request):
+        """Optimize queryset with select_related to avoid N+1 queries."""
+        qs = super().get_queryset(request)
+        return qs.select_related('user', 'meal', 'currency', 'rider__user')
 
     fieldsets = (
         ('Order Summary', {
@@ -68,9 +73,18 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'Map showing both pickup and dropoff locations'
         }),
-        ('Rider Info', {
+        ('Rider Assignment', {
+            'fields': ('rider', 'rider_assigned_at', 'confirmation_code'),
+            'description': 'Current rider assignment and delivery confirmation'
+        }),
+        ('Restaurant Payment', {
+            'fields': ('restaurant_payment_completed', 'restaurant_payment_transaction_id', 'restaurant_payment_completed_at'),
+            'description': 'Payment tracking for restaurant purchases'
+        }),
+        ('Legacy Rider Info (Deprecated)', {
             'fields': ('rider_name', 'rider_phone', 'rider_company', 'rider_note'),
-            'classes': ('collapse',)
+            'classes': ('collapse',),
+            'description': 'Old text-based rider fields - use Rider Assignment instead'
         }),
         ('Notes & Timestamps', {
             'fields': ('note', 'delivered_at', 'created_at', 'updated_at'),
@@ -123,6 +137,55 @@ class OrderAdmin(GeoJSONFieldMixin, admin.ModelAdmin):
             'border-radius: 3px; font-size: 11px;">UNPAID</span>'
         )
     paid_badge.short_description = 'Payment'
+
+    def restaurant_payment_badge(self, obj):
+        if obj.restaurant_payment_completed:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px;">✓ PAID</span>'
+            )
+        return format_html(
+            '<span style="background: #ffc107; color: black; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">PENDING</span>'
+        )
+    restaurant_payment_badge.short_description = 'Restaurant Pay'
+
+    def rider_info(self, obj):
+        """Display rider assignment info with time since assignment."""
+        if not obj.rider:
+            return format_html(
+                '<span style="color: #6c757d; font-style: italic;">Not assigned</span>'
+            )
+
+        rider_name = obj.rider.user.get_full_name() or obj.rider.user.phone or obj.rider.user.email or f"Rider #{obj.rider.id}"
+
+        # Show time since assignment if available
+        time_info = ""
+        if obj.rider_assigned_at:
+            now = timezone.now()
+            delta = now - obj.rider_assigned_at
+            minutes = int(delta.total_seconds() / 60)
+
+            if minutes < 5:
+                time_color = "#28a745"  # Green - fresh assignment
+                time_text = f"{minutes}m ago"
+            elif minutes < 10:
+                time_color = "#ffc107"  # Yellow - approaching timeout
+                time_text = f"{minutes}m ago"
+            else:
+                time_color = "#dc3545"  # Red - past timeout
+                time_text = f"{minutes}m ago"
+
+            time_info = format_html(
+                '<br><span style="color: {}; font-size: 10px;">{}</span>',
+                time_color, time_text
+            )
+
+        return format_html(
+            '<span style="color: #007bff; font-weight: 500;">{}</span>{}',
+            rider_name, time_info
+        )
+    rider_info.short_description = 'Rider'
 
     def _get_coords(self, point):
         """Extract (lng, lat) from a GeoJSON point."""

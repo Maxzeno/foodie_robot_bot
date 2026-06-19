@@ -46,7 +46,7 @@ def restaurant_payment(request, payload: RestaurantPaymentRequest):
     try:
         # Get order
         order = Order.objects.select_for_update().get(
-            code=payload.orderId,
+            id=payload.orderId,
             rider=rider
         )
 
@@ -54,9 +54,6 @@ def restaurant_payment(request, payload: RestaurantPaymentRequest):
         if order.restaurant_payment_completed:
             raise HttpError(400, "Restaurant payment already completed for this order")
 
-        if order.restaurant_payment_completed:
-            raise HttpError(400, "Restaurant payment already completed for this order")
-        
         try:
             # TODO: Pay for the order via payment gateway (e.g., Paystack, Flutterwave)
             # check that the client had paid for the order and make sure you transfer the meal_price to the restaurant

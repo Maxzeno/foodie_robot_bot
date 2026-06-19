@@ -4,6 +4,7 @@ from ninja import Router
 from django.core.cache import cache
 from ninja.errors import HttpError
 
+from api.models.user import User
 from api.schemas.rider_schemas import BanksResponse
 from api.models.location import City
 
@@ -97,18 +98,10 @@ def get_banks_for_country(country_name: str):
 
 
 @router.get("/", response={200: BanksResponse, 400: dict})
-def get_banks(request, city_id: int):
-    """
-    Get list of banks for a country based on city_id.
-
-    Results are cached for 24 hours to avoid repeated lookups.
-
-    Args:
-        city_id: ID of the city to get banks for
-
-    Returns:
-        List of banks available in that country
-    """
+def get_banks(request):
+    user: User = request.user
+    city_id = user.city.id if user.city else ''
+    
     # Create cache key based on city_id
     cache_key = f"banks_city_{city_id}"
 

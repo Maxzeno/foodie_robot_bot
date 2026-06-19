@@ -38,7 +38,6 @@ class SendResetCodeRequest(BaseModel):
 
 
 class SendResetCodeResponse(BaseModel):
-    details: str
     codeExpiresAt: datetime
 
 
@@ -63,17 +62,17 @@ class RefreshTokenResponse(BaseModel):
 
 
 class SimpleResponse(BaseModel):
-    """For endpoints that return only a details message."""
     details: str
 
 
 # ============ ORDER SCHEMAS ============
 
 class OrderItemResponse(BaseModel):
-    id: str
+    id: int
     code: str
+    restaurantPaymentCompleted: bool
     restaurantPaymentTransactionId: Optional[str] = None
-    restaurantPaymentCompletedAt: Optional[str] = None
+    restaurantPaymentCompletedAt: Optional[datetime]= None
     restaurantName: str
     restaurantPhone: str
     pickupAddress: str
@@ -105,8 +104,9 @@ class OrderHistoryResponse(BaseModel):
 
 
 class NewOrderResponse(BaseModel):
-    id: str
+    id: int
     code: str
+    restaurantPaymentCompleted: bool
     restaurantPaymentTransactionId: Optional[str] = None
     restaurantPaymentCompletedAt: Optional[str] = None
     restaurantName: str
@@ -127,8 +127,7 @@ class NewOrderResponse(BaseModel):
 
 
 class AcceptOrderResponse(BaseModel):
-    details: str
-    orderId: str
+    orderId: int
     status: str
 
 
@@ -137,8 +136,7 @@ class UpdateStatusRequest(BaseModel):
 
 
 class UpdateStatusResponse(BaseModel):
-    details: str
-    orderId: str
+    orderId: int
     status: str
     updatedAt: datetime
 
@@ -148,8 +146,7 @@ class ConfirmDeliveryRequest(BaseModel):
 
 
 class ConfirmDeliveryResponse(BaseModel):
-    details: str
-    orderId: str
+    orderId: int
     status: str
     deliveryFee: float
     completedAt: datetime
@@ -176,14 +173,13 @@ class BankDetails(BaseModel):
 
 
 class RestaurantPaymentRequest(BaseModel):
-    orderId: str
+    orderId: int
     bankDetails: BankDetails
 
 
 class RestaurantPaymentResponse(BaseModel):
-    details: str
     transactionId: str
-    orderId: str
+    orderId: int
     amount: float
     status: str
     paidAt: datetime
@@ -195,17 +191,14 @@ class CompanyBalanceResponse(BaseModel):
     balance: float
     currency: str
     pendingWithdrawals: float
-    availableForWithdrawal: float
 
 
 class WithdrawRequest(BaseModel):
-    amount: float
     bankDetails: BankDetails
 
 
 class WithdrawResponse(BaseModel):
-    details: str
-    withdrawalId: str
+    withdrawalId: int
     amount: float
     status: str
     estimatedCompletionTime: str
@@ -213,7 +206,7 @@ class WithdrawResponse(BaseModel):
 
 
 class WithdrawalItem(BaseModel):
-    id: str
+    id: int
     amount: float
     status: str
     bankDetails: BankDetails

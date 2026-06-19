@@ -48,13 +48,10 @@ def get_company_balance(request):
         currency=currency
     ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
 
-    available = balance.amount - pending_withdrawals
-
     return {
         'balance': float(balance.amount),
         'currency': currency.code,
         'pendingWithdrawals': float(pending_withdrawals),
-        'availableForWithdrawal': float(available)
     }
 
 
@@ -76,25 +73,18 @@ def withdraw_funds(request, payload: WithdrawRequest):
         raise HttpError(500, "No currency configured")
 
     # Get balance
-    balance = UserBalance.get_balance(request.user, currency)
+    user_balance = UserBalance.get_balance(request.user, currency)
 
-    # Calculate pending withdrawals
-    pending_withdrawals = Withdrawal.objects.filter(
-        user=request.user,
-        status=WithdrawalStatus.PENDING,
-        currency=currency
-    ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
-
-    available = balance.amount - pending_withdrawals
+    available = user_balance.amount
 
     # Check if sufficient balance
-    if available < Decimal(str(payload.amount)):
+    if available < Decimal(str(500)):
         raise HttpError(400, "Insufficient balance for withdrawal")
 
     # Create withdrawal request
     withdrawal = Withdrawal.objects.create(
         user=request.user,
-        amount=Decimal(str(payload.amount)),
+        amount=Decimal(str(available)),
         currency=currency,
         account_name=payload.bankDetails.accountName,
         account_number=payload.bankDetails.accountNumber,
@@ -102,8 +92,11 @@ def withdraw_funds(request, payload: WithdrawRequest):
         status=WithdrawalStatus.PENDING
     )
 
+    user_balance.amount = 0
+    user_balance.save()
+
     return {
-        'withdrawalId': f"WD-{withdrawal.id}",
+        'withdrawalId': withdrawal.id,
         'amount': float(withdrawal.amount),
         'status': withdrawal.status,
         'estimatedCompletionTime': '1-2 business days',
