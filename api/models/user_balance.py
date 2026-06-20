@@ -29,6 +29,7 @@ class UserBalance(BaseModel):
     )
 
     class Meta:
+        ordering = ['-created_at']
         unique_together = ('user', 'currency')
         ordering = ['-created_at']
         verbose_name = "User Balance"

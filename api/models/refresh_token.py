@@ -27,6 +27,7 @@ class RefreshToken(BaseModel):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['token'], name='refresh_token_idx'),
             models.Index(fields=['user', 'is_revoked'], name='refresh_user_revoked_idx'),

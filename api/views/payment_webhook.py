@@ -20,8 +20,8 @@ router = Router(tags=["Webhook"])
 
 
 @csrf_exempt
-@transaction.atomic
 @router.post("/payment", auth=None)
+@transaction.atomic
 def payment_webhook(request):
     """
     Handle payment webhook from Vendy payment provider.

@@ -3,3 +3,5 @@
 - maybe send money to the rider to send to the resturant for the meal
 
 - make the app helpful for riders to manage their selvies and take external orders
+
+- Do cleanup in Dockerfiles (Worker and the regular one)

@@ -323,14 +323,14 @@ def place_order(
                 user=user
             )
             return False
-        delivery_fee = Decimal(str(cal_delivery_fee(meal_prefetch.city.delivery_fee_per_km,
+        delivery_fee = cal_delivery_fee(meal_prefetch.city.delivery_fee_per_km,
                                                     meal_prefetch.city.min_delivery_fee,
                                                     rest_lat,
                                                     rest_lng,
                                                     addr_lat,
-                                                    addr_lng)))
+                                                    addr_lng)
 
-        delivery_fee = delivery_fee * math.ceil(number_of_plates/5)
+        delivery_fee = delivery_fee * Decimal(math.ceil(number_of_plates/5))
         total_price = meal_price + delivery_fee
 
         # Get current time for availability checks (will be used inside transaction)
@@ -480,7 +480,7 @@ def get_order_history(user: User, page: int = 1) -> bool:
         if not orders.exists():
             if page == 1:
                 Message.bot_message(
-                    "You haven't placed any orders yet. Browse our meals and place your first order!",
+                    "You haven't placed any orders yet.",
                     user=user
                 )
             else:

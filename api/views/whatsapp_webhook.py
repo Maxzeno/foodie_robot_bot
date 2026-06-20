@@ -23,8 +23,8 @@ VERIFY_TOKEN: str = settings.WHATSAPP_API_VERIFY_TOKEN
 WHATSAPP_PHONE_NUMBER_ID: str = settings.WHATSAPP_PHONE_NUMBER_ID
 
 @csrf_exempt
-@transaction.atomic
 @router.post('/whatsapp', auth=None)
+@transaction.atomic
 def whatsapp_webhook(request):
     MAX_WEBHOOK_SIZE = 1_000_000  # 1MB
 

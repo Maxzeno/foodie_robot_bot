@@ -10,6 +10,7 @@ from api.services.ai.tool_handlers.order import place_order
 from datetime import timedelta
 from api.services.ai.tool_handlers.menu_options import show_menu_options
 from api.utils.map_utils import get_place_name
+from django.utils import timezone
 
 def save_delivery_location(
     user: User,
@@ -74,12 +75,14 @@ def save_delivery_location(
         return False
     
     try:
-        # Recommend meals after setting location if they change city
         if not is_new and old_city == city:
             order = Order.objects.filter(user=user).first()
+            if not order:
+                return True
+            
             # also check that the time is not to far apart from current time
-            time_diff = user.get_local_time() - order.created_at
-            if order and order.paid == False and time_diff < timedelta(hours=6):
+            time_diff = timezone.now() - order.created_at
+            if order.paid == False and time_diff <= timedelta(hours=6):
                 place_order(user=user, meal_id=order.meal.id, number_of_plates=order.quantity, special_instructions=order.note, recreated_with_new_address=True)
             return True
         

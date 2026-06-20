@@ -35,6 +35,7 @@ class Rider(BaseModel):
     )
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user'], name='rider_user_idx'),
             models.Index(fields=['company'], name='rider_company_idx'),

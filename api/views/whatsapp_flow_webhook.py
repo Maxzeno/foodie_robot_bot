@@ -63,8 +63,8 @@ def encrypt_response(response, aes_key, iv):
 
 
 @csrf_exempt
-@transaction.atomic
 @router.post("/whatsapp-flow", auth=None)
+@transaction.atomic
 def flow_handler(request):
     print("Flow Webhook", request.body)
 

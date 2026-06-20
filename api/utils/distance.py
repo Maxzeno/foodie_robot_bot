@@ -1,6 +1,7 @@
 import math
 import requests
 from django.conf import settings
+from decimal import Decimal
 
 
 # def haversine(lat1, lon1, lat2, lon2):
@@ -46,4 +47,4 @@ def cal_delivery_fee(price_per_km, min_delivery_fee, lat1, lon1, lat2, lon2):
     if distance is None:
         raise Exception("Failed to get road distance for delivery fee calculation.")
 
-    return max(round(price_per_km * distance, 2), min_delivery_fee)
+    return max(round(Decimal(price_per_km) * Decimal(distance), 2), Decimal(min_delivery_fee))

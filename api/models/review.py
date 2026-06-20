@@ -20,6 +20,7 @@ class Review(BaseModel):
     comment = models.TextField(blank=True)
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             # User reviews history
             models.Index(fields=['user', '-created_at'], name='review_user_created_idx'),

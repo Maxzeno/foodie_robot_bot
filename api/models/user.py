@@ -72,6 +72,7 @@ class User(AbstractUser, BaseModel):
     )
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             # Phone number lookups (most frequent - user authentication)
             models.Index(fields=['phone'], name='user_phone_idx'),

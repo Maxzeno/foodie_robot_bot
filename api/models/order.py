@@ -111,6 +111,7 @@ class Order(BaseModel):
         return None
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             # Order history queries (very frequent)
             models.Index(fields=['user', '-created_at'], name='order_user_created_idx'),

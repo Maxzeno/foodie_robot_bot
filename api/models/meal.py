@@ -218,6 +218,7 @@ class Meal(BaseModel):
     cuisine = models.ManyToManyField(PreferredCuisine, blank=True, related_name="meals")
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             # Filter meals by city (very frequent in recommendation service)
             models.Index(fields=['city', 'available'], name='meal_city_available_idx'),

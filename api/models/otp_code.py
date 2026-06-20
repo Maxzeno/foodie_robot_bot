@@ -24,6 +24,7 @@ class OTPcode(BaseModel):
     is_verified = models.BooleanField(default=False)  # Track if code was verified
 
     class Meta:
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'code'], name='pwd_reset_user_code_idx'),
             models.Index(fields=['expires_at'], name='pwd_reset_expires_idx'),

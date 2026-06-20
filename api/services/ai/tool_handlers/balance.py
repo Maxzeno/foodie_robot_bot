@@ -30,7 +30,7 @@ def show_balance_withdraw(
         )
         return True
     except Exception as e:
-        print(f"Error placing order: {e}")
+        print(f"Error checking balance: {e}")
         Message.bot_message(
             "Sorry, something went wrong while trying to show balance. Please try again.",
             user=user

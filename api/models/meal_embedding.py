@@ -39,6 +39,7 @@ class MealEmbedding(BaseModel):
     )
 
     class Meta:
+        ordering = ['-created_at']
         verbose_name = "Meal Embedding"
         verbose_name_plural = "Meal Embeddings"
 
