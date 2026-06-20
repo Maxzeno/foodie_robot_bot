@@ -22,8 +22,8 @@ class UserResponse(BaseModel):
     balance: float
     isOnline: bool
     currency: str
-    currency_symbol: str
-    city_id: int
+    currencySymbol: str
+    cityId: int
     city: str
 
 
@@ -244,8 +244,8 @@ class RiderProfileResponse(BaseModel):
     isOnline: bool
     role: str
     currency: str
-    currency_symbol: str
-    city_id: int
+    currencySymbol: str
+    cityId: int
     city: str
 
 

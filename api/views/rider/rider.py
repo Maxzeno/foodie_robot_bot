@@ -59,7 +59,7 @@ def get_rider_profile(request):
         'balance': balance,
         'isOnline': user.is_online,
         'city': user.city.name if user.city else None,
-        'city_id': user.city.id if user.city else None,
+        'cityId': user.city.id if user.city else None,
         'currency': currency_code,
-        'currency_symbol': currency_symbol,
+        'currencySymbol': currency_symbol,
     }

@@ -27,4 +27,4 @@ RUN chmod +x /app/pre_run.sh
 
 # Set the entrypoint and default command
 ENTRYPOINT ["/app/pre_run.sh"]
-CMD ["gunicorn", "foodie_robot.wsgi", "-b", "0.0.0.0:8000"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "foodie_robot.asgi:application"]

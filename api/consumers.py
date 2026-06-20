@@ -38,17 +38,21 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
 
         # Verify JWT token and get user
         user = await self.verify_token(token)
+        print(user, 'a')
         if not user:
             await self.close(code=4001)
             return
 
         # Check if user is a rider
-        if not user.is_rider:
+        if not self.user_is_rider(user):
             await self.close(code=4003)
             return
 
         self.user = user
+        print(self.user, 'c')
         self.rider_group = f"rider_{user.id}"
+
+        print(self.rider_group, 'self.rider_group')
 
         # Join rider-specific group
         await self.channel_layer.group_add(
@@ -99,12 +103,22 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
         }))
 
     @database_sync_to_async
+    def user_is_rider(self, user:User):
+        print(user.is_rider, 'b')
+        return user.is_rider
+
+    @database_sync_to_async
     def verify_token(self, token):
         """Verify JWT token and return user."""
+        print("Verifying token in WebSocket:", token)
         try:
-            user = JWTAuth.verify_access_token(token)
+            user_dict = JWTAuth.decode_access_token(token)
+
+            user = User.objects.get(id=user_dict.get('user_id'))
+
+            print("Verified user in WebSocket:", user)
             return user
-        except ValueError:
+        except (ValueError, User.DoesNotExist) as e:
             return None
 
     @database_sync_to_async
@@ -122,7 +136,7 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
                 'currency',
                 'user'
             ).order_by('-rider_assigned_at')
-
+            print('orders in get_pending_orders', orders)
             return [self._serialize_order(order) for order in orders]
         except Exception as e:
             print(f"Error fetching pending orders: {e}")
@@ -135,11 +149,13 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
             'code': order.code,
             'restaurantPaymentCompleted': order.restaurant_payment_completed,
             'restaurantPaymentTransactionId': order.restaurant_payment_transaction_id,
-            'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at,
+            'restaurantPaymentCompletedAt': order.restaurant_payment_completed_at.isoformat() if order.restaurant_payment_completed_at else None,
             'restaurantName': order.meal.restaurant.name,
             'restaurantPhone': order.meal.restaurant.phone,
             'pickupAddress': order.pickup_street_address or '',
             'dropoffAddress': order.dropoff_street_address or '',
+            'pickupAddressLink': order.pickup_point_link(),
+            'dropoffAddressLink': order.dropoff_point_link(),
             'customerName': order.user.get_full_name() or order.user.username or '',
             'customerPhone': order.user.phone or '',
             'deliveryFee': float(order.delivery_fee),
@@ -148,8 +164,8 @@ class RiderOrderConsumer(AsyncWebsocketConsumer):
             'mealQuantity': order.quantity,
             'mealPrice': float(order.meal_price),
             'paymentCompleted': order.paid,
-            'createdAt': order.created_at,
-            'completedAt': order.delivered_at
+            'createdAt': order.created_at.isoformat() if order.created_at else None,
+            'completedAt': order.delivered_at.isoformat() if order.delivered_at else None
         }
 
     async def send_pending_orders(self):
