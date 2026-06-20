@@ -64,9 +64,9 @@ def user_data_profile_flow(user: User):
     currency_code = user.city.currency.code if user.city else default_currency
     currency_helper = f"Enter amount per meal ({currency_code})"
 
-    show_referral_field = True if not user.fitness_goals and not user.referred_by else False
+    # show_referral_field = True if not user.fitness_goals and not user.referred_by else False
     res = {
-        "show_referral_field": show_referral_field,
+        # "show_referral_field": show_referral_field,
         "fitness_goals": fitness_goals,
         # "health_conditions": health_conditions,
         # "allergies_diet": allergies_diet,

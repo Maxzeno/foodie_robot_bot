@@ -63,7 +63,7 @@ def send_referral_invitation_messages():
                 setting = AppSettings.get_settings()
 
                 # Generate referral link
-                text = f"Hi, I was referred by #{user.code}"
+                text = f"Hi, I was referred by a friend (Referral code: #{user.code})"
                 encoded_text = urllib.parse.quote(text)
                 referral_link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"
 
@@ -76,9 +76,8 @@ def send_referral_invitation_messages():
                 Message.bot_message(
                     content=(
                         "🎉 Love FoodieRobot? Invite your friends and family!\n\n"
-                        "Share your unique referral link and you both get rewards when they place their first order.\n\n"
+                        "Share your unique referral link and get rewarded when they place their first order.\n\n"
                         f"Your referral link (Share with friends): {referral_link}\n\n"
-                        f"Referral code: #{user.code}"
                         f"{extra_text}"
                     ),
                     user=user

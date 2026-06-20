@@ -10,7 +10,7 @@ from api.models.message import Message
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = ['short_content', 'user_link', 'role_badge', 'intent_badge', 'created_at']
-    list_filter = ['role', 'current_intent', 'created_at']
+    list_filter = ['role', 'user', 'current_intent', 'created_at']
     search_fields = ['content', 'user__phone', 'user__code', 'message_id']
     readonly_fields = ['message_id', 'resp', 'metadata', 'created_at', 'updated_at']
     raw_id_fields = ['user', 'reply_to']
