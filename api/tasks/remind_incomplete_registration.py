@@ -18,6 +18,9 @@ from django.db.models import Q, Max
 from api.models.user import User
 from api.models.address import DeliveryAddress
 from api.models.message import Message, RoleChoices
+from django.conf import settings
+
+from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +51,11 @@ def remind_incomplete_registration():
 
         sent_count = 0
         for user in potential_users:
-            has_city = user.city is not None
+            has_fill_profile = user.fitness_goals is not None
             has_delivery_address = DeliveryAddress.objects.filter(user=user).exists()
 
             # If registration is complete, skip
-            if has_city and has_delivery_address:
+            if has_fill_profile and has_delivery_address:
                 continue
 
             # Get user's last message timestamp
@@ -66,30 +69,29 @@ def remind_incomplete_registration():
                 continue
 
             try:
-                # Determine what's missing
-                missing_items = []
-                if not has_city:
-                    missing_items.append("your location")
-                if not has_delivery_address:
-                    missing_items.append("your delivery address")
-
-                # Build personalized message
-                if len(missing_items) == 1:
-                    missing_text = missing_items[0]
-                elif len(missing_items) == 2:
-                    missing_text = f"{missing_items[0]} and {missing_items[1]}"
-                else:
-                    missing_text = f"{', '.join(missing_items[:-1])}, and {missing_items[-1]}"
-
                 # Send reminder message
-                Message.bot_message(
-                    content=(
-                        f"👋 Hey there! We noticed you started setting up your FoodieRobot account.\n\n"
-                        f"You're almost done! Just need to add {missing_text} to get started.\n\n"
-                        "Complete your profile now to start ordering delicious meals! 🍽️"
-                    ),
-                    user=user
-                )
+                if not has_fill_profile:
+                    Message.bot_message_flow(
+                        (
+                            f"👋 Hey {user.username}, welcome to FoodieRobot!\n"
+                            f"You're almost done! 🎉 Please answer a quick question to get started."
+                        ),
+                        user=user,
+                        flow_cta="Get Started",
+                        flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
+                        screen_name="USER_PROFILE",
+                        data=user_data_profile_flow(user),
+                    )
+
+                elif has_fill_profile and not has_delivery_address:
+                    Message.bot_message_request_location(
+                       content=(
+                            f"👋 Hey {user.username}, welcome to FoodieRobot!\n"
+                            f"You're almost set 🎉 Just add your delivery location to get meal recommendations tailored to your fitness goal "
+                            f"from top restaurants around you."
+                        ),
+                        user=user
+                    )
 
                 # Mark as sent
                 user.registration_reminder_sent = True

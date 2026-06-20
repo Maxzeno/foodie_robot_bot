@@ -61,7 +61,11 @@ def send_review_request_on_order_received(sender, instance, created, **kwargs):
 
     if instance.status == OrderStatus.ON_THE_WAY:
         Message.bot_message(
-                content=f"Your order #{instance.code} is on the way!",
+                content=f"""
+Your order #{instance.code} is on the way!
+
+🔒 Confirmation code (only share with the rider on arrival): {instance.confirmation_code}
+                """,
                 user=instance.user,
             )
         return

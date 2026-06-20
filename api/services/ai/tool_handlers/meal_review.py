@@ -53,7 +53,7 @@ def review_order(
             )
             return False
         
-        if order.status != OrderStatus.RECEIVED:
+        if order.status != OrderStatus.DELIVERED:
             Message.bot_message(
                 f"You can only review orders that have been delivered. Order #{order.code}.",
                 user=user
@@ -73,7 +73,6 @@ def review_order(
             
             existing_review.comment = review_text or ""
             existing_review.save()
-            action = "updated"
         else:
             # Create new review
             Review.objects.create(

@@ -158,11 +158,11 @@ def whatsapp_webhook(request):
                 user.referred_by = referrer
                 user.save()
 
-        message = "Welcome to FoodieRobot! \n\nI'm here to help you with meal recommendations that you can order directly from us so you don't have to stress about what to eat while you're on your fitness journey. \n\nTo begin, please fill in your profile"
+        message = "Welcome to FoodieRobot! \n\nI'm here to help you with meal recommendations that you can order directly from us so you don't have to stress about what to eat while you're on your fitness journey. \n\nTo get started, answer a quick question."
         Message.bot_message_flow(
             message,
             user=user,
-            flow_cta="Create profile",
+            flow_cta="Get Started",
             flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
             screen_name="USER_PROFILE",
             data=user_data_profile_flow(user),
