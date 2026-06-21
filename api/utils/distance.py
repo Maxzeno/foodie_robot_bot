@@ -1,7 +1,7 @@
 import math
 import requests
 from django.conf import settings
-from decimal import Decimal
+from decimal import Decimal, ROUND_UP
 
 
 # def haversine(lat1, lon1, lat2, lon2):
@@ -47,4 +47,8 @@ def cal_delivery_fee(price_per_km, min_delivery_fee, lat1, lon1, lat2, lon2):
     if distance is None:
         raise Exception("Failed to get road distance for delivery fee calculation.")
 
-    return max(round(Decimal(price_per_km) * Decimal(distance), 2), Decimal(min_delivery_fee))
+    fee = Decimal(str(price_per_km)) * Decimal(str(distance))
+    # round to whole number
+    fee = fee.quantize(Decimal("1"), rounding=ROUND_UP)
+
+    return max(fee, Decimal(min_delivery_fee))

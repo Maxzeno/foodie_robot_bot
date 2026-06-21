@@ -19,7 +19,7 @@ def get_welcome_message(user: User) -> str:
     return (
         f"👋 Hey {name}!\n"
         f"Welcome to FoodieRobot 🤖\n\n"
-        f"🎁 Enjoy ₦1,000 OFF your first order today only"
+        f"🎁 Enjoy {user.city.currency.symbol}{user.city.delivery_fee_per_km} OFF your first order today only"
     )
 
 

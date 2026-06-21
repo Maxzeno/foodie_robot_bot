@@ -21,6 +21,7 @@ class CurrentIntentChoices(models.TextChoices):
     COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
     PROGRESS_STATS_REMINDER = 'progress_stats_reminder', 'Progress stats reminder'
     WELCOME_BONUS_MESSAGE = 'welcome_bonus_message', 'Welcome bonus message'
+    NO_MEAL_TO_RECOMMEND_MASSAGE = 'no_meal_to_recommend_message', 'No meal to recommend Message'
 
 
 class Message(BaseModel):

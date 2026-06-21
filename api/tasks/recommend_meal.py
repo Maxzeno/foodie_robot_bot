@@ -13,7 +13,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Max, Q
 from api.models.user import User
-from api.models.message import RoleChoices
+from api.models.message import CurrentIntentChoices, RoleChoices
 
 
 logger = logging.getLogger(__name__)
@@ -259,7 +259,11 @@ def _send_recommendation_message(user, meal, recommendation_obj, time_period, in
         raise
 
 
-def _send_no_recommendation_message(user, filter_stats):
+# def _send_no_recommendation_message(user, filter_stats):
+#     # send nothing
+#     return
+
+def _send_no_recommendation_message(user: User, filter_stats):
     """
     Send a message to the user explaining why no meal recommendations are available.
 
@@ -276,6 +280,20 @@ def _send_no_recommendation_message(user, filter_stats):
     from api.utils.whatsapp_payload_helper.user_profile_flow_data import user_data_profile_flow
 
     try:
+        # Check if a no-recommendation message was already sent to this user
+        existing_message = Message.objects.filter(
+            user=user,
+            role=RoleChoices.BOT,
+            current_intent=CurrentIntentChoices.NO_MEAL_TO_RECOMMEND_MASSAGE
+        ).order_by('-created_at').first()
+
+        # If message exists and user hasn't updated their profile since, skip sending
+        if existing_message and existing_message.created_at >= user.updated_at:
+            logger.info(
+                f"Skipping no-recommendation message for user {user.id}: "
+                f"Already sent at {existing_message.created_at}, user last updated at {user.updated_at}"
+            )
+            return
         # Get currency symbol from user's city
         currency_symbol = "₦"  # Default to Naira
         if user.city and user.city.currency:
@@ -299,16 +317,14 @@ def _send_no_recommendation_message(user, filter_stats):
                 flow_id=settings.WHATSAPP_FLOW_USER_PROFILE,
                 screen_name="USER_PROFILE",
                 data=user_data_profile_flow(user),
+                current_intent=CurrentIntentChoices.NO_MEAL_TO_RECOMMEND_MASSAGE
             )
         else:
             # Send regular text message (for issues that can't be fixed by profile update)
             Message.bot_message(
                 content=message_text,
                 user=user,
-                metadata={
-                    "type": "no_recommendation",
-                    "reason": primary_reason,
-                }
+                current_intent=CurrentIntentChoices.NO_MEAL_TO_RECOMMEND_MASSAGE,
             )
 
     except Exception as e:
