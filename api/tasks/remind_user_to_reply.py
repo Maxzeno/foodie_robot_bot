@@ -59,16 +59,16 @@ def remind_users_to_reply_task():
 
             # Send reminder message
             message_content = (
-                "Hi!\n\n"
-                "It's important you respond so we know you still want meal recommendations. "
-                "If you don't reply, we might stop sending recommendations until you message us.\n\n"
-                "Reply with anything to keep receiving personalized meal suggestions!"
+                "Don’t lose your progress… 👀\n\n"
+                f"You haven’t responded, and this is usually how people drift away from their {user.fitness_goals.get_name_display() if user.fitness_goals else 'fitness'} journey.\n\n"
+                "If you’re still committed, reply now to keep receiving your meal recommendations.\n\n"
+                "No reply means we’ll pause recommendations until you message FoodieRobot."
             )
 
             Message.bot_message_action_reply_simple(
                 content=message_content,
                 user=user,
-                action_replies=["OK"],
+                action_replies=["Continue"],
                 current_intent=CurrentIntentChoices.REMINDER_MESSAGE
             )
 

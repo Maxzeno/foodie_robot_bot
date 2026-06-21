@@ -247,11 +247,21 @@ def text_temp_recommendation(request):
 
 # # TODO: to be removed in production
 # @csrf_exempt
-# @router.get("/test-temp-time")
+# @router.get("/test-temp-time", auth=None)
 # def text_temp_time(request):
 #     user = User.objects.filter(phone="2349077745730").first()
-#     print("User:", user)
-#     print("User:", user.get_local_time(), user.get_local_time().hour)
-#     print('now', timezone.now(), timezone.now().hour)
- 
+#     message_content = (
+#         "Don’t lose your progress… 👀\n\n"
+#         f"You haven’t responded, and this is usually how people drift away from their fitness journey.\n\n"
+#         "If you’re still committed, reply now to keep receiving your meal recommendations.\n\n"
+#         "No reply means we’ll pause recommendations until you message FoodieRobot."
+#     )
+
+
+#     Message.bot_message_action_reply_simple(
+#         content=message_content,
+#         user=user,
+#         action_replies=["Continue"],
+#         current_intent=CurrentIntentChoices.REMINDER_MESSAGE
+#     )
 #     return {"status": 'ok'}
