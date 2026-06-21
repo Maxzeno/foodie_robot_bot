@@ -178,7 +178,9 @@ def payment_webhook(request):
                 )
 
                 if city.referral_bonus > 0:
-                    text = f"Hi, I was referred by a friend (Referral code: #{referrer.code})"
+                    text = f"""Hi, I was referred by a friend
+
+(Ref code: #{referrer.code.upper()})"""
                     encoded_text = urllib.parse.quote(text)
 
                     link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"

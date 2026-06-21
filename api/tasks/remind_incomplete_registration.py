@@ -73,7 +73,7 @@ def remind_incomplete_registration():
                 if not has_fill_profile:
                     Message.bot_message_flow(
                         (
-                            f"👋 Hey {user.username}, welcome to FoodieRobot!\n"
+                            f"👋 Hey {user.username or 'there'}, welcome to FoodieRobot!\n"
                             f"You're almost done! 🎉 Please answer a quick question to get started."
                         ),
                         user=user,
@@ -86,7 +86,7 @@ def remind_incomplete_registration():
                 elif has_fill_profile and not has_delivery_address:
                     Message.bot_message_request_location(
                        content=(
-                            f"👋 Hey {user.username}, welcome to FoodieRobot!\n"
+                            f"👋 Hey {user.username or 'there'}, welcome to FoodieRobot!\n"
                             f"You're almost set 🎉 Just add your delivery location to get meal recommendations tailored to your fitness goal "
                             f"from top restaurants around you."
                         ),

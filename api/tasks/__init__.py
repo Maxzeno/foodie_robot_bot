@@ -17,6 +17,14 @@ from api.tasks.order_assignment import (
     assign_rider_to_order,
     # check_order_assignment_timeouts
 )
+from api.tasks.send_progress_stats import (
+    send_progress_stats_task,
+    scheduled_send_progress_stats
+)
+from api.tasks.send_welcome_bonus import (
+    send_welcome_bonus_task,
+    scheduled_send_welcome_bonus
+)
 
 __all__ = [
     'remind_users_to_reply_task',
@@ -31,4 +39,8 @@ __all__ = [
     'remind_incomplete_registration',
     'assign_rider_to_order',
     # 'check_order_assignment_timeouts',
+    'send_progress_stats_task',
+    'scheduled_send_progress_stats',
+    'send_welcome_bonus_task',
+    'scheduled_send_welcome_bonus',
 ]

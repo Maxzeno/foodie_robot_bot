@@ -5,3 +5,5 @@
 - make the app helpful for riders to manage their selvies and take external orders
 
 - Do cleanup in Dockerfiles (Worker and the regular one)
+
+- Check how optimised the task queues and backend in general is eg. can it scale. what if we have 1000 actice users etc

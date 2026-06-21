@@ -19,6 +19,8 @@ class CurrentIntentChoices(models.TextChoices):
     REMINDER_MESSAGE = 'reminder_message', 'Reminder message'
     FLOW_MESSAGE = 'flow_message', 'Flow message'
     COMPLETED_REPLY = 'completed_reply', 'Completed reply' # meaning no need to add it as an ssistant reply
+    PROGRESS_STATS_REMINDER = 'progress_stats_reminder', 'Progress stats reminder'
+    WELCOME_BONUS_MESSAGE = 'welcome_bonus_message', 'Welcome bonus message'
 
 
 class Message(BaseModel):

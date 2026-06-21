@@ -63,7 +63,9 @@ def send_referral_invitation_messages():
                 setting = AppSettings.get_settings()
 
                 # Generate referral link
-                text = f"Hi, I was referred by a friend (Referral code: #{user.code})"
+                text = f"""Hi, I was referred by a friend
+
+(Ref code: #{user.code.upper()})"""
                 encoded_text = urllib.parse.quote(text)
                 referral_link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"
 

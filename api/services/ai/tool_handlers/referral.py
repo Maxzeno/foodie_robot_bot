@@ -8,7 +8,9 @@ def referral_link(
 ) -> bool:
     try:
         setting = AppSettings.get_settings()
-        text = f"Hi, I was referred by a friend (Referral code: #{user.code})"
+        text = f"""Hi, I was referred by a friend
+
+(Ref code: #{user.code.upper()})"""
         encoded_text = urllib.parse.quote(text)
 
         link = f"https://wa.me/{setting.whatsapp_phone_number}?text={encoded_text}"

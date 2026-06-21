@@ -5,7 +5,7 @@ import calendar
 
 from api.models.order import Order
 from api.models.user import User
-from api.models.message import Message
+from api.models.message import CurrentIntentChoices, Message
 from api.utils.progress_image_generator import generate_progress_image, upload_progress_image
 
 
@@ -132,7 +132,7 @@ def _get_user_display_name_for_image(u: User) -> str:
     return f"Foodie #{u.code[-4:]}"
 
 
-def get_progress_stats(user: User) -> bool:
+def get_progress_stats(user: User, caption="Your Progress Stats \n\nShare your achievements with friends!") -> bool:
     try:
         # Always use today's data to encourage daily check-ins
         start_local = _get_period_start(user, "day")
@@ -192,14 +192,13 @@ def get_progress_stats(user: User) -> bool:
         # Upload to Cloudinary
         image_url = upload_progress_image(image_bytes, user.code)
 
-        caption = "Your Progress Stats \n\nShare your achievements with friends!"
-
         # Send image if upload succeeded, otherwise send text
         if image_url:
             Message.bot_message_image(
                 content=caption,
                 user=user,
-                preview_media=image_url
+                preview_media=image_url,
+                current_intent=CurrentIntentChoices.PROGRESS_STATS_REMINDER
             )
         else:
             Message.bot_message(
