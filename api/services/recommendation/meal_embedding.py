@@ -2,7 +2,7 @@
 """
 Meal Embedding Service - Semantic Understanding of Meals
 
-This service generates and caches OpenAI embeddings for meals to enable:
+This service generates and caches meal embeddings to enable:
 1. Semantic similarity detection (e.g., "Jollof Rice" similar to "Party Rice")
 2. User taste profile matching
 3. Content-based recommendations
@@ -10,7 +10,6 @@ This service generates and caches OpenAI embeddings for meals to enable:
 Cost Optimization:
 - Embeddings are cached in database (MealEmbedding model)
 - Only regenerate when meal attributes change
-- Uses text-embedding-3-small (~$0.00002 per 1K tokens, ~$0.02 for 1000 meals)
 """
 
 import logging
@@ -20,6 +19,8 @@ from typing import List, Dict, Optional, Set, Tuple
 from django.conf import settings
 from django.core.cache import cache
 from openai import OpenAI
+
+from api.services.ai.llm_client import get_ai_client
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +37,16 @@ class MealEmbeddingService:
     - Price category
     """
 
-    EMBEDDING_MODEL = "text-embedding-3-small"
-    EMBEDDING_DIMENSIONS = 1536
+    EMBEDDING_MODEL = settings.AI_EMBEDDING_MODEL
+    EMBEDDING_DIMENSIONS = settings.AI_EMBEDDING_DIMENSIONS
     CACHE_KEY_PREFIX = "meal_emb_"
     CACHE_TIMEOUT = 60 * 60 * 24 * 30  # 30 days
 
-    # Batch size for OpenAI API calls (max 2048)
-    BATCH_SIZE = 100
+    # Max inputs per DashScope embeddings request (configurable via settings).
+    BATCH_SIZE = settings.AI_EMBEDDING_BATCH_SIZE
 
     def __init__(self, openai_client: OpenAI = None):
-        self.client = openai_client or OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = openai_client or get_ai_client()
 
     def _create_meal_text(self, meal) -> str:
         """
@@ -162,7 +163,8 @@ class MealEmbeddingService:
 
             response = self.client.embeddings.create(
                 model=self.EMBEDDING_MODEL,
-                input=meal_text
+                input=meal_text,
+                dimensions=self.EMBEDDING_DIMENSIONS,
             )
             embedding = response.data[0].embedding
 
@@ -242,10 +244,11 @@ class MealEmbeddingService:
                 # Prepare texts
                 texts = [self._create_meal_text(meal) for meal in batch]
 
-                # Call OpenAI API
+                # Call embeddings API
                 response = self.client.embeddings.create(
                     model=self.EMBEDDING_MODEL,
-                    input=texts
+                    input=texts,
+                    dimensions=self.EMBEDDING_DIMENSIONS,
                 )
 
                 # Process results

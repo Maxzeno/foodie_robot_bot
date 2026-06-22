@@ -1,7 +1,8 @@
 import json
 from typing import Dict, List
-from openai import OpenAI
 from django.conf import settings
+
+from api.services.ai.llm_client import get_ai_client
 
 from api.models.user import User
 from api.models.message import Message, RoleChoices
@@ -11,9 +12,9 @@ from api.services.ai.embedding_filter import ToolEmbeddingFilter
 
 
 class FoodBotAIHandler:
-    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = "gpt-5-nano", use_embedding_filter: bool = False, top_k_tools: int = 3): # gpt-5-nano gpt-4.1-nano
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = model
+    def __init__(self, user: User, sender_message_id: str = None, reply_message_id: str = None, model: str = None, use_embedding_filter: bool = False, top_k_tools: int = 3):
+        self.client = get_ai_client()
+        self.model = model or settings.AI_CHAT_MODEL
         self.user = user
         self.use_embedding_filter = use_embedding_filter
         self.top_k_tools = top_k_tools
@@ -63,7 +64,7 @@ class FoodBotAIHandler:
         }
 
     def get_conversation_history(self) -> List[Dict]:
-        # Static system prompt for prompt caching (OpenAI automatically caches repeated content >1024 tokens)
+        # Static system prompt kept first so it can be cached across requests.
         messages = [
 {
   "role": "system",
@@ -124,16 +125,19 @@ class FoodBotAIHandler:
             tools = self.all_tools
             print(f"Using all {len(tools)} tools (filtering disabled)")
 
-        # LLM API call with automatic prompt caching
-        # OpenAI automatically caches static prompt prefixes (system prompts, tool definitions)
-        # Cache is reused when the same prefix is sent, reducing costs
+        # LLM API call. reasoning_effort is sent only when AI_REASONING_EFFORT
+        # is configured.
+        extra_params = {}
+        if settings.AI_REASONING_EFFORT:
+            extra_params["reasoning_effort"] = settings.AI_REASONING_EFFORT
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             tools=tools,
             tool_choice="auto",
             # max_completion_tokens=150,
-            reasoning_effort="low" # minimal
+            **extra_params,
         )
 
         # Log usage including cache hits

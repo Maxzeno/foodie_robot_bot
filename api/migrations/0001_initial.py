@@ -838,7 +838,7 @@ class Migration(migrations.Migration):
                 (
                     "embedding",
                     models.JSONField(
-                        help_text="OpenAI embedding vector for semantic similarity (1536 floats)"
+                        help_text="Embedding vector for semantic similarity (1536 floats)"
                     ),
                 ),
                 (
@@ -853,7 +853,7 @@ class Migration(migrations.Migration):
                     "embedding_text",
                     models.TextField(
                         blank=True,
-                        help_text="The text that was sent to OpenAI for embedding (truncated)",
+                        help_text="The text that was sent for embedding (truncated)",
                     ),
                 ),
             ],

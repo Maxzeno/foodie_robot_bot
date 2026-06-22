@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 @task()
 def analyze_meal_with_ai_task(meal_id):
     """
-    Task to analyze meal with OpenAI API and update nutritional information.
+    Task to analyze a meal with AI and update nutritional information.
 
     Args:
         meal_id: ID of the meal to analyze
@@ -44,8 +44,8 @@ def analyze_meal_with_ai_task(meal_id):
             f"Fitness Goals: {len(fitness_goals)}, "
         )
 
-        # Initialize meal analyzer with model that supports structured outputs
-        analyzer = MealAnalyzer(model="gpt-4o")
+        # Initialize meal analyzer (uses the configured vision model)
+        analyzer = MealAnalyzer()
 
         # # Get full Cloudinary URL from the stored path
         # image_path = meal.image_url.name

@@ -1,7 +1,0 @@
-check that the CurrentIntentChoices.NO_MEAL_TO_RECOMMEND_MASSAGE has not being sent today before you send in _send_no_recommendation_message under task queue also another exception to send is if the user updated their
-  profile before that 
-
-
-before you send the reason for no meal recommendation in _send_no_recommendation_message function under task queue make sure that you check if a message by a bot was already send with current_intent=CurrentIntentChoices.NO_MEAL_TO_RECOMMEND_MASSAGE, in that case send if the message created at datetime is older than the user last update at datetime if no such current_intent then you can send the message
-
-tell me what you plan to do so i know you understand it don't implement yet

@@ -22,7 +22,7 @@ from api.services.recommendation.meal_embedding import MealEmbeddingService
 
 
 class Command(BaseCommand):
-    help = 'Pre-compute and cache OpenAI embeddings for meals'
+    help = 'Pre-compute and cache meal embeddings'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -92,7 +92,7 @@ class Command(BaseCommand):
 
             # Estimate cost
             avg_tokens = 150  # Approximate tokens per meal
-            cost_per_1k = 0.00002  # text-embedding-3-small pricing
+            cost_per_1k = 0.00002  # embedding price per 1K tokens
             estimated_cost = (needs_update * avg_tokens / 1000) * cost_per_1k
             self.stdout.write(f'Estimated cost: ${estimated_cost:.4f}')
 

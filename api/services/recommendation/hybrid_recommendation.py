@@ -35,7 +35,7 @@ Architecture:
 Cost Considerations:
 - Embeddings are cached in DB (one-time cost ~$0.02 per 1000 meals)
 - User profiles cached for 6 hours
-- No per-request OpenAI calls for cached meals
+- No per-request embedding API calls for cached meals
 """
 
 import logging

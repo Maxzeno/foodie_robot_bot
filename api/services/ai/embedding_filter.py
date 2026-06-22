@@ -5,6 +5,8 @@ from openai import OpenAI
 from django.conf import settings
 from django.core.cache import cache
 
+from api.services.ai.llm_client import get_ai_client
+
 
 class ToolEmbeddingFilter:
     """
@@ -12,18 +14,20 @@ class ToolEmbeddingFilter:
     Reduces token costs by pre-selecting most relevant tools before LLM call.
     """
 
-    EMBEDDING_MODEL = "text-embedding-3-small"
+    EMBEDDING_MODEL = settings.AI_EMBEDDING_MODEL
+    EMBEDDING_DIMENSIONS = settings.AI_EMBEDDING_DIMENSIONS
     CACHE_KEY_PREFIX = "tool_embedding_"
     CACHE_TIMEOUT = 60 * 60 * 24 * 7  # 7 days
 
     def __init__(self, openai_client: OpenAI = None):
-        self.client = openai_client or OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = openai_client or get_ai_client()
 
     def _get_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text using OpenAI API."""
+        """Generate embedding for text via Alibaba Cloud DashScope."""
         response = self.client.embeddings.create(
             model=self.EMBEDDING_MODEL,
-            input=text
+            input=text,
+            dimensions=self.EMBEDDING_DIMENSIONS,
         )
         return response.data[0].embedding
 

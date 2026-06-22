@@ -62,6 +62,27 @@ VENDY_SECRET_HASH = config('VENDY_SECRET_HASH')
 
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 
+DASHSCOPE_API_KEY = config('DASHSCOPE_API_KEY')
+
+# ---------------------------------------------------------------------------
+# Alibaba Cloud Model Studio (DashScope) configuration
+# ---------------------------------------------------------------------------
+# AI calls (chat/tool-calling, vision, embeddings) are served by Alibaba Cloud
+# Qwen models via the DashScope API.
+AI_API_KEY = config('AI_API_KEY', default=DASHSCOPE_API_KEY)
+# DashScope API host. For the China (mainland) region drop the "-intl".
+AI_BASE_URL = config(
+    'AI_BASE_URL',
+    default='https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+)
+AI_CHAT_MODEL = config('AI_CHAT_MODEL', default='qwen-max')          # orchestrator / tool calling
+AI_VISION_MODEL = config('AI_VISION_MODEL', default='qwen-vl-max')   # meal image analysis
+AI_EMBEDDING_MODEL = config('AI_EMBEDDING_MODEL', default='text-embedding-v4')
+AI_EMBEDDING_DIMENSIONS = config('AI_EMBEDDING_DIMENSIONS', default=1536, cast=int)
+# Max inputs per DashScope embeddings request.
+AI_EMBEDDING_BATCH_SIZE = config('AI_EMBEDDING_BATCH_SIZE', default=10, cast=int)
+AI_REASONING_EFFORT = config('AI_REASONING_EFFORT', default='')
+
 # Cloudinary Configuration
 CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME')
 CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY')

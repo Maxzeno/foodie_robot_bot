@@ -5,10 +5,9 @@ from api.models.meal import Meal
 
 class MealEmbedding(BaseModel):
     """
-    Stores OpenAI embeddings for meals to enable semantic similarity.
+    Stores meal embeddings to enable semantic similarity.
 
     Embeddings are cached here to avoid repeated API calls:
-    - Cost: ~$0.02 per 1000 meals (text-embedding-3-small)
     - Regenerate when meal attributes change (tracked via content_hash)
     """
 
@@ -19,9 +18,9 @@ class MealEmbedding(BaseModel):
         primary_key=True
     )
 
-    # The embedding vector (1536 dimensions for text-embedding-3-small)
+    # The embedding vector (1536 dimensions)
     embedding = models.JSONField(
-        help_text="OpenAI embedding vector for semantic similarity (1536 floats)"
+        help_text="Embedding vector for semantic similarity (1536 floats)"
     )
 
     # Hash of meal attributes used to generate embedding
@@ -35,7 +34,7 @@ class MealEmbedding(BaseModel):
     # Store the text that was embedded (for debugging)
     embedding_text = models.TextField(
         blank=True,
-        help_text="The text that was sent to OpenAI for embedding (truncated)"
+        help_text="The text that was sent for embedding (truncated)"
     )
 
     class Meta:
